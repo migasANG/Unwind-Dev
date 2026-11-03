@@ -960,6 +960,7 @@
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes" role="group" aria-label="Map size">' + [1, 3, 5, 10].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? 'Normal' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
+    html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = sheet(html);
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab')); }; });
@@ -1131,6 +1132,7 @@
 
   window.addEventListener('resize', function () { layout(); });
   window.addEventListener('hashchange', function () { if (location.hash === '#debug') debugSheet(); });
+  /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     point: function (id) {
@@ -1158,6 +1160,7 @@
     win: function () { return null; }
   };
 
+  /*TEST-HOOK-END*/
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   openLevel(SETS[last.set] ? last.set : 'calm', Math.min(last.index || 0, (SETS[last.set] || SETS.calm).length - 1));

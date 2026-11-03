@@ -29,3 +29,6 @@ All events go through `track()` in `src/game.js` and are stored in the player's 
 - Twins leave together. Compass arrows turn a quarter per launch. Sleepers wait for their star arrow. Mirrors turn arrows on their way out. Patient arrows wait for a number of launches.
 - Sets: Calm (24 levels), Hard (12 levels, 2 lives, no hints), Timed (12 levels), Today's puzzle, and Open water (endless, with optional Harder and Timed switches and 3x, 5x or 10x map area).
 - `src/music.js` holds the four music themes. Every sound is a separate note, with no continuous drone.
+
+## Rights
+© 2026 Miguel. All rights reserved. No licence is granted to copy, modify, publish or use this work commercially without written agreement.
