@@ -3,7 +3,7 @@
 A relaxing web puzzle prototype inspired by the core mechanic of Arrows – Puzzle Escape (Lessmore). The name, art, levels and sound are original.
 
 ## Run it
-Play it at https://migasang.github.io/unwind/
+Play it at https://migasang.github.io/Unwind/
 
 The root `index.html` is the page GitHub Pages serves. It's a copy of `dist/index.html`, so copy it again after rebuilding. You can also open it directly in a browser.
 
