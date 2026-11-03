@@ -1,0 +1,175 @@
+<title>Unwind</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one full-screen sky. The board floats in it, arrows fly off the real screen edge, and a sun marks progress through the day. */
+:root{
+  --ink:#3d2f5b; --twin:#c2476d; --compass:#17707f; --sun:#ffe9c7; --sky-a:#f6d9cf; --sky-b:#c9c6e6; --card:#fff6f0; --gold:#f0a92a; --gold-ink:#a86a00; --heart:#d23d5e;
+  --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#sky,#sky2,#sun,#board{position:fixed;inset:0}
+#sky,#sky2{transition:opacity 2.4s ease}
+#sky2{opacity:0}
+#sun{inset:auto;left:50%;width:min(92vw,560px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);top:var(--sun-y,70%);background:var(--sun);opacity:.55;filter:blur(2px);transition:top 2.6s cubic-bezier(.3,.1,.2,1),background 2.4s ease}
+#board{width:100%;height:100%;touch-action:manipulation;cursor:pointer;display:block}
+.ui{position:fixed;left:0;right:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none;transition:color 2s ease}
+.ui>*{pointer-events:auto}
+header.ui{top:0;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.place{min-width:0}
+.place h1{margin:0;font:italic 500 clamp(1.7rem,6vw,2.1rem)/1 var(--display)}
+.place p{margin:4px 0 0;font-size:.8125rem;letter-spacing:.02em;opacity:.8}
+.right{display:flex;align-items:center;gap:14px;flex:none}
+#lives{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+#hearts{display:flex;gap:3px}
+#hearts svg{width:21px;height:21px;fill:currentColor;transition:transform .5s cubic-bezier(.3,1.6,.5,1),opacity .5s ease}
+#hearts svg.gone{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.42;transform:scale(.82)}
+#hearts svg.lost{animation:heartbreak .7s ease}
+#livesLabel{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
+#timer{flex:none;font-size:1.4rem;font-weight:600;font-variant-numeric:tabular-nums;text-align:center}
+#timer.low{animation:breathe 1s ease-in-out infinite}
+#timebar{position:fixed;top:env(safe-area-inset-top,0px);left:0;height:5px;width:100%;background:currentColor;transform-origin:left;opacity:.7}
+@keyframes heartbreak{0%{transform:scale(1)}30%{transform:scale(1.45)}100%{transform:scale(.82)}}
+@keyframes breathe{50%{opacity:.5}}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:8px}
+#mute{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px}
+#mute svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+#caption{bottom:calc(84px + env(safe-area-inset-bottom,0px));text-align:center;font:italic 500 1.2rem/1.25 var(--display);text-wrap:balance;opacity:0;transition:opacity .8s ease}
+#caption.on{opacity:1}
+nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,84px));justify-content:center;gap:4px}
+nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px;transition:opacity .3s ease,background .3s ease}
+nav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+nav button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
+nav button:disabled{opacity:.32;cursor:default;background:none}
+nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
+.sheet{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:color-mix(in srgb,var(--sky-a) 45%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fade .6s ease both;z-index:5}
+.card{width:100%;max-width:400px;max-height:100%;overflow:auto;background:var(--card);border-radius:24px;padding:26px 24px;display:flex;flex-direction:column;gap:16px;user-select:text;-webkit-user-select:text}
+.card h2{margin:0;font:italic 500 2.25rem/1.05 var(--display);text-wrap:balance}
+.card p{margin:0;line-height:1.5;font-size:.9375rem}
+.primary{height:50px;border-radius:25px;background:var(--ink);color:var(--card);font-weight:600}
+.secondary{height:44px;border-radius:22px;border:1.5px solid currentColor;font-weight:500}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.close{width:40px;height:40px;font-size:1.5rem;line-height:1;margin:-8px -8px -8px 0}
+.lv{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+.lv button{position:relative;aspect-ratio:1;border-radius:50%;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;border:1.5px solid currentColor}
+.lv .mk{position:absolute;width:16px;height:16px;top:-4px;stroke:var(--card);stroke-width:1.4;stroke-linejoin:round;paint-order:stroke}
+.lv .mk.s{right:-3px;fill:#ffc21f}
+.lv .mk.m{left:-3px;fill:#9fd8ff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;align-items:center;margin-top:-6px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend svg{width:15px;height:15px;stroke:none}
+.sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:3px;border-radius:12px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.modes .openbox>button{border:0;padding:0;border-radius:0}
+.modes .sizes button{border:0;padding:0;text-align:center;line-height:1}
+.modes .switch{padding:0}
+.modes .openbox>.primary{border-radius:25px;text-align:center;height:46px}
+.sizes button{height:32px;border-radius:9px;font-weight:600;font-size:.8125rem}
+.sizes button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+#zoomctl{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(82px + env(safe-area-inset-bottom,0px));display:flex;gap:5px;z-index:2}
+#zoomctl button{width:40px;height:40px;border-radius:50%;background:var(--card);font-size:1.3rem;font-weight:500;line-height:1;display:grid;place-items:center;box-shadow:0 1px 5px rgba(0,0,0,.25)}
+#zoomctl svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+body.bigmap header.ui{background:var(--sky-a);padding-bottom:8px}
+body.bigmap nav.ui{background:var(--sky-b);padding-top:6px}
+body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:max-content;max-width:44vw;padding:4px 14px;border-radius:14px;background:var(--card);font:600 .8125rem/1.3 var(--body)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.tabs button{height:38px;border-radius:12px;font-weight:600;font-size:.875rem}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--card)}
+.note{font-size:.8125rem;opacity:.85;margin-top:-6px}
+.setting{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:500}
+.switch{width:52px;height:30px;border-radius:15px;border:1.5px solid currentColor;position:relative;flex:none}
+.switch::after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:currentColor;top:3.5px;left:4px;transition:left .2s ease}
+.switch[aria-checked="true"]{background:color-mix(in srgb,currentColor 18%,transparent)}
+.switch[aria-checked="true"]::after{left:25px}
+.theme{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:10px 14px;border-radius:14px;border:1.5px solid color-mix(in srgb,currentColor 25%,transparent);text-align:left}
+.theme[aria-pressed="true"]{border-color:currentColor;background:color-mix(in srgb,currentColor 11%,transparent)}
+.theme b{font-weight:600}
+.theme span{font-size:.8125rem;opacity:.8}
+.win{gap:12px;padding:0 0 20px;overflow:auto}
+.win>*:not(.scene){margin-left:20px;margin-right:20px}
+.scene{display:block;width:100%;height:auto;flex:none;border-radius:24px 24px 0 0}
+.verdict{text-align:center;margin-top:2px}
+.win h2{font-size:2.6rem;text-align:center}
+.win h2.gold{color:var(--gold-ink)}
+.verdict p{margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.stats b{display:block;font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stats span{font-size:.75rem;opacity:.8}
+.winhearts{display:flex;justify-content:center;gap:4px}
+.winhearts svg{width:24px;height:24px;fill:var(--heart);animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
+.winhearts svg.gone{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.35}
+.lanterns{font-size:.8125rem;text-align:center;opacity:.9}
+.lantern-bar{height:6px;border-radius:3px;background:color-mix(in srgb,currentColor 14%,transparent);overflow:hidden;margin-top:5px}
+.lantern-bar i{display:block;height:100%;background:var(--gold);border-radius:3px}
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.actions .secondary{font-size:.8125rem;padding:0 4px}
+.actions .primary{grid-column:1/-1}
+.openbox{display:grid;gap:10px;padding:11px 16px;border-radius:16px;border:1.5px solid currentColor}
+.openbox>button{text-align:left;line-height:1.3;border:0;padding:0}
+.openbox .setting{font-size:.875rem}
+.openbox .setting span small{display:block;font-size:.75rem;font-weight:400;opacity:.8}
+.now{font-size:.875rem;margin-top:-6px;opacity:.9}
+.sheet.side{justify-content:flex-start;align-items:stretch;padding:0}
+.sheet.side .card{height:100%;max-width:350px;width:90vw;border-radius:0 24px 24px 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:18px;padding-block:calc(18px + env(safe-area-inset-top,0px)) calc(18px + env(safe-area-inset-bottom,0px));animation:slidein .32s cubic-bezier(.2,.8,.3,1) both;gap:14px}
+.sheet.side h2{font-size:1.9rem}
+.guide-item{display:grid;grid-template-columns:62px minmax(0,1fr);gap:12px;align-items:start}
+.guide-item svg{width:62px;height:46px;display:block;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.guide-item h3{margin:0;font-size:.9375rem;font-weight:600;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.guide-item p{margin:2px 0 0;font-size:.8125rem;line-height:1.4}
+.onboard{font-size:.6875rem;font-weight:600;padding:1px 7px;border-radius:9px;background:var(--ink);color:var(--card)}
+@keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
+.smoke{animation:smoke 5s ease-in infinite}
+.smoke.b{animation-delay:1.6s}.smoke.c{animation-delay:3.2s}
+.boat{animation:bob 4.6s ease-in-out infinite}
+.rise{animation:rise 6s ease-in infinite}
+.fly{animation:fly 3.4s ease-in-out infinite}
+@keyframes smoke{0%{transform:translate(0,0) scale(.6);opacity:0}15%{opacity:.6}100%{transform:translate(9px,-30px) scale(1.5);opacity:0}}
+@keyframes bob{50%{transform:translateY(2px) rotate(1.2deg)}}
+@keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:1}85%{opacity:.9}100%{transform:translateY(-105px);opacity:0}}
+@keyframes fly{0%,100%{transform:translate(0,0);opacity:.2}50%{transform:translate(8px,-7px);opacity:1}}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+
+.lv button.done{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.lv button:disabled{opacity:.28;cursor:default}
+.chapter{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;opacity:.75;margin-bottom:-8px}
+.modes{display:grid;gap:8px}
+.modes button{text-align:left;padding:11px 16px;border-radius:16px;border:1.5px solid currentColor;line-height:1.3}
+.modes b{display:block;font-weight:600}
+.modes span{font-size:.8125rem;opacity:.8}
+#debug pre{margin:0;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;overflow:auto;max-height:36vh;white-space:pre}
+#debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
+#debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
+</style>
+
+<div id="sky"></div><div id="sky2"></div><div id="sun"></div>
+<canvas id="board" aria-label="Puzzle board. Tap an arrow to send it off the board."></canvas>
+
+<header class="ui">
+  <div class="place"><h1>Unwind</h1><p id="where" aria-live="polite"></p></div>
+  <div id="timer" role="timer" hidden></div>
+  <div class="right">
+    <div id="lives" role="img"><div id="hearts"></div><div id="livesLabel"></div></div>
+    <button id="mute" aria-label="Music and sound settings"></button>
+  </div>
+</header>
+<div id="timebar" hidden></div>
+<div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+<div id="caption" class="ui"></div>
+<nav class="ui">
+  <button id="bRewind"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></svg>Rewind</button>
+  <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
+  <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
+  <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
+  <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
+</nav>
+<div id="sheetHost"></div>
+
+<script>/*__ENGINE__*/</script>
+<script>window.UNWIND_LEVELS=/*__LEVELS__*/;</script>
+<script>/*__MUSIC__*/</script>
+<script>/*__GAME__*/</script>
