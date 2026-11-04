@@ -13,6 +13,7 @@
   };
   SET_INFO.hard.offset = 33; SET_INFO.calm.offset = 0;
   var SEASON_ORDER = ['winter', 'spring', 'summer', 'autumn'];
+  var SET_FLOW = ['calm', 'hard', 'timed', 'winter', 'spring', 'summer', 'autumn'];
   var HEART = '<path d="M12 20.500s-7.800-4.700-9.300-9.700C1.600 7.200 3.800 4.200 7 4.200c2 0 3.700 1 5 3 1.300-2 3-3 5-3 3.200 0 5.400 3 4.300 6.600-1.500 5-9.300 9.700-9.300 9.700Z"/>';
   function heartSvg(cls) { return '<svg viewBox="0 0 24 24" aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '>' + HEART + '</svg>'; }
   var $ = function (id) { return document.getElementById(id); };
@@ -238,7 +239,13 @@
     wireBackgrounds(s, applyBackgroundNow);
   }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
-  function openEndless() {
+  // Very large maps take a moment to build, so a short message appears first.
+  function openEndless(ready) {
+    if (ready !== true && (endlessOpts().scale || 1) >= 10) {
+      sheet('<h2>Growing the map</h2><p>Just a moment.</p>');
+      setTimeout(function () { openEndless(true); }, 60);
+      return;
+    }
     var o = Object.assign({}, endlessOpts()), scale = o.scale || 1, picked = effectChoice();
     // Random uses a random number of effects (1 to 4) for each board.
     if (picked.random) {
@@ -396,7 +403,9 @@
   var cam = null, fitCs = 40, viewTop = 0, viewBottom = 0, MIN_TAP = 38, MAX_ZOOM = 64;
   function l0season() { return current && (E.effectsOf(current.level).length || current.mode === 'endless'); }
   function layout() {
-    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    // Big boards draw at a lower resolution, which keeps them smooth on phones.
+    var bigBoard = current && current.level.big, area = current ? current.level.w * current.level.h : 0;
+    var dpr = Math.min(window.devicePixelRatio || 1, area > 700 ? 1.5 : bigBoard ? 2 : 3);
     vw = window.innerWidth; vh = window.innerHeight;
     canvas.width = vw * dpr; canvas.height = vh * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -713,19 +722,28 @@
     var l = current.level, sc = Math.min(92 / l.w, 112 / l.h), mw = l.w * sc, mh = l.h * sc;
     return { x: 16, y: viewBottom - mh - 2, w: mw, h: mh, sc: sc };
   }
+  var miniCache = null;
   function drawMinimap(fade) {
     var l = current.level, r = miniRect();
     ctx.globalAlpha = 0.92 * fade; ctx.fillStyle = colors.card;
     ctx.beginPath(); ctx.roundRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8, 8); ctx.fill();
-    ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, r.sc * 0.35); ctx.globalAlpha = fade;
-    l.arrows.forEach(function (a) {
-      if (state.removed[a.id]) return;
-      ctx.strokeStyle = hintArrow === a.id ? colors.hint : arrowColor(a);
-      ctx.beginPath();
-      a.cells.forEach(function (c, i) { ctx[i ? 'lineTo' : 'moveTo'](r.x + (c[0] + 0.5) * r.sc, r.y + (c[1] + 0.5) * r.sc); });
-      if (a.cells.length === 1) ctx.lineTo(r.x + (a.cells[0][0] + 0.6) * r.sc, r.y + (a.cells[0][1] + 0.5) * r.sc);
-      ctx.stroke();
-    });
+    // The map only changes when arrows do, so it is drawn once per change and reused.
+    var key = [current.id, state.launches, hintArrow, colors.name, Math.round(r.w)].join();
+    if (!miniCache || miniCache.key !== key) {
+      var cv = miniCache && miniCache.canvas || document.createElement('canvas'), mc = cv.getContext('2d');
+      cv.width = Math.ceil(r.w * 2); cv.height = Math.ceil(r.h * 2);
+      mc.setTransform(2, 0, 0, 2, 0, 0); mc.lineCap = 'round'; mc.lineWidth = Math.max(1, r.sc * 0.35);
+      l.arrows.forEach(function (a) {
+        if (state.removed[a.id]) return;
+        mc.strokeStyle = hintArrow === a.id ? colors.hint : arrowColor(a);
+        mc.beginPath();
+        a.cells.forEach(function (c, i) { mc[i ? 'lineTo' : 'moveTo']((c[0] + 0.5) * r.sc, (c[1] + 0.5) * r.sc); });
+        if (a.cells.length === 1) mc.lineTo((a.cells[0][0] + 0.6) * r.sc, (a.cells[0][1] + 0.5) * r.sc);
+        mc.stroke();
+      });
+      miniCache = { key: key, canvas: cv };
+    }
+    ctx.globalAlpha = fade; ctx.drawImage(miniCache.canvas, r.x, r.y, r.w, r.h);
     var vx = Math.max(0, -ox / cs), vy = Math.max(0, (viewTop - oy) / cs), ex = Math.min(l.w, (vw - ox) / cs), ey = Math.min(l.h, (viewBottom - oy) / cs);
     ctx.globalAlpha = fade; ctx.strokeStyle = colors.hint; ctx.lineWidth = 1.5;
     ctx.strokeRect(r.x + vx * r.sc, r.y + vy * r.sc, (ex - vx) * r.sc, (ey - vy) * r.sc);
@@ -805,17 +823,25 @@
     spring: '<svg viewBox="0 0 24 24"><g fill="#f06ca8"><circle cx="12" cy="6" r="4"/><circle cx="18" cy="11" r="4"/><circle cx="15.500" cy="18" r="4"/><circle cx="8.500" cy="18" r="4"/><circle cx="6" cy="11" r="4"/></g><circle cx="12" cy="13" r="3.200" fill="#ffd23f"/></svg>',
     autumn: '<svg viewBox="0 0 24 24" fill="none" stroke="#a8591a" stroke-width="2" stroke-linecap="round"><path d="M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h6"/></svg>'
   };
-  var shownBadge = '', activeScene = null;
+  var popCount = {}, shownBadge = '', activeScene = null;
   function drawBadge() {
     var fx = current ? E.effectsOf(current.level) : [], b = $('seasonBadge');
     b.hidden = !fx.length;
     if (!fx.length) { shownBadge = ''; return; }
     var names = { winter: '20% chance per launch that arrows freeze', summer: '25% chance per launch that tiles burn', autumn: '50% chance per launch of wind', spring: ' flowers remaining' };
-    var html = SEASON_ORDER.filter(function (k) { return fx.indexOf(k) >= 0; }).map(function (k) {
-      var text = k === 'winter' ? '20%' : k === 'summer' ? '25%' : k === 'autumn' ? '50%' : Math.max(0, current.level.flowers.length - state.launches) + '/' + current.level.flowers.length;
-      return '<span class="chip" data-tip="' + k + '" role="img" aria-label="' + (k === 'spring' ? text + names.spring : names[k]) + '">' + ICONS[k] + '<span>' + text + '</span></span>';
-    }).join('');
-    if (html !== shownBadge) { b.innerHTML = html; shownBadge = html; }
+    var keys = SEASON_ORDER.filter(function (k) { return fx.indexOf(k) >= 0; }), label = function (k) { return k === 'winter' ? '20%' : k === 'summer' ? '25%' : k === 'autumn' ? '50%' : Math.max(0, current.level.flowers.length - state.launches) + '/' + current.level.flowers.length; };
+    var signature = keys.join();
+    if (signature !== shownBadge) {
+      b.innerHTML = keys.map(function (k) { return '<span class="chip" data-tip="' + k + '" role="img">' + ICONS[k] + '<span class="val"></span></span>'; }).join('');
+      shownBadge = signature;
+    }
+    // Text updates in place, so a popping symbol keeps animating.
+    keys.forEach(function (k) {
+      var chip = b.querySelector('[data-tip="' + k + '"]'), text = label(k), val = chip.querySelector('.val');
+      if (val.textContent !== text) val.textContent = text;
+      chip.setAttribute('aria-label', k === 'spring' ? text + names.spring : names[k]);
+    });
+
   }
   // Hovering a season symbol, or holding it on a phone, explains what it does.
   var TIPS = {
@@ -849,7 +875,14 @@
   });
   ['pointerup', 'pointercancel'].forEach(function (n) { $('seasonBadge').addEventListener(n, function (ev) { if (ev.pointerType !== 'mouse') hideTip(); }); });
   $('seasonBadge').addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
-  function pulseBadge() { var b = $('seasonBadge'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+  // When an event happens, its symbol pops up.
+  function popSymbol(effect) {
+    var chip = $('seasonBadge').querySelector('[data-tip="' + effect + '"]');
+    if (!chip) return;
+    chip.classList.remove('pop'); void chip.offsetWidth; chip.classList.add('pop');
+    setTimeout(function () { chip.classList.remove('pop'); }, 1000);
+    popCount[effect] = (popCount[effect] || 0) + 1;
+  }
   function applySeason(season) {
     activeScene = season;
     document.body.classList.toggle('season', !!season);
@@ -984,7 +1017,12 @@
     ctx.restore();
   }
   function drawFlowers(now, l) {
-    l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
+    l.flowers.forEach(function (f, i) {
+      if (i < state.launches) return;
+      var p = px(f);
+      if (p.x < -cs || p.x > vw + cs || p.y < -cs || p.y > vh + cs) return;
+      drawFlower(p, cs * 0.47, f[0] * 7 + f[1] * 3, now, true);
+    });
   }
   // A simple little bee: a soft oval, two stripes, one dot of an eye and pale wings. No outlines, in keeping with the flat, calm art.
   function drawBeeAt(x, y, k, now, flap, flip) {
@@ -1166,13 +1204,21 @@
   function drawWind(now) {
     var t = (now - windAt) / 1200;
     if (t >= 1 || reduced) { if (t >= 1) windAt = 0; return; }
-    ctx.lineCap = 'round';
-    for (var i = 0; i < 12; i++) {
-      var y = oy + (current.level.h * cs) * ((i * 0.37 + 0.13) % 1), offset = (i * 0.17) % 0.5, q = (t - offset * 0.6) * 1.7;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // Each gust has a dark edge under a bright core, so it shows on any background.
+    var gusts = 16, boardH = current.level.h * cs;
+    for (var i = 0; i < gusts; i++) {
+      var y = oy + boardH * ((i * 0.37 + 0.13) % 1) + Math.sin(i * 2.1) * cs * 0.3, offset = (i * 0.17) % 0.5, q = (t - offset * 0.6) * 1.75;
       if (q < 0 || q > 1) continue;
-      var x = -120 + (vw + 240) * q, len = 60 + (i % 4) * 28;
-      ctx.globalAlpha = Math.sin(q * Math.PI) * 0.75; ctx.strokeStyle = '#fff4e3'; ctx.lineWidth = Math.max(2, cs * 0.06);
-      ctx.beginPath(); ctx.moveTo(x - len, y); ctx.quadraticCurveTo(x - len / 2, y - 8 * Math.sin(now / 90 + i), x, y); ctx.stroke();
+      var x = -160 + (vw + 320) * q, len = 80 + (i % 4) * 40, wave = 9 * Math.sin(now / 90 + i), fade = Math.sin(q * Math.PI);
+      var curl = i % 3 === 0 ? 11 + (i % 2) * 5 : 0;
+      var trace = function () {
+        ctx.beginPath(); ctx.moveTo(x - len, y); ctx.bezierCurveTo(x - len * 0.66, y - wave, x - len * 0.33, y + wave, x, y);
+        if (curl) ctx.arc(x, y - curl, curl, Math.PI / 2, -Math.PI, true);
+        ctx.stroke();
+      };
+      ctx.globalAlpha = fade * 0.5; ctx.strokeStyle = '#1e2c40'; ctx.lineWidth = Math.max(4.5, cs * 0.13); trace();
+      ctx.globalAlpha = fade * 0.98; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2.5, cs * 0.075); trace();
     }
     ctx.globalAlpha = 1;
   }
@@ -1181,11 +1227,11 @@
     var l = current.level;
     if (ev.freeze.length) {
       ev.freeze.forEach(function (id) { addRipple(px(l.arrows[id].cells[l.arrows[id].cells.length >> 1]), '#3f9fd8', 1.6); });
-      seasonSound('freezeSound'); pulseBadge(); buzz(12);
+      seasonSound('freezeSound'); popSymbol('winter'); buzz(12);
     }
-    if (ev.burn.length) { seasonSound('igniteSound'); pulseBadge(); buzz(16); }
+    if (ev.burn.length) { seasonSound('igniteSound'); popSymbol('summer'); buzz(16); }
     if (ev.wind) {
-      windAt = now; seasonSound('windSound'); pulseBadge();
+      windAt = now; seasonSound('windSound'); popSymbol('autumn');
       ev.rotate.forEach(function (r) { var a = l.arrows[r.id]; a.rot = { start: now, turn: (r.quarters === 3 ? -1 : r.quarters) * Math.PI / 2 }; });
     }
     if (l.flowers && l.flowers.length) {
@@ -1194,8 +1240,7 @@
         var p = px(taken), right = p.x > vw / 2;
         beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((state.launches * 61) % 200) }, start: now, seed: taken[0] * 7 + taken[1] * 3 });
       }
-      if (taken) seasonSound('springSound');
-      pulseBadge();
+      if (taken) { seasonSound('springSound'); popSymbol('spring'); }
       sendBee(state.launches, now + 450);
     }
   }
@@ -1508,6 +1553,8 @@
   function allLevelCount() { return Object.keys(SETS).reduce(function (n, k) { return n + SETS[k].length; }, 0); }
   function winSheet(c, st) {
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
+    // The end of a group leads to the next group. Only the very last level leads to open water.
+    var nextSet = c.mode === 'levels' && !hasNext ? SET_FLOW[SET_FLOW.indexOf(c.set) + 1] : null;
     var title = st.perfect ? 'Perfect!' : 'All clear';
     var lines = st.perfect ? ['You never lost a life.', 'Not one collision. Lovely.', 'Smooth as still water.']
       : c.level.lives === null ? ['Another calm stretch of water.'] : st.hits === 1 ? ['One small bump on the way.'] : [st.hits + ' bumps on the way, and you got there.'];
@@ -1520,7 +1567,7 @@
     var fmt = function (s) { return s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's'; };
     var third = c.mode === 'levels' ? '<div><b>' + (st.newBest ? 'New!' : fmt(progress.best[c.id])) + '</b><span>Best time</span></div>' : '<div><b>' + st.hints + '</b><span>Hints used</span></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
-    var nextLabel = hasNext ? 'Next level' : c.mode === 'levels' && c.set === 'calm' ? 'On to open water' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'On to open water' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + fmt(st.secs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div>' + third + '</div>' +
@@ -1529,7 +1576,8 @@
     s.querySelector('#next').onclick = function () {
       if (c.mode === 'levels') {
         if (hasNext) openLevel(c.set, c.index + 1);
-        else if (c.set === 'calm') openEndless(); else levelsSheet(c.set);
+        else if (nextSet) openLevel(nextSet, 0);
+        else openEndless();
       } else if (c.mode === 'endless') openEndless();
       else levelsSheet('calm');
     };
@@ -1575,15 +1623,15 @@
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
-      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes" role="group" aria-label="Map size">' + [1, 3, 5, 10].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? 'Normal' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
+      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = sheet(html);
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab')); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
-    s.querySelector('#mOpen').onclick = openEndless;
-    s.querySelector('#mGo').onclick = openEndless;
+    s.querySelector('#mOpen').onclick = function () { openEndless(); };
+    s.querySelector('#mGo').onclick = function () { openEndless(); };
     [['#oHard', 'hard'], ['#oTimed', 'timed']].forEach(function (pair) {
       s.querySelector(pair[0]).onclick = function () {
         var o = endlessOpts(); o[pair[1]] = !o[pair[1]]; progress.endlessOpts = o; save('unwind.progress2', progress);
@@ -1810,8 +1858,9 @@
     seasonInfo: function () { return { hintAmt: lastHintAmt, frozen: Object.keys(state.frozen).length, burning: Object.keys(state.burning).filter(function (k) { return state.burning[k] > state.launches; }).length, flowersLeft: current.level.flowers ? Math.max(0, current.level.flowers.length - state.launches) : null, beeIndex: bee ? bee.index : null, rotating: current.level.arrows.filter(function (a) { return a.rot; }).length, windAt: windAt, theme: M.THEMES[wantedTheme()].name, badge: $('seasonBadge').textContent, title: $('where').textContent }; },
     setFrozen: function (id) { state.frozen[id] = state.launches + 3; refresh(); },
     levelInfo: function () { var l = current.level; return { effects: E.effectsOf(l), scene: activeScene, season: l.season, seed: l.seed, big: !!l.big, w: l.w, h: l.h, lives: state.lives, limit: l.timeLimit || null, guarantee: l.guaranteeAt, flowers: (l.flowers || []).length }; },
-    openEndless: function () { openEndless(); },
-    perfBoard: function (scale, effects, hard) { var o = endlessOpts(), saved = JSON.stringify(o); o.scale = scale; o.effectList = effects; o.effectRandom = false; o.hard = !!hard; o.timed = false; openEndless(); progress.endlessOpts = JSON.parse(saved); },
+    openEndless: function () { openEndless(true); },
+    pops: function () { return popCount; },
+    perfBoard: function (scale, effects, hard) { var o = endlessOpts(), saved = JSON.stringify(o); o.scale = scale; o.effectList = effects; o.effectRandom = false; o.hard = !!hard; o.timed = false; openEndless(true); progress.endlessOpts = JSON.parse(saved); },
     frameLoad: function () { return { flights: flights.length, embers: embers.length }; },
     burnAll: function () { var l = current.level, n = 0; for (var k = 0; k < l.w * l.h && n < 5; k++) { var o = l.grid[k]; if (o === -1 || state.removed[o]) { state.burning[k] = state.launches + 3; n++; } } return n; },
     firePath: function () { var l = current.level; for (var i = 0; i < l.arrows.length; i++) { var a = l.arrows[i]; if (state.removed[a.id]) continue; var c = E.check(l, state, a); if (c.fire) return a.id; } return -1; },

@@ -25,15 +25,15 @@ const calm = [
  { w:5,h:6,minLen:2,maxLen:4,depth:4,ghosts:1,caption:'Ghost arrows swap form on every launch. Play them only when solid.' },
  { w:6,h:8,minLen:2,maxLen:5,depth:5,ghosts:2 },
  { w:7,h:9,minLen:2,maxLen:6,depth:7,ghosts:3 },
- { w:5,h:6,minLen:2,maxLen:4,depth:4,phases:1,caption:'Phase arrows can slip through one blocked tile on their way out.' },
- { w:6,h:8,minLen:2,maxLen:5,depth:5,phases:2 },
- { w:7,h:9,minLen:2,maxLen:6,depth:7,phases:3 },
+ { w:5,h:6,minLen:2,maxLen:4,depth:4,phases:1,phaseStrict:true,caption:'Phase arrows can slip through one blocked tile on their way out.' },
+ { w:6,h:8,minLen:2,maxLen:5,depth:5,phases:2,phaseStrict:true },
+ { w:7,h:9,minLen:2,maxLen:6,depth:7,phases:3,phaseStrict:true },
  { w:5,h:6,minLen:2,maxLen:4,depth:4,reds:1,caption:'Play this arrow before its count runs out, or it gets a red card.' },
  { w:6,h:8,minLen:2,maxLen:5,depth:5,reds:2 },
  { w:7,h:9,minLen:2,maxLen:6,depth:7,reds:3 },
- { w:7,h:9,minLen:2,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,trap:[0.05,0.5] },
- { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,mirrors:2,patient:1,trap:[0.05,0.6] },
- { w:9,h:11,minLen:2,maxLen:8,depth:9,twins:2,compass:2,sleepers:2,mirrors:3,patient:2,trap:[0.1,0.7] },
+ { w:7,h:9,minLen:2,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,ghosts:1,phases:1,trap:[0.05,0.5] },
+ { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,mirrors:2,patient:1,ghosts:1,phases:1,reds:1,trap:[0.05,0.6] },
+ { w:9,h:11,minLen:2,maxLen:8,depth:9,twins:2,compass:2,sleepers:2,mirrors:3,patient:2,ghosts:2,phases:2,reds:1,trap:[0.1,0.7] },
 ];
 const hard = [
  { w:7,h:9,minLen:3,maxLen:7,depth:9 },
@@ -41,13 +41,13 @@ const hard = [
  { w:8,h:10,minLen:2,maxLen:8,depth:9,twins:3 },
  { w:8,h:10,minLen:2,maxLen:7,depth:9,compass:3,trap:[0.3,0.8] },
  { w:8,h:10,minLen:2,maxLen:8,depth:10,sleepers:4 },
- { w:8,h:10,minLen:2,maxLen:7,depth:9,mirrors:5 },
- { w:9,h:11,minLen:2,maxLen:8,depth:10,patient:4,maxWait:8 },
- { w:9,h:11,minLen:2,maxLen:9,depth:11,compass:4,trap:[0.3,0.85] },
- { w:9,h:11,minLen:2,maxLen:8,depth:11,twins:2,sleepers:3,mirrors:3 },
- { w:9,h:12,minLen:2,maxLen:9,depth:12,twins:2,compass:3,patient:2,trap:[0.3,0.85] },
- { w:9,h:12,minLen:2,maxLen:9,depth:12,compass:3,sleepers:3,mirrors:4,trap:[0.3,0.85] },
- { w:9,h:12,minLen:2,maxLen:9,depth:13,twins:3,compass:4,sleepers:3,mirrors:4,patient:3,trap:[0.3,0.9] },
+ { w:8,h:10,minLen:2,maxLen:7,depth:9,mirrors:5,phases:2 },
+ { w:9,h:11,minLen:2,maxLen:8,depth:10,patient:3,maxWait:8,reds:2 },
+ { w:9,h:11,minLen:2,maxLen:9,depth:11,compass:4,ghosts:2,trap:[0.3,0.85] },
+ { w:9,h:11,minLen:2,maxLen:8,depth:11,twins:2,sleepers:3,mirrors:3,ghosts:2,phases:2 },
+ { w:9,h:12,minLen:2,maxLen:9,depth:12,twins:2,compass:3,patient:2,reds:2,phases:1,trap:[0.3,0.85] },
+ { w:9,h:12,minLen:2,maxLen:9,depth:12,compass:3,sleepers:3,mirrors:4,ghosts:2,phases:2,trap:[0.3,0.85] },
+ { w:9,h:12,minLen:2,maxLen:9,depth:13,twins:3,compass:3,sleepers:2,mirrors:3,patient:2,ghosts:2,phases:2,reds:2,trap:[0.3,0.9] },
 ].map(s=>({...s,lives:2,hints:0}));
 const timed = [
  { w:4,h:5,minLen:2,maxLen:3,depth:3 },
@@ -58,17 +58,17 @@ const timed = [
  { w:6,h:8,minLen:2,maxLen:5,depth:5,mirrors:2 },
  { w:6,h:8,minLen:2,maxLen:5,depth:6,sleepers:2 },
  { w:7,h:9,minLen:2,maxLen:6,depth:7,twins:2 },
- { w:7,h:9,minLen:2,maxLen:6,depth:7,patient:3,maxWait:4 },
- { w:7,h:9,minLen:2,maxLen:6,depth:7,compass:2,trap:[0.05,0.4] },
- { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,mirrors:2,sleepers:2 },
- { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,patient:2,trap:[0.05,0.5] },
+ { w:7,h:9,minLen:2,maxLen:6,depth:7,patient:2,maxWait:4,phases:2 },
+ { w:7,h:9,minLen:2,maxLen:6,depth:7,compass:2,ghosts:2,trap:[0.05,0.4] },
+ { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,mirrors:2,sleepers:2,reds:2,phases:1 },
+ { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,patient:1,ghosts:2,phases:1,reds:1,trap:[0.05,0.5] },
 ].map(s=>({...s,timed:true}));
 
 // Early season levels focus on the new effect. The last ones bring every arrow type back.
 const seasonSet=(season,extra)=>[
  {w:5,h:6,maxLen:4,depth:4},{w:5,h:7,maxLen:4,depth:4},{w:6,h:7,maxLen:5,depth:5},{w:6,h:8,maxLen:5,depth:5},
- {w:7,h:8,maxLen:6,depth:6,twins:1,mirrors:1},{w:7,h:9,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,patient:1,trap:[0.02,0.5]},
- {w:8,h:10,maxLen:7,depth:8,twins:2,compass:1,sleepers:2,mirrors:2,patient:2,trap:[0.02,0.5]},
+ {w:7,h:8,maxLen:6,depth:6,twins:1,mirrors:1},{w:7,h:9,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,patient:1,ghosts:1,phases:1,trap:[0.02,0.5]},
+ {w:8,h:10,maxLen:7,depth:8,twins:2,compass:1,sleepers:2,mirrors:2,patient:2,ghosts:1,phases:1,reds:season==='spring'||season==='autumn'?1:0,trap:[0.02,0.5]},
 ].map(s=>({minLen:2,season,...extra,...s}));
 const winter=seasonSet('winter',{}), spring=seasonSet('spring',{flowers:0.3}), summer=seasonSet('summer',{gaps:0.16}), autumn=seasonSet('autumn',{gaps:0.26,maxLen:4});
 winter[0].caption='Ice can trap arrows. Hit a frozen arrow with another arrow to free it.';

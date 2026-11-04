@@ -265,27 +265,25 @@
     }
     if (hasEffect(level, 'summer') && (rollSummer < 0.25 || forced)) {
       ev.triggered = true;
-      var tiles = 1 + Math.floor(r() * 5), turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
+      // 1 to 5 tiles on a normal map, with more on bigger maps so fire stays noticeable.
+      var fireScale = Math.max(1, Math.round(level.w * level.h / 56));
+      var tiles = (1 + Math.floor(r() * 5)) * fireScale, turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
       live.forEach(function (a) { rayCellsOf(level, state, a).forEach(function (k) { onPath[k] = 1; }); });
       // Prefer tiles that arrows actually need, so the fire matters.
-      var order = shuffle(empty, r).sort(function (x, y) { return (onPath[y] || 0) - (onPath[x] || 0); });
-      order.some(function (k) {
-        if (ev.burn.length >= tiles) return true;
-        state.burning[k] = state.launches + turns;
-        if (legalMoves(level, state).length === 0) delete state.burning[k]; else ev.burn.push(k);
-        return false;
-      });
+      var order = shuffle(empty, r).sort(function (x, y) { return (onPath[y] || 0) - (onPath[x] || 0); }).slice(0, tiles);
+      order.forEach(function (k) { state.burning[k] = state.launches + turns; ev.burn.push(k); });
+      while (ev.burn.length && legalMoves(level, state).length === 0) delete state.burning[ev.burn.pop()];
     }
     if (hasEffect(level, 'autumn') && (rollAutumn < 0.5 || forced)) {
       ev.triggered = true; ev.wind = true;
-      var attempts = 0, maxAttempts = level.big ? 4 : Infinity, windOrder = shuffle(live.slice(), r);
+      var attempts = 0, maxAttempts = level.w * level.h > 900 ? 2 : level.big ? 4 : Infinity, windOrder = shuffle(live.slice(), r);
       var spin = function (a, pick) {
         var options = pivotOptions(level, state, a);
         if (!options.length || attempts >= maxAttempts) return false;
         attempts++;
         var o = options[Math.floor(pick * options.length)], oldCells = a.cells, oldDir = a.dir;
         a.cells = o.cells; a.dir = o.dir; rebuildGrid(level, state);
-        var res = solve(level, state, level.big ? 1500 : 15000);
+        var res = solve(level, state, level.w * level.h > 900 ? 800 : level.big ? 1500 : 15000);
         if (res.solved) { ev.rotate.push({ id: a.id, quarters: o.quarters }); return true; }
         a.cells = oldCells; a.dir = oldDir; rebuildGrid(level, state);
         return false;
@@ -559,7 +557,7 @@
       }
     });
     // New arrow types, each set so the known solution still works when played in order.
-    var ghostsLeft = spec.ghosts || 0, phasesLeft = spec.phases || 0, redsLeft = spec.reds || 0;
+    var ghostsLeft = spec.ghosts || 0, redsLeft = spec.reds || 0;
     shuffle(plainGroups, r);
     plainGroups.forEach(function (i) {
       var lb = n - 1 - i, a = arrows[groupOf(i)[0]];
@@ -570,9 +568,8 @@
         if (count <= n - 2) { a.red = count; redsLeft--; return; }
       }
       if (ghostsLeft > 0) { a.ghostPhase = lb % 2; ghostsLeft--; return; }
-      if (phasesLeft > 0) { a.phase = true; phasesLeft--; }
     });
-    if (sleepersLeft > 0 || patientLeft > 0 || redsLeft > 0 || ghostsLeft > 0 || phasesLeft > 0) return null;
+    if (sleepersLeft > 0 || patientLeft > 0 || redsLeft > 0 || ghostsLeft > 0) return null;
     var used = occ.filter(Boolean).length;
     // Groups leave in reverse order, so this list always clears the board.
     var solution = groups.slice().reverse().map(function (g) { return g.ids[0]; });
@@ -606,6 +603,25 @@
     level.flowers = queue.map(function (k) { return [k % level.w, Math.floor(k / level.w)]; });
     prepare(level);
   }
+  // Gives phase arrows to arrows that can really use it: blocked by one tile now, free to slip through it.
+  function phaseWorks(level, a, state) {
+    a.phase = false;
+    var without = check(level, state, a);
+    a.phase = true;
+    var withPhase = check(level, state, a);
+    delete a.phase;
+    return !without.clear && withPhase.clear;
+  }
+  function assignPhases(level, spec, r) {
+    var s = newState(level);
+    var pool = level.arrows.filter(function (a) { return a.kind === 'plain' && a.key === undefined && !a.isKey && !a.wait && !a.red && a.ghostPhase === undefined; });
+    var useful = shuffle(pool.filter(function (a) { return phaseWorks(level, a, s); }), r);
+    if (spec.phaseStrict && useful.length < spec.phases) return false;
+    var chosen = useful.slice(0, spec.phases);
+    shuffle(pool, r).forEach(function (a) { if (chosen.length < spec.phases && chosen.indexOf(a) < 0) chosen.push(a); });
+    chosen.forEach(function (a) { a.phase = true; });
+    return true;
+  }
   function replays(level) {
     var s = newState(level); s.lives = null;
     return level.solution.every(function (id) { return tap(level, s, id).ok; }) && isWon(s);
@@ -619,6 +635,7 @@
       if (!lvl) continue;
       prepare(lvl);
       if (spec.flowers) plantFlowers(lvl, rng32(useSeed + 5));
+      if (spec.phases && !assignPhases(lvl, spec, rng32(useSeed + 9))) continue;
       var hasCompass = (spec.compass || 0) > 0;
       var start = newState(lvl);
       var startFree = legalMoves(lvl, start).length;
