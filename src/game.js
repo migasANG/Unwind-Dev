@@ -219,11 +219,12 @@
     fresh.className = 'scenebg pending';
     old.parentNode.insertBefore(fresh, old.nextSibling);
     if (next) { fresh.setAttribute('data-season', next); bakeScene(fresh, next); }
-    requestAnimationFrame(function () { requestAnimationFrame(function () {
+    // Give the browser time to finish painting the new scene, so it never fades in half drawn.
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () { requestAnimationFrame(function () {
       // A newer choice replaced this one while it was getting ready.
       if (ask !== bgRequest || !current || current.mode !== 'endless') { fresh.remove(); return; }
       commitBackground(ask, fresh, next);
-    }); });
+    }); }, next ? 90 : 0); }); });
   }
   // A gentle crossfade: the scene, sky, sun, board and menus all drift to the new colours together.
   var BG_FADE = 1400;
@@ -231,7 +232,7 @@
     var old = $('seasonBg'), sun = $('sun'), board = $('board'), sunWasOn = !sun.hidden;
     document.body.classList.add('bgswap');
     // A copy of the board as it looks now fades out while the real one draws in the new colours.
-    if (fresh && !reduced) {
+    if (!reduced) {
       var copy = document.createElement('canvas');
       copy.className = 'boardfade'; copy.width = board.width; copy.height = board.height;
       copy.getContext('2d').drawImage(board, 0, 0);
@@ -256,6 +257,7 @@
     }
     ambience = [];
     refresh(); layout();
+    lastDrawn = 0;
     musicTick();
     setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, BG_FADE + 60);
   }
@@ -489,7 +491,9 @@
     var dpr = Math.min(window.devicePixelRatio || 1, area > 700 ? 1.5 : bigBoard ? 2 : 3);
     vw = window.innerWidth; vh = window.innerHeight;
     boardDpr = dpr;
-    canvas.width = vw * dpr; canvas.height = vh * dpr;
+    // Setting a canvas size wipes it, so it is only touched when the size really changes.
+    var cw = Math.round(vw * dpr), ch = Math.round(vh * dpr);
+    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!current) return;
     viewTop = document.querySelector('header.ui').getBoundingClientRect().bottom + 10;

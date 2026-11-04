@@ -20,8 +20,7 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg.baking *{animation:none!important}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
-.scenebg{transition:opacity 1.4s ease-in-out}
-body.bgswap .scenebg{will-change:opacity}
+.scenebg{transition:opacity 1.4s ease-in-out;will-change:opacity}
 .boardfade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity 1.4s ease-in-out}
 body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,body.bgswap .sheet,body.bgswap header.ui *,body.bgswap nav.ui *{transition:background-color 1.4s ease-in-out,color 1.4s ease-in-out,border-color 1.4s ease-in-out,fill 1.4s ease-in-out,stroke 1.4s ease-in-out}
 .scenebg.leaving{opacity:0}
