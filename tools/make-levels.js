@@ -80,7 +80,7 @@ const out={}, rows=[];
   const c=k=>l.arrows.filter(k).length;
   const limit=s.timed?E.timeLimitFor(sol.sequence.length):null;
   rows.push({set:name,level:i+1,grid:s.w+'x'+s.h,arrows:l.arrows.length,twin:c(a=>a.kind==='twin')/2,compass:c(a=>a.kind==='compass'),sleep:c(a=>a.key!==undefined),mirror:l.mirrors.length,flowers:(l.flowers||[]).length,patient:c(a=>a.wait),filled:Math.round(l.density*100)+'%',freeAtStart:E.legalMoves(l,E.newState(l)).length,lives:s.lives||3,limit,stuck:Math.round(E.trapRate(l,300,7)*100)+'%'});
-  return {w:l.w,h:l.h,lives:s.lives||3,hints:s.hints===undefined?1:s.hints,timeLimit:limit,seed:l.seed,caption:s.caption||null,season:s.season||null,flowers:l.flowers||null,mirrors:l.mirrors,arrows:l.arrows};
+  return {w:l.w,h:l.h,lives:s.lives||3,hints:s.hints===undefined?1:s.hints,timeLimit:limit,seed:l.seed,caption:s.caption||null,season:s.season||null,guaranteeAt:s.season?Math.max(1,Math.floor(sol.sequence.length/3)):null,flowers:l.flowers||null,mirrors:l.mirrors,arrows:l.arrows};
  });
 });
 fs.writeFileSync(__dirname+'/../src/levels.json',JSON.stringify(out));

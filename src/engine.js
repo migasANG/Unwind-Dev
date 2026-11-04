@@ -45,7 +45,7 @@
       removed: level.arrows.map(function () { return false; }),
       launches: 0,
       lives: level.lives === null ? null : (level.lives || 3),
-      history: [], frozen: {}, burning: {}, snaps: []
+      history: [], frozen: {}, burning: {}, snaps: [], eventDone: false
     };
   }
   function headOf(a) { return a.cells[a.cells.length - 1]; }
@@ -105,7 +105,7 @@
     }
     if (level.season) {
       state.snaps = state.snaps || [];
-      state.snaps.push({ frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
+      state.snaps.push({ eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
         geo: level.arrows.map(function (a) { return { cells: a.cells, dir: a.dir }; }) });
     }
     members.forEach(function (m) { state.removed[m.id] = true; });
@@ -121,7 +121,7 @@
     state.launches--;
     var snap = state.snaps && state.snaps.pop();
     if (snap && level) {
-      state.frozen = snap.frozen; state.burning = snap.burning;
+      state.frozen = snap.frozen; state.burning = snap.burning; state.eventDone = snap.eventDone;
       level.arrows.forEach(function (a, i) { a.cells = snap.geo[i].cells; a.dir = snap.geo[i].dir; });
       rebuildGrid(level, state);
     }
@@ -201,11 +201,14 @@
     return out;
   }
   function seasonStep(level, state) {
-    var ev = { freeze: [], thaw: [], burn: [], wind: false, rotate: [], cleared: false };
+    var ev = { triggered: false, forced: false, freeze: [], thaw: [], burn: [], wind: false, rotate: [], cleared: false };
     if (!level.season || isWon(state)) return ev;
     var r = rng32(((level.seed || 7) * 31 + state.launches * 7919 + 13) >>> 0);
     r(); r();
     var live = level.arrows.filter(function (a) { return !state.removed[a.id]; });
+    // Pre-made levels promise at least one event. It keeps being retried until one really happens.
+    var forced = level.guaranteeAt !== undefined && level.guaranteeAt !== null && !state.eventDone && state.launches >= level.guaranteeAt;
+    ev.forced = forced;
     // An arrow nothing can reach thaws by itself after 3 launches.
     Object.keys(state.frozen).forEach(function (id) {
       if (state.removed[id]) { delete state.frozen[id]; return; }
@@ -213,7 +216,9 @@
       state.frozen[id] = reachable ? 0 : state.frozen[id] + 1;
       if (state.frozen[id] >= 3) { delete state.frozen[id]; ev.thaw.push(+id); }
     });
-    if (level.season === 'winter' && r() < 0.2) {
+    var roll0 = r();
+    if (level.season === 'winter' && (roll0 < 0.2 || forced)) {
+      ev.triggered = true;
       var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && state.frozen[a.id] === undefined; }), r);
       pool.some(function (a) {
         if (ev.freeze.length >= want) return true;
@@ -223,7 +228,8 @@
         return false;
       });
     }
-    if (level.season === 'summer' && r() < 0.25) {
+    if (level.season === 'summer' && (roll0 < 0.25 || forced)) {
+      ev.triggered = true;
       var tiles = 1 + Math.floor(r() * 5), turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
       live.forEach(function (a) { rayCellsOf(level, state, a).forEach(function (k) { onPath[k] = 1; }); });
       // Prefer tiles that arrows actually need, so the fire matters.
@@ -235,20 +241,28 @@
         return false;
       });
     }
-    if (level.season === 'autumn' && r() < 0.5) {
-      ev.wind = true;
-      shuffle(live.slice(), r).forEach(function (a) {
-        var roll = r(), pick = r();
-        if (roll >= 0.5) return;
+    if (level.season === 'autumn' && (roll0 < 0.5 || forced)) {
+      ev.triggered = true; ev.wind = true;
+      var attempts = 0, maxAttempts = level.big ? 4 : Infinity, windOrder = shuffle(live.slice(), r);
+      var spin = function (a, pick) {
         var options = pivotOptions(level, state, a);
-        if (!options.length) return;
+        if (!options.length || attempts >= maxAttempts) return false;
+        attempts++;
         var o = options[Math.floor(pick * options.length)], oldCells = a.cells, oldDir = a.dir;
         a.cells = o.cells; a.dir = o.dir; rebuildGrid(level, state);
-        var res = solve(level, state, 15000);
-        if (res.solved) ev.rotate.push({ id: a.id, quarters: o.quarters });
-        else { a.cells = oldCells; a.dir = oldDir; rebuildGrid(level, state); }
+        var res = solve(level, state, level.big ? 1500 : 15000);
+        if (res.solved) { ev.rotate.push({ id: a.id, quarters: o.quarters }); return true; }
+        a.cells = oldCells; a.dir = oldDir; rebuildGrid(level, state);
+        return false;
+      };
+      windOrder.forEach(function (a) {
+        var roll = r(), pick = r();
+        if (roll < 0.5) spin(a, pick);
       });
+      // A promised gust must really turn something if anything can turn.
+      if (forced && !ev.rotate.length) windOrder.some(function (a) { return spin(a, r()); });
     }
+    if (ev.freeze.length || ev.burn.length || ev.rotate.length || level.season === 'spring') state.eventDone = true;
     // If nothing can move, fire dies and ice melts, so effects alone can never trap the player.
     if (isStuck(level, state) && (Object.keys(state.frozen).length || Object.keys(state.burning).length)) {
       ev.thaw = ev.thaw.concat(Object.keys(state.frozen).map(Number));
@@ -557,7 +571,7 @@
         var seen = {};
         lvl.arrows.forEach(function (a) {
           if (a.kind === 'compass') return;
-          check(lvl, { removed: lvl.arrows.map(function () { return true; }), launches: 0 }, a).path.forEach(function (c) { seen[c.join()] = 1; });
+          check(lvl, { removed: lvl.arrows.map(function () { return true; }), launches: 1e9 }, a).path.forEach(function (c) { seen[c.join()] = 1; });
         });
         mirrorUse = Object.keys(seen).length;
         if (mirrorUse < lvl.mirrors.length) continue;
@@ -586,7 +600,8 @@
       maxLen: 5 + size + extra + Math.round(root * 1.5), depth: 5 + size + extra * 2,
       twins: more(Math.min(2, Math.floor(n / 3)) + (hard ? 1 : 0)), compass: more(Math.min(2, Math.floor((n + 1) / 4)) + (hard ? 1 : 0)),
       sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more((n % 5 === 3 ? 2 : 0) + (hard && n % 2 ? 2 : 0)), patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
-      trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1
+      trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1,
+      flowers: opts.season === 'spring' ? 0.24 : 0, gaps: opts.season === 'summer' ? 0.14 : opts.season === 'autumn' ? 0.24 : 0
     };
   }
   // Builds a board, simplifying the mix of special arrows if a seed cannot fit them all.
@@ -597,7 +612,7 @@
       || generate(Object.assign({}, spec, { mirrors: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0 }), seed, tries * 2);
-    lvl.hints = spec.hints; lvl.big = spec.big;
+    lvl.hints = spec.hints; lvl.big = spec.big; lvl.season = opts && opts.season ? opts.season : null;
     return lvl;
   }
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }

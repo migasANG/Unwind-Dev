@@ -169,7 +169,42 @@
   function windSound(ctx, dest, t) { glide(ctx, dest, 220, 520, t, 0.75, 0.06); glide(ctx, dest, 330, 260, t + 0.25, 0.8, 0.05); }
   function freezeSound(ctx, dest, t) { [88, 91, 96].forEach(function (m, i) { voice(ctx, dest, hz(m), t + i * 0.06, 0.07, 0.9, 0.002, BELL); }); }
   function crackSound(ctx, dest, t) { [84, 79].forEach(function (m, i) { voice(ctx, dest, hz(m), t + i * 0.05, 0.1, 0.45, 0.002, WOOD); }); }
-  function fireSound(ctx, dest, t) { glide(ctx, dest, 120, 240, t, 0.5, 0.09); glide(ctx, dest, 300, 130, t + 0.1, 0.5, 0.05); }
+  // A short burst of shaped noise: the rush of flame. It has a defined end, so nothing lingers.
+  function flameBurst(ctx, dest, t, dur, vol, fromHz, toHz) {
+    var len = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) { last = last * 0.82 + (Math.random() * 2 - 1) * 0.18; d[i] = last; }
+    var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = buf; f.type = 'bandpass'; f.Q.value = 0.8;
+    f.frequency.setValueAtTime(fromHz, t); f.frequency.exponentialRampToValueAtTime(toHz, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + dur * 0.28); g.gain.linearRampToValueAtTime(0, t + dur);
+    s.connect(f); f.connect(g); g.connect(dest); s.start(t); s.stop(t + dur + 0.02);
+    s.onended = function () { g.disconnect(); f.disconnect(); };
+  }
+  function crackles(ctx, dest, t, span, count, vol) {
+    for (var i = 0; i < count; i++) voice(ctx, dest, 1400 + Math.random() * 1800, t + Math.random() * span, vol * (0.5 + Math.random() * 0.5), 0.05, 0.001, [[1, 1]]);
+  }
+  // Tiles catching fire: a rising whoosh, a warm low swell and crackling embers.
+  function igniteSound(ctx, dest, t) {
+    flameBurst(ctx, dest, t, 0.75, 0.55, 500, 1500);
+    glide(ctx, dest, 70, 165, t, 0.65, 0.16);
+    crackles(ctx, dest, t + 0.12, 0.85, 9, 0.07);
+  }
+  // An arrow hitting fire: a quick flare and a sizzle.
+  function fireSound(ctx, dest, t) {
+    flameBurst(ctx, dest, t, 0.42, 0.45, 1300, 500);
+    glide(ctx, dest, 220, 95, t, 0.4, 0.1);
+    crackles(ctx, dest, t + 0.05, 0.5, 5, 0.06);
+  }
+  // A bee carrying off a flower: a soft wing flutter under a bright little rising chime.
+  function springSound(ctx, dest, t) {
+    var o = ctx.createOscillator(), lfo = ctx.createOscillator(), depth = ctx.createGain(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(235, t); o.frequency.linearRampToValueAtTime(330, t + 0.55);
+    lfo.frequency.value = 42; depth.gain.value = 16; lfo.connect(depth); depth.connect(o.frequency);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045, t + 0.07); g.gain.linearRampToValueAtTime(0, t + 0.6);
+    o.connect(g); g.connect(dest); o.start(t); lfo.start(t); o.stop(t + 0.62); lfo.stop(t + 0.62);
+    o.onended = function () { g.disconnect(); depth.disconnect(); };
+    [79, 83, 88].forEach(function (m, i) { voice(ctx, dest, hz(m), t + 0.08 + i * 0.09, 0.085, 0.75, 0.003, BELL); });
+  }
   function buzzSound(ctx, dest, t) { glide(ctx, dest, 300, 420, t, 0.22, 0.03); }
   // Schedules one bar and returns its length in seconds.
   function scheduleBar(ctx, dest, themeIndex, bar, t) {
@@ -213,5 +248,5 @@
     voice(ctx, dest, urgent ? 1046.5 : 784, t, urgent ? 0.26 : 0.17, 0.26, 0.002, WOOD);
     if (urgent) voice(ctx, dest, 1046.5, t + 0.13, 0.17, 0.2, 0.002, WOOD);
   }
-  return { windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
+  return { igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
 });

@@ -186,7 +186,7 @@
   /* ---------- Level state ---------- */
   var current = null, state = null, hintsLeft = 1, hintArrow = -1, stuckShown = false, blockerGlow = {};
   var flights = [], bounces = {}, ripples = [], angles = {}, introStart = 0, collisions = 0, ended = false;
-  var lastHintAmt = 0, wakes = [], HINT_IN = 500, HINT_HOLD = 3000, HINT_OUT = 800, bee = null, beesLeaving = [], ambience = [], windAt = 0, hintStart = 0, tune = [], tuneBase = 0, hintsUsed = 0, rewinds = 0, activeMs = 0, lastFrame = 0, timeLeft = null, lastSecond = -1, nudges = {};
+  var lastHintAmt = 0, wakes = [], HINT_IN = 500, HINT_HOLD = 3000, HINT_OUT = 800, embers = [], bee = null, beesLeaving = [], ambience = [], windAt = 0, hintStart = 0, tune = [], tuneBase = 0, hintsUsed = 0, rewinds = 0, activeMs = 0, lastFrame = 0, timeLeft = null, lastSecond = -1, nudges = {};
 
   function openLevel(set, index) {
     var list = SETS[set], info = SET_INFO[set], lvl = list[index];
@@ -197,16 +197,18 @@
   function timeChapter() { var h = new Date().getHours(); return h < 6 ? 4 : h < 10 ? 0 : h < 14 ? 1 : h < 18 ? 2 : h < 21 ? 3 : 4; }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
   function openEndless() {
-    var o = endlessOpts(), scale = o.scale || 1, key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + (scale > 1 ? scale + 'x' : '');
+    var o = Object.assign({}, endlessOpts()), scale = o.scale || 1, choice = o.seasonChoice || 'none';
+    o.season = choice === 'random' ? SEASON_ORDER[Math.floor(Math.random() * 4)] : choice === 'none' ? null : choice;
+    var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + (scale > 1 ? scale + 'x' : '') + (choice !== 'none' ? '-' + choice : '');
     progress.endlessBy = progress.endlessBy || {};
-    var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009;
+    var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009 + (o.season ? 40000 + o.season.length * 777 + o.season.charCodeAt(0) * 91 : 0);
     var lvl = E.endlessBoard(n, o, seed);
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
     // Big boards get extra time, since the player also has to move around them.
     if (o.timed) lvl.timeLimit = Math.round(E.timeLimitFor(lvl.solution.length) * (scale > 1 ? 1.3 : 1));
-    var tags = (scale > 1 ? ' · ' + scale + 'x' : '') + (o.hard ? ' · Harder' : '') + (o.timed ? ' · Timed' : '');
-    begin({ id: 'open-' + key + '-' + (n + 1), endlessKey: key, mode: 'endless', level: lvl, title: 'Open water ' + (n + 1) + tags, chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    var tags = (o.season ? ' · ' + SET_INFO[o.season].label : '') + (scale > 1 ? ' · ' + scale + 'x' : '') + (o.hard ? ' · Harder' : '') + (o.timed ? ' · Timed' : '');
+    begin({ id: 'open-' + key + '-' + (n + 1), endlessKey: key, mode: 'endless', level: lvl, title: 'Open water ' + (n + 1) + tags, chapter: o.season ? SEASONS[o.season] : CHAPTERS[timeChapter()], sunY: 34 });
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -220,9 +222,12 @@
     duck(false); stopJingle();
     tuneBase = c.mode === 'levels' ? c.index : 3;
     closeSheet();
+    // Open water rolls fresh, unpredictable events for every game, including restarts.
+    if (c.mode === 'endless') c.level.seed = Math.floor(Math.random() * 1e9);
     E.resetBoard(c.level);
     state = E.newState(c.level);
-    bee = null; beesLeaving = []; ambience = []; windAt = 0;
+    bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = [];
+    c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
     hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {};
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
@@ -473,7 +478,7 @@
     if (l.season) {
       drawAmbience(now, l.season);
       // A soft panel keeps the arrows easy to read over the scenery.
-      ctx.globalAlpha = 0.62 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.card;
+      ctx.globalAlpha = 0.5 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.card;
       ctx.beginPath(); ctx.roundRect(ox - cs * 0.2, oy - cs * 0.2, cs * (l.w + 0.4), cs * (l.h + 0.4), cs * 0.4); ctx.fill();
       ctx.globalAlpha = 1;
     }
@@ -553,7 +558,9 @@
       var nudge = nudges[a.id] && now < nudges[a.id] ? Math.sin((nudges[a.id] - now) / 40) * cs * 0.05 : 0;
       var glow = blockerGlow[a.id] && now < blockerGlow[a.id] ? 1 + 0.35 * Math.sin((blockerGlow[a.id] - now) / 420 * Math.PI) : 1;
       var isFrozen = state.frozen[a.id] !== undefined, burning = a.burnUntil && now < a.burnUntil;
-      var baseColor = burning ? mixColor(arrowColor(a), '#ff5a12', 0.85) : isFrozen ? '#3f9fd8' : arrowColor(a);
+      var burnT = burning && a.burn ? (now - a.burn.start) / a.burn.dur : 0;
+      // Glowing hot at first, then briefly charred, then back to normal.
+      var baseColor = burning ? (burnT < 0.55 ? mixColor(arrowColor(a), '#ff5a12', 0.9) : mixColor('#2b1208', arrowColor(a), (burnT - 0.55) / 0.45)) : isFrozen ? '#3f9fd8' : arrowColor(a);
       var color = amt ? mixColor(baseColor, colors.hint, amt) : baseColor;
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
@@ -598,6 +605,7 @@
     });
 
     drawWakes(now);
+    if (embers.length) drawEmbers(now);
     if (windAt) drawWind(now);
     if (l.flowers) drawBees(now);
 
@@ -750,33 +758,75 @@
     for (var i = 0; i < n; i++) out += make(r, i);
     return out;
   }
-  function svgWrap(inner) { return '<svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' + inner + '</svg>'; }
+  function svgWrap(inner) { return '<svg viewBox="0 0 1000 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' + inner + '</svg>'; }
+  function gradient(id, stops, horizontal) {
+    return '<linearGradient id="' + id + '" x1="0" y1="0" x2="' + (horizontal ? 1 : 0) + '" y2="' + (horizontal ? 0 : 1) + '">' + stops.map(function (st) { return '<stop offset="' + st[0] + '" stop-color="' + st[1] + '"/>'; }).join('') + '</linearGradient>';
+  }
+  function cloud(x, y, k, o) { return '<g class="drift' + (x % 2 ? ' b' : '') + '" opacity="' + (o || 0.9) + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" fill="#fff"><ellipse cx="0" cy="0" rx="46" ry="15"/><circle cx="-16" cy="-10" r="16"/><circle cx="10" cy="-15" r="21"/><circle cx="32" cy="-6" r="13"/></g></g>'; }
   function seasonScene(season) {
     if (season === 'winter') {
-      var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-4" y="0" width="8" height="14" fill="#5a4636"/><path d="M0-70 26-30H12L32 0H-32L-12-30H-26Z" fill="#2f6a5c"/><path d="M0-70 14-48 2-44-12-46Z" fill="#fff"/><path d="M-26 0 32 0 18-8-20-8Z" fill="#fff" opacity=".85"/></g>'; };
-      var man = function (x, y, k, sc) { return '<g class="sway' + (sc ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><circle cy="-14" r="22" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cy="-46" r="16" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cy="-70" r="11" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cx="-4" cy="-72" r="1.600" fill="#223"/><circle cx="4" cy="-72" r="1.600" fill="#223"/><path d="M0-69l11 3-11 2Z" fill="#f08020"/><path d="M-11-60h22v5h-22Z" fill="#c23c3c"/><path d="M5-58h6v16h-6Z" fill="#c23c3c"/><rect x="-11" y="-92" width="22" height="13" fill="#2a2a3f"/><rect x="-16" y="-80" width="32" height="3" fill="#2a2a3f"/><circle cy="-46" r="1.800" fill="#223"/><circle cy="-38" r="1.800" fill="#223"/><circle cy="-20" r="1.800" fill="#223"/><path d="M-15-46-38-58M15-46 38-60" stroke="#5a4636" stroke-width="2.500" stroke-linecap="round"/></g></g>'; };
-      return svgWrap('<path d="M0 180Q100 130 210 175T400 150V800H0Z" fill="#e3f0f8"/><path d="M0 600Q110 545 220 590T400 560V800H0Z" fill="#f2f8fc"/><path d="M0 700Q140 660 260 700T400 680V800H0Z" fill="#fff"/>' +
-        pine(30, 180, 0.9) + pine(92, 165, 0.65) + pine(330, 165, 0.85) + pine(382, 160, 0.6) + pine(48, 640, 1.2) + pine(365, 625, 1.1) +
-        man(120, 690, 1, false) + man(295, 684, 0.82, true) + man(205, 180, 0.48, true));
+      var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-5" y="-4" width="10" height="20" fill="#4a3528"/><path d="M0-96 20-66H9L30-36H13L38-2H-38L-13-36H-30L-9-66H-20Z" fill="#1f5a50"/><path d="M0-96 20-66H9L30-36H13L38-2H0Z" fill="#17473f"/><path d="M0-96 13-76 3-79-3-73-13-76ZM-22-50-9-54-3-47 7-53 22-50 13-36-3-41-13-36ZM-31-14-14-20-3-12 11-20 31-14 38-2H-38Z" fill="#fff"/></g>'; };
+      var man = function (x, y, k, b2) { return '<g class="sway' + (b2 ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="10" rx="32" ry="7" fill="#b9d3e6" opacity=".8"/><circle cy="-16" r="26" fill="url(#wSnow)"/><circle cy="-52" r="19" fill="url(#wSnow)"/><circle cy="-80" r="14" fill="url(#wSnow)"/><circle cx="-5" cy="-83" r="2" fill="#1c2238"/><circle cx="5" cy="-83" r="2" fill="#1c2238"/><path d="M0-79 15-75 0-73Z" fill="#f08020"/><path d="M-6-74Q0-70 6-74" fill="none" stroke="#1c2238" stroke-width="1.500" stroke-dasharray="1.500 2"/><path d="M-14-68Q0-61 14-68V-62Q0-55-14-62Z" fill="#c8323c"/><path d="M6-62h8v20h-8Z" fill="#c8323c"/><path d="M6-48h8M6-44h8" stroke="#fff" stroke-width="1.500"/><rect x="-13" y="-108" width="26" height="17" rx="1" fill="#22243a"/><rect x="-13" y="-96" width="26" height="4" fill="#c8323c"/><rect x="-19" y="-92" width="38" height="4" rx="2" fill="#22243a"/><circle cy="-53" r="2.200" fill="#1c2238"/><circle cy="-43" r="2.200" fill="#1c2238"/><circle cy="-22" r="2.400" fill="#1c2238"/><path d="M-18-54-44-68M-34-63-42-58M-34-63-40-72M18-54 44-70M34-64 42-60M34-64 40-74" fill="none" stroke="#5a3e2a" stroke-width="2.800" stroke-linecap="round"/></g></g>'; };
+      var cabin = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-30" y="-30" width="60" height="30" fill="#6b4630"/><path d="M-30-20H30M-30-10H30" stroke="#4f3222" stroke-width="1.500"/><rect x="-16" y="-23" width="12" height="12" fill="#ffd27a"/><rect x="5" y="-23" width="12" height="12" fill="#ffd27a"/><circle cx="-10" cy="-17" r="17" fill="#ffd27a" opacity=".22"/><circle cx="11" cy="-17" r="17" fill="#ffd27a" opacity=".22"/><path d="M-40-28 0-60 40-28Z" fill="#fff"/><path d="M-40-28 0-60 0-52-34-26Z" fill="#d7e8f3"/><rect x="16" y="-58" width="8" height="18" fill="#5a3e2a"/><rect x="14" y="-61" width="12" height="4" fill="#fff"/></g>'; };
+      var stars = seededRows(36, 11, function (r, i) { return '<circle class="twinkle' + (['', ' b', ' c'][i % 3]) + '" cx="' + Math.round(r() * 1000) + '" cy="' + Math.round(r() * 170) + '" r="' + (0.8 + r() * 1.4).toFixed(1) + '" fill="#fff"/>'; });
+      return svgWrap('<defs>' + gradient('wSky', [[0, '#35598f'], [0.45, '#88b3d8'], [1, '#e4f2fa']]) + gradient('wFar', [[0, '#c5d8ea'], [1, '#8fb0cf']]) + gradient('wSnow', [[0, '#ffffff'], [1, '#cfe3f0']]) + gradient('wHill', [[0, '#ffffff'], [1, '#d6e8f4']]) + gradient('wLake', [[0, '#a9d3ea'], [1, '#e0f1f9']]) + '</defs>' +
+        '<rect width="1000" height="800" fill="url(#wSky)"/>' + stars +
+        '<circle cx="705" cy="118" r="34" fill="#fbfdff" opacity=".9"/><circle cx="705" cy="118" r="60" fill="#fff" opacity=".18"/>' +
+        '<path d="M0 260 130 130 230 225 350 95 480 235 610 120 730 230 860 110 1000 245V400H0Z" fill="url(#wFar)"/><path d="M130 130 103 158 123 150 142 168 158 150ZM350 95 318 130 342 120 362 142 382 124ZM610 120 582 150 604 142 624 158 640 146ZM860 110 830 142 852 134 872 150 890 138Z" fill="#fff"/>' +
+        '<path d="M0 305Q170 240 360 292T700 270 1000 295V800H0Z" fill="url(#wHill)"/>' +
+        [40, 120, 215, 720, 800, 900, 965].map(function (x, i) { return pine(x, 285 - (i % 3) * 8, 0.42 + (i % 3) * 0.07); }).join('') + cabin(505, 280, 0.72) +
+        '<path d="M0 575Q200 505 440 560T1000 530V800H0Z" fill="#eaf4fa"/><ellipse cx="500" cy="618" rx="240" ry="42" fill="url(#wLake)"/><path d="M340 616h90M480 628h120M560 608h70" stroke="#fff" stroke-width="2.500" stroke-linecap="round" opacity=".8"/>' +
+        '<path d="M0 665Q250 625 520 668T1000 640V800H0Z" fill="url(#wHill)"/>' +
+        pine(330, 640, 0.95) + pine(675, 636, 0.9) + pine(120, 680, 1.5) + pine(880, 670, 1.4) + pine(30, 700, 1.15) + pine(965, 695, 1.1) +
+        man(415, 705, 0.82, false) + man(590, 700, 0.72, true) + man(505, 255, 0.28, true) + man(225, 715, 0.95, true) + man(770, 715, 0.9, false));
     }
     if (season === 'spring') {
-      var dots = seededRows(90, 77, function (r) { var x = Math.round(r() * 400), y = Math.round(330 + r() * 460), c = ['#f06ca8', '#ffd23f', '#ffffff', '#e8485e', '#b184ea'][Math.floor(r() * 5)], k = 1.5 + (y - 330) / 110; return '<circle cx="' + x + '" cy="' + y + '" r="' + k.toFixed(1) + '" fill="' + c + '"/>'; });
-      return svgWrap('<path d="M-10 250 70 110 130 200 205 70 290 210 345 130 410 250Z" fill="#7d94b5"/><path d="M205 70 182 108 200 100 216 116 230 98ZM70 110 54 138 72 130 88 138ZM345 130 330 156 346 150 360 158Z" fill="#fff"/><path d="M0 250Q120 210 240 245T400 225V800H0Z" fill="#a6db7c"/><path d="M0 340Q130 300 250 335T400 320V800H0Z" fill="#8dd066"/><path d="M0 560Q140 510 260 555T400 530V800H0Z" fill="#74c253"/>' +
-        '<path class="sway" d="M250 245C200 330 330 390 270 480S60 590 150 800H290C210 640 400 570 380 440S300 320 280 245Z" fill="#6cc6e8"/><path class="wave" d="M262 300C240 350 320 400 300 470M210 620C170 680 190 740 215 790" stroke="#d8f3fb" stroke-width="3" fill="none" stroke-linecap="round"/>' + dots);
+      var bloom = function (x, y, k, c) { var o = ''; for (var i = 0; i < 5; i++) { var a = i * 1.257 - 1.57; o += '<circle cx="' + (Math.cos(a) * k).toFixed(1) + '" cy="' + (Math.sin(a) * k).toFixed(1) + '" r="' + (k * 0.72).toFixed(1) + '" fill="' + c + '"/>'; } return '<g transform="translate(' + x + ' ' + y + ')"><path d="M0 ' + k + 'V' + (k * 5) + '" stroke="#2f8a3f" stroke-width="' + Math.max(1, k * 0.35).toFixed(1) + '"/>' + o + '<circle r="' + (k * 0.55).toFixed(1) + '" fill="#ffd23f"/></g>'; };
+      var meadow = seededRows(150, 77, function (r) { var y = 440 + Math.pow(r(), 0.7) * 300, x = Math.round(r() * 1000); if (x > 390 && x < 610 && y > 620) x = x < 500 ? x - 230 : x + 230; return bloom(x, Math.round(y), +(1.4 + (y - 440) / 62).toFixed(1), ['#f06ca8', '#ffcf33', '#ffffff', '#e8485e', '#b184ea', '#ff9f43'][Math.floor(r() * 6)]); });
+      var blossom = function (x, y, k) { return '<g class="sway"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><path d="M-7 0-4-62H4L8 0Z" fill="#6a4426"/><path d="M-2-40-25-65M2-46 26-72" stroke="#6a4426" stroke-width="4" stroke-linecap="round"/><g fill="#ffb7d5"><circle cy="-88" r="34"/><circle cx="-30" cy="-70" r="24"/><circle cx="30" cy="-74" r="25"/><circle cx="-12" cy="-112" r="20"/><circle cx="16" cy="-108" r="20"/></g><g fill="#ffd9e8"><circle cx="-9" cy="-94" r="14"/><circle cx="17" cy="-82" r="11"/><circle cx="-27" cy="-74" r="10"/></g></g></g>'; };
+      var fly = function (x, y, c, d) { return '<g class="flit" style="animation-delay:' + d + 's"><g transform="translate(' + x + ' ' + y + ')"><path d="M0 0C-10-14-20-9-15 0-20 8-8 10 0 0Z" fill="' + c + '"/><path d="M0 0C10-14 20-9 15 0 20 8 8 10 0 0Z" fill="' + c + '"/><path d="M0-6V6" stroke="#2a2008" stroke-width="1.500"/></g></g>'; };
+      return svgWrap('<defs>' + gradient('sSky', [[0, '#5eb6ea'], [0.6, '#b9e5f6'], [1, '#effae2']]) + gradient('sFar', [[0, '#6d84ad'], [1, '#a9c4cf']]) + gradient('sMid', [[0, '#7fa88f'], [1, '#9ccc8e']]) + gradient('sField1', [[0, '#b7e68a'], [1, '#90d267']]) + gradient('sField2', [[0, '#8fd465'], [1, '#62b94a']]) + gradient('sRiver', [[0, '#bcecf8'], [0.5, '#6fcbea'], [1, '#3aa7d6']]) + '</defs>' +
+        '<rect width="1000" height="800" fill="url(#sSky)"/><circle cx="790" cy="95" r="44" fill="#fff6c2"/><circle cx="790" cy="95" r="78" fill="#fff6c2" opacity=".28"/>' + cloud(180, 80, 1.2) + cloud(520, 54, 0.8, 0.8) + cloud(690, 150, 0.7, 0.8) + cloud(90, 170, 0.6, 0.7) +
+        '<path d="M-20 310 110 165 200 250 330 92 460 245 545 170 670 72 800 235 900 160 1020 300V420H-20Z" fill="url(#sFar)"/>' +
+        '<path d="M330 92 298 132 322 122 343 146 362 124 376 130ZM670 72 636 116 660 104 684 130 702 108 716 116ZM110 165 88 190 108 182 124 196 136 186ZM900 160 878 184 898 176 916 190 928 182Z" fill="#fff"/>' +
+        '<path d="M-20 335 160 230 340 320 520 240 730 325 880 245 1020 330V450H-20Z" fill="url(#sMid)"/>' +
+        '<path d="M0 355Q220 300 470 348T1000 320V800H0Z" fill="url(#sField1)"/>' +
+        '<g fill="none" stroke="#7fc25a" stroke-width="2.500" opacity=".65"><path d="M0 395Q230 345 450 388"/><path d="M0 425Q230 372 440 420"/><path d="M0 458Q200 410 415 455"/><path d="M640 380Q830 345 1000 362"/><path d="M660 415Q830 382 1000 398"/><path d="M675 452Q830 420 1000 436"/></g>' +
+        '<path d="M0 500Q230 450 500 500T1000 470V800H0Z" fill="url(#sField2)"/>' +
+        '<path d="M535 344C500 400 590 440 560 505S360 590 430 800H660C590 650 760 590 720 480S590 410 560 344Z" fill="url(#sRiver)"/>' +
+        '<path d="M535 344C500 400 590 440 560 505S360 590 430 800" fill="none" stroke="#3f8f3a" stroke-width="5" opacity=".55"/><path d="M560 344C590 410 760 480 720 480" fill="none" stroke="none"/><path d="M660 800C590 650 760 590 720 480S590 410 560 344" fill="none" stroke="#3f8f3a" stroke-width="5" opacity=".55"/>' +
+        '<g class="wave"><path d="M552 400Q590 430 585 470M630 520Q570 570 530 620M580 640Q540 700 540 780" fill="none" stroke="#e8fbff" stroke-width="3.500" stroke-linecap="round"/></g><g class="wave b"><path d="M625 470Q660 510 640 550M480 640Q460 700 480 770M660 620Q620 680 620 740" fill="none" stroke="#d3f4fc" stroke-width="2.500" stroke-linecap="round"/></g>' +
+        '<g stroke="#8a5e38" stroke-width="4" stroke-linecap="round"><path d="M40 505V470M95 498V463M150 492V457M205 487V452M260 484V449"/><path d="M28 480 275 458M28 492 275 470" stroke-width="2.500"/></g>' +
+        blossom(330, 440, 0.85) + blossom(770, 430, 0.8) + blossom(130, 655, 1.3) + blossom(880, 650, 1.35) + meadow +
+        fly(365, 610, '#ff8fb8', 0) + fly(650, 560, '#ffcf33', 1.4) + fly(480, 690, '#b184ea', 2.6) + fly(610, 690, '#ff9f43', 0.8));
     }
     if (season === 'summer') {
-      return svgWrap('<circle cx="320" cy="84" r="46" fill="#fff0a8"/><circle cx="320" cy="84" r="66" fill="#fff0a8" opacity=".3"/><path d="M0 190H400V470H0Z" fill="#3ab3d8"/><path d="M0 190H400V250H0Z" fill="#6ccbe6"/>' +
-        '<g class="wave"><path d="M-20 300Q30 285 80 300T180 300T280 300T380 300T480 300" stroke="#c9f0f8" stroke-width="3" fill="none"/></g><g class="wave b"><path d="M-20 370Q30 355 80 370T180 370T280 370T380 370T480 370" stroke="#c9f0f8" stroke-width="3" fill="none"/></g>' +
-        '<path d="M0 470Q100 440 210 462T400 452V800H0Z" fill="#f4dc9f"/><g class="wave b"><path d="M-30 468Q70 442 210 466T430 452" stroke="#fff" stroke-width="7" fill="none" opacity=".85"/></g>' +
-        '<g class="sway" style="transform-origin:50% 100%"><path d="M46 740C52 650 70 590 90 540" stroke="#7a5230" stroke-width="10" fill="none" stroke-linecap="round"/><g fill="#2f9a5a"><path d="M90 540C60 510 26 515 8 540 40 530 66 535 90 540Z"/><path d="M90 540C70 500 40 480 12 488 44 498 70 515 90 540Z"/><path d="M90 540C100 500 130 485 158 495 130 505 108 520 90 540Z"/><path d="M90 540C120 520 154 525 172 552 140 540 114 538 90 540Z"/></g></g>' +
-        '<g><path d="M300 730V590" stroke="#fff" stroke-width="5"/><path d="M226 610C240 550 360 550 374 610Z" fill="#e8485e"/><path d="M262 610C270 565 330 565 338 610Z" fill="#fff"/></g><rect x="150" y="682" width="92" height="30" rx="3" fill="#3ab3d8" transform="rotate(-6 196 697)"/><rect x="150" y="692" width="92" height="9" fill="#fff" transform="rotate(-6 196 697)"/><g transform="translate(0 -46)"><circle cx="350" cy="750" r="16" fill="#fff"/><path d="M350 734a16 16 0 0 1 14 8l-14 8Z" fill="#e8485e"/><path d="M350 750l-14-8a16 16 0 0 0 0 16Z" fill="#3ab3d8"/></g>');
+      var palm = function (x, y, k, flip) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + (flip ? -k : k) + ' ' + k + ')"><path d="M0 0C-4-80 16-160 58-230L72-226C36-160 24-80 26 0Z" fill="#8a5a32"/><path d="M6-30 28-36M6-62 30-68M12-95 36-100M22-128 45-132M34-160 56-164M46-190 66-194" stroke="#6a4324" stroke-width="3"/><g class="sway"><g transform="translate(66 -232)"><path d="M0 0C-50-46-112-30-142 20-96-5-48-8 0 0Z" fill="#279a58"/><path d="M0 0C-38-70-100-82-138-54-90-52-40-34 0 0Z" fill="#35b56a"/><path d="M0 0C-4-66 40-110 88-108 52-82 22-44 0 0Z" fill="#2aa35e"/><path d="M0 0C42-48 106-44 138 0 92-20 44-20 0 0Z" fill="#35b56a"/><path d="M0 0C42-6 88 18 104 66 70 36 34 16 0 0Z" fill="#279a58"/><path d="M0 0C-34 8-70 42-76 82-50 48-24 22 0 0Z" fill="#1f8a4c"/><circle cx="-7" cy="10" r="9" fill="#6a4324"/><circle cx="9" cy="12" r="9" fill="#7a5230"/></g></g></g>'; };
+      var glints = seededRows(46, 23, function (r, i) { var y = 230 + r() * 225; return '<rect class="twinkle' + (['', ' b', ' c'][i % 3]) + '" x="' + Math.round(r() * 1000) + '" y="' + Math.round(y) + '" width="' + Math.round(10 + r() * 26) + '" height="2.500" rx="1.200" fill="#fff" opacity=".8"/>'; });
+      var grains = seededRows(120, 29, function (r) { return '<circle cx="' + Math.round(r() * 1000) + '" cy="' + Math.round(490 + r() * 300) + '" r="' + (0.7 + r() * 1.3).toFixed(1) + '" fill="#c79a55" opacity=".55"/>'; });
+      var gull = function (x, y, k, d) { return '<g class="flit" style="animation-delay:' + d + 's"><path transform="translate(' + x + ' ' + y + ') scale(' + k + ')" d="M-18 0Q-9-11 0 0Q9-11 18 0" fill="none" stroke="#33506b" stroke-width="2.600" stroke-linecap="round"/></g>'; };
+      var umbrella = function (x, y, k, a, b2) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cx="4" cy="4" rx="58" ry="10" fill="#b8843f" opacity=".4"/><path d="M0 2V-108" stroke="#f7f1e3" stroke-width="5"/><path d="M-72-90C-58-142 58-142 72-90Z" fill="' + a + '"/><path d="M-44-90C-38-142 -14-136 0-122 14-136 38-142 44-90 30-100 14-100 0-90-14-100-30-100-44-90Z" fill="' + b2 + '"/><circle cy="-124" r="4" fill="#fff"/></g>'; };
+      var chair = function (x, y, k, c) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><path d="M-44 0-18-30 44-24 46-16-12-22-36 2Z" fill="' + c + '"/><path d="M-30-6-34 8M-6-22-14 8M36-22 40 8" stroke="#7a5230" stroke-width="3"/></g>'; };
+      return svgWrap('<defs>' + gradient('uSky', [[0, '#2fa6e0'], [0.55, '#8ddcf2'], [1, '#fff3c6']]) + gradient('uSea', [[0, '#1aa6d0'], [0.45, '#1fc4d3'], [1, '#7ceee0']]) + gradient('uSand', [[0, '#fff0bd'], [1, '#eec27a']]) + gradient('uBall', [[0, '#ff6b6b'], [1, '#d9404e']]) + '</defs>' +
+        '<rect width="1000" height="800" fill="url(#uSky)"/><circle cx="745" cy="96" r="52" fill="#fff4a8"/><circle cx="745" cy="96" r="82" fill="#fff4a8" opacity=".35"/><circle cx="745" cy="96" r="120" fill="#fff4a8" opacity=".16"/>' + cloud(170, 84, 1.1) + cloud(470, 60, 0.85) + cloud(620, 165, 0.6, 0.75) + cloud(885, 170, 0.7, 0.8) + gull(320, 120, 0.9, 0) + gull(390, 95, 0.65, 1.3) + gull(585, 118, 0.7, 2.1) +
+        '<path d="M120 230Q180 160 250 192 300 150 360 230Z" fill="#4c9a8a"/><path d="M180 230Q210 195 245 212 275 192 300 230Z" fill="#37806f"/>' +
+        '<rect y="228" width="1000" height="262" fill="url(#uSea)"/>' + glints +
+        '<g transform="translate(690 262)"><g class="drift b"><path d="M-30 0H34L24 13H-20Z" fill="#fff"/><path d="M2-3V-58L34-6Z" fill="#fff"/><path d="M0-3V-46L-23-6Z" fill="#ff7b6b"/></g></g>' +
+        '<g class="wave"><path d="M-30 325Q40 306 110 325T250 325T390 325T530 325T670 325T810 325T950 325T1090 325" stroke="#d7fbff" stroke-width="3" fill="none" opacity=".75"/></g><g class="wave b"><path d="M-30 395Q40 374 110 395T250 395T390 395T530 395T670 395T810 395T950 395T1090 395" stroke="#ecffff" stroke-width="4" fill="none" opacity=".8"/></g>' +
+        '<path d="M0 498Q170 462 360 490T720 472 1000 486V800H0Z" fill="url(#uSand)"/>' +
+        '<g class="wave b"><path d="M-40 496Q160 452 360 482T720 464 1040 478V498Q720 482 360 504 150 470-40 512Z" fill="#fff" opacity=".82"/></g><path d="M0 515Q190 480 360 508T720 490 1000 504" fill="none" stroke="#dcb56e" stroke-width="5" opacity=".5"/>' + grains +
+        palm(70, 720, 1.25, false) + palm(210, 650, 0.8, false) + palm(930, 725, 1.3, true) + palm(800, 650, 0.78, true) +
+        umbrella(385, 680, 0.82, '#ff6b6b', '#fff') + chair(440, 700, 0.72, '#1fa8c9') + umbrella(630, 662, 0.66, '#ffb020', '#fff7dc') + chair(560, 686, 0.6, '#ff8a65') +
+        '<g transform="translate(305 718)"><circle r="17" fill="url(#uBall)"/><path d="M0-17C12-8 12 8 0 17-12 8-12-8 0-17Z" fill="#fff"/><path d="M-17 0H17" stroke="#ffd23f" stroke-width="3"/></g>' +
+        '<path transform="translate(675 722) scale(.85)" d="M0-16 5-5 17-3 8 5 11 17 0 11-11 17-8 5-17-3-5-5Z" fill="#ff8a65" stroke="#d9603f" stroke-linejoin="round" stroke-width="2"/><g class="crab"><g transform="translate(505 722)"><ellipse rx="15" ry="10" fill="#e8483d"/><circle cx="-5" cy="-11" r="3" fill="#fff"/><circle cx="5" cy="-11" r="3" fill="#fff"/><circle cx="-5" cy="-11" r="1.500" fill="#222"/><circle cx="5" cy="-11" r="1.500" fill="#222"/><path d="M-13-4-24-12M13-4 24-12M-13 3-23 7M13 3 23 7" stroke="#c63228" stroke-width="3" stroke-linecap="round"/><circle cx="-26" cy="-14" r="4.500" fill="#e8483d"/><circle cx="26" cy="-14" r="4.500" fill="#e8483d"/></g></g>');
     }
     var tree = function (x, y, k, c, c2, cls) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><g class="sway' + (cls ? ' b' : '') + '"><path d="M-7 0-4-70 4-70 7 0Z" fill="#5a3418"/><path d="M-3-50-26-74M3-44 24-70" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/><circle cy="-92" r="38" fill="' + c + '"/><circle cx="-28" cy="-74" r="25" fill="' + c2 + '"/><circle cx="28" cy="-76" r="26" fill="' + c + '"/><circle cx="4" cy="-118" r="23" fill="' + c2 + '"/></g></g>'; };
     var cols = [['#d65f1e', '#e8872c'], ['#c0392b', '#d65f1e'], ['#e0a12d', '#eebb47'], ['#a8501a', '#c6702a']];
     var trees = seededRows(11, 41, function (r, i) { var y = i < 6 ? 190 + r() * 30 : 640 + r() * 70, k = i < 6 ? 0.75 + r() * 0.25 : 1 + r() * 0.35, c = cols[Math.floor(r() * 4)]; return tree(Math.round((i < 6 ? i * 76 : (i - 6) * 95) + r() * 26 - 6), Math.round(y), k.toFixed(2), c[0], c[1], i % 2); });
     var squirrel = function (x, y, k, cls, flip) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + (flip ? -k : k) + ' ' + k + ')"><g class="squirrel ' + cls + '"><g class="tailwag"><path d="M-12-4C-34-6-38-34-24-40-14-44-10-34-16-30-22-26-18-16-8-12Z" fill="#a8501a"/></g><ellipse cy="-9" rx="13" ry="10" fill="#b85f22"/><circle cx="11" cy="-20" r="7.500" fill="#b85f22"/><path d="M9-27 11-33 14-27Z" fill="#a8501a"/><circle cx="13.500" cy="-21" r="1.400" fill="#201008"/><ellipse cx="4" cy="-7" rx="5" ry="7" fill="#e8c090"/><path d="M-8 0H-2M4 0H10" stroke="#7a3a14" stroke-width="3" stroke-linecap="round"/></g></g>'; };
-    return svgWrap('<path d="M0 220Q120 170 250 215T400 195V800H0Z" fill="#c98a45"/><path d="M0 640Q130 590 260 635T400 610V800H0Z" fill="#a8682e"/><path d="M0 720Q140 690 270 725T400 705V800H0Z" fill="#8f5522"/>' + trees +
+    var autumnArt = ('<path d="M0 220Q120 170 250 215T400 195V800H0Z" fill="#c98a45"/><path d="M0 640Q130 590 260 635T400 610V800H0Z" fill="#a8682e"/><path d="M0 720Q140 690 270 725T400 705V800H0Z" fill="#8f5522"/>' + trees +
       squirrel(70, 722, 1.15, 'a', false) + squirrel(315, 716, 1.05, 'b', true) + squirrel(195, 700, 0.9, 'c', false) + squirrel(340, 226, 0.6, 'c', true));
+    return svgWrap('<rect width="1000" height="800" fill="#e8b070"/>' + [-100, 300, 700].map(function (x) { return '<g transform="translate(' + x + ' 0)">' + autumnArt + '</g>'; }).join(''));
   }
   // Falling snow and drifting leaves.
   function drawAmbience(now, season) {
@@ -799,28 +849,67 @@
     });
     ctx.globalAlpha = 1;
   }
-  function drawFlower(p, k, seed, now) {
-    var sway = reduced ? 0 : Math.sin(now / 700 + seed) * 0.12;
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(sway); ctx.scale(k, k);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = ['#f06ca8', '#e8485e', '#b184ea', '#ff9f43'][seed % 4];
-    for (var i = 0; i < 5; i++) { var a = i * Math.PI * 0.4 - Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 7, Math.sin(a) * 7, 5.2, 0, 7); ctx.fill(); }
-    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(0, 0, 4.4, 0, 7); ctx.fill();
+  // Large flowers that fill their tile, so they clearly occupy the board.
+  var PETALS = [['#ff7eb6', '#d93d84'], ['#ff6b6b', '#c92f3f'], ['#b58cff', '#7b4fd6'], ['#ffa94d', '#e0701a'], ['#ffffff', '#c7cdf0']];
+  function drawFlower(p, size, seed, now, withLeaves) {
+    var sway = reduced ? 0 : Math.sin(now / 760 + seed) * 0.09, pal = PETALS[seed % PETALS.length], n = 5 + seed % 2;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.globalAlpha = 1;
+    if (withLeaves) {
+      ctx.fillStyle = 'rgba(120,190,90,.55)';
+      ctx.beginPath(); ctx.roundRect(-size, -size, size * 2, size * 2, size * 0.35); ctx.fill();
+      ctx.fillStyle = '#3f9a45';
+      for (var l = 0; l < 4; l++) {
+        ctx.save(); ctx.rotate(l * Math.PI / 2 + Math.PI / 4 + sway * 0.5);
+        ctx.beginPath(); ctx.ellipse(0, -size * 0.72, size * 0.23, size * 0.34, 0, 0, 7); ctx.fill(); ctx.restore();
+      }
+    }
+    ctx.rotate(sway);
+    for (var i = 0; i < n; i++) {
+      ctx.save(); ctx.rotate(i * Math.PI * 2 / n);
+      ctx.fillStyle = pal[1];
+      ctx.beginPath(); ctx.ellipse(0, -size * 0.5, size * 0.33, size * 0.47, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = pal[0];
+      ctx.beginPath(); ctx.ellipse(0, -size * 0.52, size * 0.25, size * 0.39, 0, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#d98a00'; ctx.beginPath(); ctx.arc(0, 0, size * 0.27, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(0, 0, size * 0.21, 0, 7); ctx.fill();
+    ctx.fillStyle = '#b86f00';
+    for (var d = 0; d < 6; d++) { var a = d * Math.PI / 3; ctx.beginPath(); ctx.arc(Math.cos(a) * size * 0.12, Math.sin(a) * size * 0.12, size * 0.025, 0, 7); ctx.fill(); }
     ctx.restore();
   }
   function drawFlowers(now, l) {
-    l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs / 40, f[0] * 7 + f[1] * 3, now); });
+    l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
   }
   function drawBeeAt(x, y, k, now, flap, flip) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.globalAlpha = 1;
-    var wing = flap ? Math.sin(now / 26) * 0.75 : 0.25;
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.strokeStyle = 'rgba(60,70,90,.55)'; ctx.lineWidth = 0.8;
-    [-1, 1].forEach(function (side) { ctx.save(); ctx.translate(side * 1, -6); ctx.rotate(side * 0.35 + wing * side); ctx.beginPath(); ctx.ellipse(0, -6, 4.5, 8, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); });
-    ctx.fillStyle = '#ffc61a'; ctx.strokeStyle = '#2a2008'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#2a2008'; [-3.5, 2].forEach(function (sx) { ctx.fillRect(sx, -6.3, 2.6, 12.6); });
-    ctx.beginPath(); ctx.arc(9, 0, 4.2, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(10.3, -1.2, 1.1, 0, 7); ctx.fill();
+    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.rotate(-0.08); ctx.globalAlpha = 1; ctx.lineCap = 'round';
+    // Far wings, then legs, body, near wings: it reads as a small round creature.
+    var beat = flap ? Math.sin(now / 22) : 0.35;
+    var wing = function (ox, oy, len, wid, base) {
+      ctx.save(); ctx.translate(ox, oy); ctx.rotate(base + beat * 0.6);
+      ctx.fillStyle = 'rgba(225,245,255,.82)'; ctx.strokeStyle = 'rgba(70,95,125,.75)'; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.ellipse(0, -len, wid, len, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(wid * 0.3, -len, 0, -len * 1.8); ctx.stroke();
+      ctx.restore();
+    };
+    wing(-3, -8, 8.5, 4.6, -0.75); wing(1, -8, 10, 5.2, 0.05);
+    ctx.strokeStyle = '#2a2008'; ctx.lineWidth = 1.1;
+    [[-5, 7, -8, 12], [0, 8, -1, 13], [5, 7, 7, 12]].forEach(function (g) { ctx.beginPath(); ctx.moveTo(g[0], g[1]); ctx.lineTo(g[2], g[3]); ctx.stroke(); });
+    ctx.fillStyle = '#2a2008'; ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(-18, 1); ctx.lineTo(-13, 3); ctx.closePath(); ctx.fill();
+    var body = ctx.createRadialGradient(-1, -3, 1, 0, 0, 15);
+    body.addColorStop(0, '#ffe56a'); body.addColorStop(1, '#f5aa00');
+    ctx.fillStyle = body; ctx.strokeStyle = '#2a2008'; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.ellipse(-2, 1, 12.5, 8.8, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(-2, 1, 12.5, 8.8, 0, 0, 7); ctx.clip();
+    ctx.fillStyle = '#2a2008'; [-10, -4.5, 1].forEach(function (sx) { ctx.fillRect(sx, -9, 3, 20); }); ctx.restore();
+    ctx.fillStyle = '#6b4a17'; ctx.beginPath(); ctx.arc(9, -3, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd86b'; ctx.beginPath(); ctx.arc(9, -3, 7, Math.PI * 1.1, Math.PI * 1.75); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(12, -4.5, 2.6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#16120a'; ctx.beginPath(); ctx.arc(12.8, -4.3, 1.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(13.3, -5, 0.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#d9607a'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(11.5, -1, 2, 0.3, 1.8); ctx.stroke();
+    ctx.strokeStyle = '#2a2008'; ctx.lineWidth = 1;
+    [[9, -9, 12, -15], [12, -8, 17, -13]].forEach(function (g) { ctx.beginPath(); ctx.moveTo(g[0], g[1]); ctx.quadraticCurveTo(g[2], g[3] + 3, g[2], g[3]); ctx.stroke(); ctx.beginPath(); ctx.arc(g[2], g[3], 1.2, 0, 7); ctx.fillStyle = '#2a2008'; ctx.fill(); });
     ctx.restore();
   }
   // Bees come in and leave from beyond the edge of the screen.
@@ -829,14 +918,13 @@
     if (!l.flowers || index >= l.flowers.length) { bee = null; return; }
     var fromLeft = (index * 7 + l.flowers[index][1]) % 2 === 0;
     bee = { index: index, start: start, from: { x: fromLeft ? -50 : vw + 50, y: 110 + ((index * 83) % Math.max(100, vh - 240)) } };
-    setTimeout(function () { if (bee && bee.index === index && !ended) seasonSound('buzzSound'); }, Math.max(0, start - performance.now()) + 500);
   }
   function drawBees(now) {
-    var k = cs / 34, l = current.level;
+    var k = cs / 30, l = current.level;
     if (bee) {
       var t = (now - bee.start) / 1000;
       if (t > 0) {
-        var to = px(l.flowers[bee.index]); to = { x: to.x, y: to.y - cs * 0.28 };
+        var to = px(l.flowers[bee.index]); to = { x: to.x, y: to.y - cs * 0.3 };
         var e = reduced ? 1 : ease(Math.min(1, t));
         var x = bee.from.x + (to.x - bee.from.x) * e, y = bee.from.y + (to.y - bee.from.y) * e + Math.sin(e * Math.PI * 3) * (1 - e) * cs;
         var settled = t >= 1;
@@ -850,7 +938,7 @@
       var t = (now - b.start) / 1100;
       if (t >= 1) return false;
       var e = reduced ? 1 : t * t, x = b.from.x + (b.to.x - b.from.x) * e, y = b.from.y + (b.to.y - b.from.y) * e - Math.sin(t * Math.PI) * cs * 1.2;
-      drawFlower({ x: x, y: y + cs * 0.3 }, cs / 58, b.seed, now);
+      drawFlower({ x: x, y: y + cs * 0.42 }, cs * 0.3, b.seed, now, false);
       drawBeeAt(x, y, k, now, true, b.to.x < b.from.x);
       return true;
     });
@@ -880,8 +968,58 @@
     });
     ctx.globalAlpha = 1;
   }
+  // An arrow on fire: an impact flash, flames licking along its whole length, then rising sparks and smoke.
+  function igniteArrow(a, now, impact) {
+    var dur = 500 + Math.random() * 1000;
+    a.burn = { start: now, until: now + dur, dur: dur, impact: impact };
+    a.burnUntil = now + dur;
+    var count = Math.min(46, 12 + a.cells.length * 7);
+    for (var i = 0; i < count; i++) {
+      var c = a.cells[Math.floor(Math.random() * a.cells.length)], p = px(c);
+      embers.push({ x: p.x + (Math.random() - 0.5) * cs * 0.7, y: p.y + (Math.random() - 0.5) * cs * 0.4, vx: (Math.random() - 0.5) * cs * 0.5, vy: -cs * (0.8 + Math.random() * 1.6), born: now + Math.random() * dur * 0.75, life: 420 + Math.random() * 650, smoke: Math.random() < 0.3, size: cs * (0.035 + Math.random() * 0.05) });
+    }
+  }
   function drawArrowFlames(a, now) {
-    a.cells.forEach(function (c, i) { var p = px(c); drawFlame(p.x, p.y - cs * 0.08, cs * 0.3, now, i * 4 + a.id); });
+    var b = a.burn;
+    if (!b) return;
+    var t = Math.min(1, (now - b.start) / b.dur), grow = Math.min(1, t / 0.15), fade = t > 0.65 ? 1 - (t - 0.65) / 0.35 : 1, env = grow * fade;
+    if (env <= 0) return;
+    // Heat glow around the arrow.
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#ff7a18'; ctx.globalAlpha = 0.28 * env; ctx.lineWidth = cs * 0.52;
+    ctx.beginPath(); a.cells.forEach(function (c, i) { var p = px(c); ctx[i ? 'lineTo' : 'moveTo'](p.x, p.y); }); ctx.stroke();
+    ctx.restore();
+    // Several tongues per tile, each flickering on its own.
+    a.cells.forEach(function (c, i) {
+      var p = px(c);
+      for (var f = 0; f < 3; f++) {
+        var ox = (f - 1) * cs * 0.24, seed = i * 5 + f * 3 + a.id, tall = cs * (0.26 + 0.12 * Math.abs(Math.sin(now / 110 + seed))) * env;
+        if (tall > 1) drawFlame(p.x + ox + Math.sin(now / 150 + seed) * cs * 0.04, p.y - cs * 0.04, tall, now, seed);
+      }
+    });
+    // A bright flash where it hit the fire.
+    if (b.impact && t < 0.22) {
+      var q = t / 0.22;
+      ctx.globalAlpha = (1 - q) * 0.9; ctx.fillStyle = '#ffe9a0'; ctx.beginPath(); ctx.arc(b.impact.x, b.impact.y, cs * (0.2 + q * 0.75), 0, 7); ctx.fill();
+      ctx.globalAlpha = (1 - q) * 0.8; ctx.strokeStyle = '#ff7a18'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(b.impact.x, b.impact.y, cs * (0.3 + q * 1.05), 0, 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawEmbers(now) {
+    embers = embers.filter(function (e) {
+      var t = (now - e.born) / e.life;
+      if (t >= 1) return false;
+      if (t < 0) return true;
+      var x = e.x + e.vx * t + Math.sin(now / 120 + e.size * 90) * cs * 0.05, y = e.y + e.vy * t;
+      if (e.smoke) {
+        ctx.globalAlpha = (1 - t) * 0.3; ctx.fillStyle = '#5a5048';
+        ctx.beginPath(); ctx.arc(x, y, e.size * (2 + t * 4), 0, 7); ctx.fill();
+      } else {
+        ctx.globalAlpha = 1 - t * t; ctx.fillStyle = t < 0.35 ? '#ffe27a' : t < 0.7 ? '#ff9a22' : '#d9401a';
+        ctx.beginPath(); ctx.arc(x, y, e.size * (1 - t * 0.6), 0, 7); ctx.fill();
+      }
+      return true;
+    });
+    ctx.globalAlpha = 1;
   }
   function drawIce(c, r) {
     ctx.globalAlpha = 1; ctx.fillStyle = '#e4f5ff'; ctx.strokeStyle = '#2f8fd0'; ctx.lineWidth = Math.max(1.5, r * 0.13);
@@ -913,7 +1051,7 @@
       ev.freeze.forEach(function (id) { addRipple(px(l.arrows[id].cells[l.arrows[id].cells.length >> 1]), '#3f9fd8', 1.6); });
       seasonSound('freezeSound'); pulseBadge(); buzz(12);
     }
-    if (ev.burn.length) { seasonSound('fireSound'); pulseBadge(); buzz(12); }
+    if (ev.burn.length) { seasonSound('igniteSound'); pulseBadge(); buzz(16); }
     if (ev.wind) {
       windAt = now; seasonSound('windSound'); pulseBadge();
       ev.rotate.forEach(function (r) { var a = l.arrows[r.id]; a.rot = { start: now, turn: (r.quarters === 3 ? -1 : r.quarters) * Math.PI / 2 }; });
@@ -924,6 +1062,7 @@
         var p = px(taken), right = p.x > vw / 2;
         beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((state.launches * 61) % 200) }, start: now, seed: taken[0] * 7 + taken[1] * 3 });
       }
+      if (taken) seasonSound('springSound');
       pulseBadge();
       sendBee(state.launches, now + 450);
     }
@@ -1042,7 +1181,7 @@
         if (r.check.clear) { bounces[r.id] = { start: now, reach: 0.18, pts: pts }; return; }
         bounces[r.id] = { start: now, reach: Math.max(0.14, r.check.dist - 0.62), pts: pts };
         blockerGlow[r.check.blocker] = now + 420;
-        if (r.check.fire) { l.arrows[r.id].burnUntil = now + 500 + Math.random() * 1000; seasonSound('fireSound'); }
+        if (r.check.fire) { var fh = E.headOf(l.arrows[r.id]), fd = r.check.endDir; igniteArrow(l.arrows[r.id], now, px([fh[0] + E.DX[fd] * (r.check.dist - 0.5), fh[1] + E.DY[fd] * (r.check.dist - 0.5)])); seasonSound('fireSound'); }
         track('collision', { arrow: r.id, blocker: r.check.blocker, fire: !!r.check.fire, flower: !!r.check.flower });
       });
       thud(); buzz(26);
@@ -1237,6 +1376,7 @@
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
+      '<div class="setting"><span>Season effects<small>Random freezes, fire, bees or wind on every board</small></span></div><div class="sizes seasons" role="group" aria-label="Season effects">' + [['none', 'None'], ['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['random', 'Random']].map(function (x) { return '<button data-season-choice="' + x[0] + '" aria-pressed="' + ((endlessOpts().seasonChoice || 'none') === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes" role="group" aria-label="Map size">' + [1, 3, 5, 10].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? 'Normal' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = sheet(html);
@@ -1251,6 +1391,12 @@
         var o = endlessOpts(); o[pair[1]] = !o[pair[1]]; progress.endlessOpts = o; save('unwind.progress2', progress);
         this.setAttribute('aria-checked', o[pair[1]]);
         s.querySelector('#mOpen span').textContent = openLabel();
+      };
+    });
+    s.querySelectorAll('[data-season-choice]').forEach(function (b) {
+      b.onclick = function () {
+        var o = endlessOpts(); o.seasonChoice = b.getAttribute('data-season-choice'); progress.endlessOpts = o; save('unwind.progress2', progress);
+        s.querySelectorAll('[data-season-choice]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
       };
     });
     s.querySelectorAll('[data-scale]').forEach(function (b) {
@@ -1367,7 +1513,8 @@
     audio();
     var ids = E.rewind(state, current.level);
     if (!ids) return;
-    current.level.arrows.forEach(function (x) { delete x.rot; delete x.burnUntil; });
+    current.level.arrows.forEach(function (x) { delete x.rot; delete x.burnUntil; delete x.burn; });
+    embers = [];
     beesLeaving = [];
     if (current.level.flowers && current.level.flowers.length) { sendBee(state.launches, performance.now() - 2000); }
     current.level.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id] && ids.indexOf(x.id) < 0) angles[x.id] -= 90; });
@@ -1453,6 +1600,8 @@
     rewind: function () { $('bRewind').click(); },
     seasonInfo: function () { return { frozen: Object.keys(state.frozen).length, burning: Object.keys(state.burning).filter(function (k) { return state.burning[k] > state.launches; }).length, flowersLeft: current.level.flowers ? Math.max(0, current.level.flowers.length - state.launches) : null, beeIndex: bee ? bee.index : null, rotating: current.level.arrows.filter(function (a) { return a.rot; }).length, windAt: windAt, theme: M.THEMES[wantedTheme()].name, badge: $('seasonBadge').textContent, title: $('where').textContent }; },
     setFrozen: function (id) { state.frozen[id] = 0; refresh(); },
+    levelInfo: function () { var l = current.level; return { season: l.season, seed: l.seed, big: !!l.big, w: l.w, h: l.h, lives: state.lives, limit: l.timeLimit || null, guarantee: l.guaranteeAt, flowers: (l.flowers || []).length }; },
+    openEndless: function () { openEndless(); },
     burnAll: function () { var l = current.level, n = 0; for (var k = 0; k < l.w * l.h && n < 5; k++) { var o = l.grid[k]; if (o === -1 || state.removed[o]) { state.burning[k] = state.launches + 3; n++; } } return n; },
     firePath: function () { var l = current.level; for (var i = 0; i < l.arrows.length; i++) { var a = l.arrows[i]; if (state.removed[a.id]) continue; var c = E.check(l, state, a); if (c.fire) return a.id; } return -1; },
     iceHitFor: function () { return E.iceHits(current.level, state); },
