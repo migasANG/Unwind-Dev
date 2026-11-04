@@ -20,9 +20,12 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg.baking *{animation:none!important}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
-.scenebg{transition:opacity .45s ease}
+.scenebg{transition:opacity 1.4s ease-in-out}
+body.bgswap .scenebg{will-change:opacity}
+.boardfade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity 1.4s ease-in-out}
+body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,body.bgswap .sheet,body.bgswap header.ui *,body.bgswap nav.ui *{transition:background-color 1.4s ease-in-out,color 1.4s ease-in-out,border-color 1.4s ease-in-out,fill 1.4s ease-in-out,stroke 1.4s ease-in-out}
 .scenebg.leaving{opacity:0}
-body.bgswap #sky,body.bgswap #sky2{transition-duration:.45s}
+body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-function:ease-in-out}
 .card.tall{height:min(100%,860px)}
 #seasonBadge{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:58px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 #seasonBadge .chip{pointer-events:auto;cursor:help;touch-action:none;-webkit-touch-callout:none;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:17px;background:var(--card);font-weight:600;font-size:.8125rem;font-variant-numeric:tabular-nums;box-shadow:0 1px 5px rgba(0,0,0,.2)}

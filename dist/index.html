@@ -22,9 +22,12 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg.baking *{animation:none!important}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
-.scenebg{transition:opacity .45s ease}
+.scenebg{transition:opacity 1.4s ease-in-out}
+body.bgswap .scenebg{will-change:opacity}
+.boardfade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity 1.4s ease-in-out}
+body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,body.bgswap .sheet,body.bgswap header.ui *,body.bgswap nav.ui *{transition:background-color 1.4s ease-in-out,color 1.4s ease-in-out,border-color 1.4s ease-in-out,fill 1.4s ease-in-out,stroke 1.4s ease-in-out}
 .scenebg.leaving{opacity:0}
-body.bgswap #sky,body.bgswap #sky2{transition-duration:.45s}
+body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-function:ease-in-out}
 .card.tall{height:min(100%,860px)}
 #seasonBadge{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:58px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 #seasonBadge .chip{pointer-events:auto;cursor:help;touch-action:none;-webkit-touch-callout:none;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:17px;background:var(--card);font-weight:600;font-size:.8125rem;font-variant-numeric:tabular-nums;box-shadow:0 1px 5px rgba(0,0,0,.2)}
@@ -1517,23 +1520,39 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       commitBackground(ask, fresh, next);
     }); });
   }
+  // A gentle crossfade: the scene, sky, sun, board and menus all drift to the new colours together.
+  var BG_FADE = 1400;
   function commitBackground(ask, fresh, next) {
-    var old = $('seasonBg');
+    var old = $('seasonBg'), sun = $('sun'), board = $('board'), sunWasOn = !sun.hidden;
     document.body.classList.add('bgswap');
+    // A copy of the board as it looks now fades out while the real one draws in the new colours.
+    if (fresh && !reduced) {
+      var copy = document.createElement('canvas');
+      copy.className = 'boardfade'; copy.width = board.width; copy.height = board.height;
+      copy.getContext('2d').drawImage(board, 0, 0);
+      board.parentNode.insertBefore(copy, board.nextSibling);
+      requestAnimationFrame(function () { copy.style.opacity = '0'; });
+      setTimeout(function () { copy.remove(); }, BG_FADE + 60);
+    }
     if (fresh) {
       old.removeAttribute('id');
       fresh.id = 'seasonBg';
-      fresh.classList.remove('pending');
       if (!next) { fresh.hidden = true; old.classList.add('leaving'); }
-      setTimeout(function () { old.remove(); }, 520);
+      requestAnimationFrame(function () { fresh.classList.remove('pending'); });
+      setTimeout(function () { old.remove(); }, BG_FADE + 60);
     }
     current.chapter = backgroundPalette();
     applyChapter(current.chapter, 34);
     applySeason(next);
+    // The sun stays until the new scene has covered it.
+    if (next && sunWasOn && !reduced) {
+      sun.hidden = false;
+      setTimeout(function () { if (ask === bgRequest) sun.hidden = true; }, BG_FADE + 60);
+    }
     ambience = [];
     refresh(); layout();
     musicTick();
-    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, 520);
+    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, BG_FADE + 60);
   }
   function effectChoice() {
     var o = endlessOpts();

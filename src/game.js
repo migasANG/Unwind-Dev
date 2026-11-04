@@ -225,23 +225,39 @@
       commitBackground(ask, fresh, next);
     }); });
   }
+  // A gentle crossfade: the scene, sky, sun, board and menus all drift to the new colours together.
+  var BG_FADE = 1400;
   function commitBackground(ask, fresh, next) {
-    var old = $('seasonBg');
+    var old = $('seasonBg'), sun = $('sun'), board = $('board'), sunWasOn = !sun.hidden;
     document.body.classList.add('bgswap');
+    // A copy of the board as it looks now fades out while the real one draws in the new colours.
+    if (fresh && !reduced) {
+      var copy = document.createElement('canvas');
+      copy.className = 'boardfade'; copy.width = board.width; copy.height = board.height;
+      copy.getContext('2d').drawImage(board, 0, 0);
+      board.parentNode.insertBefore(copy, board.nextSibling);
+      requestAnimationFrame(function () { copy.style.opacity = '0'; });
+      setTimeout(function () { copy.remove(); }, BG_FADE + 60);
+    }
     if (fresh) {
       old.removeAttribute('id');
       fresh.id = 'seasonBg';
-      fresh.classList.remove('pending');
       if (!next) { fresh.hidden = true; old.classList.add('leaving'); }
-      setTimeout(function () { old.remove(); }, 520);
+      requestAnimationFrame(function () { fresh.classList.remove('pending'); });
+      setTimeout(function () { old.remove(); }, BG_FADE + 60);
     }
     current.chapter = backgroundPalette();
     applyChapter(current.chapter, 34);
     applySeason(next);
+    // The sun stays until the new scene has covered it.
+    if (next && sunWasOn && !reduced) {
+      sun.hidden = false;
+      setTimeout(function () { if (ask === bgRequest) sun.hidden = true; }, BG_FADE + 60);
+    }
     ambience = [];
     refresh(); layout();
     musicTick();
-    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, 520);
+    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, BG_FADE + 60);
   }
   function effectChoice() {
     var o = endlessOpts();
