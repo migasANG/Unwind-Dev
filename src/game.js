@@ -5,8 +5,14 @@
   var SET_INFO = {
     calm: { label: 'Calm', prefix: 'L', title: 'Level ' },
     hard: { label: 'Hard', prefix: 'H', title: 'Hard ' },
-    timed: { label: 'Timed', prefix: 'T', title: 'Timed ' }
+    timed: { label: 'Timed', prefix: 'T', title: 'Timed ', offset: 36 },
+    winter: { label: 'Winter', prefix: 'W', title: 'Winter ', offset: 48, season: true },
+    spring: { label: 'Spring', prefix: 'S', title: 'Spring ', offset: 55, season: true },
+    summer: { label: 'Summer', prefix: 'U', title: 'Summer ', offset: 62, season: true },
+    autumn: { label: 'Autumn', prefix: 'A', title: 'Autumn ', offset: 69, season: true }
   };
+  SET_INFO.hard.offset = 24; SET_INFO.calm.offset = 0;
+  var SEASON_ORDER = ['winter', 'spring', 'summer', 'autumn'];
   var HEART = '<path d="M12 20.500s-7.800-4.700-9.300-9.700C1.600 7.200 3.800 4.200 7 4.200c2 0 3.700 1 5 3 1.300-2 3-3 5-3 3.200 0 5.400 3 4.300 6.600-1.500 5-9.300 9.700-9.300 9.700Z"/>';
   function heartSvg(cls) { return '<svg viewBox="0 0 24 24" aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '>' + HEART + '</svg>'; }
   var $ = function (id) { return document.getElementById(id); };
@@ -20,6 +26,12 @@
     { name: 'Dusk', a: '#4f4580', b: '#b4688a', ink: '#fff1e0', twin: '#ffcb77', compass: '#94ece6', sun: '#ffab76', card: '#3f3768', hint: '#ffe14d', music: 2, mirror: '#8fd0ff', twins: ['#ffcb77', '#ff9ecb', '#a8f08a', '#a9d4ff'] },
     { name: 'Night', a: '#111737', b: '#27335f', ink: '#e7ecff', twin: '#ffa6b8', compass: '#8ee8c6', sun: '#dfe6ff', card: '#1b2348', hint: '#ffe14d', music: 3, mirror: '#7cc4ff', twins: ['#ffa6b8', '#ffd479', '#a8f08a', '#a9d4ff'] }
   ];
+  var SEASONS = {
+    winter: { name: 'Winter', a: '#bfdcf0', b: '#eef6fb', ink: '#12365a', twin: '#b83563', compass: '#5a3fc0', sun: '#ffffff', card: '#f6fbff', hint: '#e85d04', music: 4, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#8f5200', '#5a3fc0'] },
+    spring: { name: 'Spring', a: '#bfe6f5', b: '#a8d982', ink: '#143c24', twin: '#b83563', compass: '#6a3fb0', sun: '#fff7c9', card: '#f7fcef', hint: '#e85d04', music: 5, mirror: '#1f6fd6', twins: ['#b83563', '#a8127a', '#7d5200', '#5a3fc0'] },
+    summer: { name: 'Summer', a: '#8fd8f2', b: '#f7e3ac', ink: '#0d3555', twin: '#b83563', compass: '#5a3fc0', sun: '#fff0a8', card: '#fffaf0', hint: '#c2410c', music: 6, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#7d5200', '#5a3fc0'] },
+    autumn: { name: 'Autumn', a: '#e8b070', b: '#b5763c', ink: '#311705', twin: '#a01f4b', compass: '#2f4f8f', sun: '#ffd892', card: '#fff4e3', hint: '#0f6a79', music: 7, mirror: '#1f4fa6', twins: ['#a01f4b', '#14603f', '#2f4f8f', '#6a2fa0'] }
+  };
   function chapterFor(i, total) { return CHAPTERS[Math.min(4, Math.floor(i / total * 5))]; }
 
   // Storage can throw in private windows, so every access is guarded.
@@ -39,7 +51,7 @@
   }
 
   /* ---------- Sound: everything is a short note. There is no drone, and silence is true silence. ---------- */
-  var colors = CHAPTERS[0];
+  var colors = CHAPTERS[0], audioUnlocked = false;
   var ac = null, sfxBus = null, musicBus = null, duckBus = null, sectionBus = null, jingleBus = null, analyser = null, musicBar = 0, nextBarAt = 0, playingTheme = -1;
   var ARROW_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
   function audio() {
@@ -57,7 +69,12 @@
       analyser = ac.createAnalyser(); analyser.fftSize = 2048; musicBus.connect(analyser);
       setInterval(musicTick, 200);
     }
-    if (ac.state === 'suspended' && !document.hidden) ac.resume();
+    if (ac.state !== 'running' && !document.hidden) ac.resume();
+    if (!audioUnlocked) {
+      // Phones only allow sound once a real tap has started some. A silent blip inside that tap satisfies them.
+      audioUnlocked = true;
+      try { var blip = ac.createBufferSource(); blip.buffer = ac.createBuffer(1, 1, 22050); blip.connect(ac.destination); blip.start(0); } catch (e) {}
+    }
     return ac;
   }
   function wantedTheme() {
@@ -67,6 +84,7 @@
     }
     return colors.music;
   }
+  function seasonSound(fn) { if (!audioPrefs.sound) return; var c = audio(); if (c) M[fn](c, sfxBus, c.currentTime + 0.01); }
   function musicTick() {
     if (!ac || ac.state !== 'running' || !audioPrefs.music) return;
     var want = wantedTheme();
@@ -156,6 +174,10 @@
     var c = audio(); if (c) M.tick(c, sfxBus, urgent, c.currentTime + 0.01);
   }
   function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+  // Phones can suspend sound (a call, or switching apps). Any later touch brings it back.
+  ['touchend', 'click', 'keydown'].forEach(function (name) {
+    document.addEventListener(name, function () { if (ac && ac.state !== 'running' && !document.hidden) ac.resume(); }, { passive: true, capture: true });
+  });
   document.addEventListener('visibilitychange', function () {
     if (!ac) return;
     if (document.hidden) ac.suspend(); else ac.resume();
@@ -164,13 +186,13 @@
   /* ---------- Level state ---------- */
   var current = null, state = null, hintsLeft = 1, hintArrow = -1, stuckShown = false, blockerGlow = {};
   var flights = [], bounces = {}, ripples = [], angles = {}, introStart = 0, collisions = 0, ended = false;
-  var lastHintAmt = 0, wakes = [], HINT_IN = 500, HINT_HOLD = 3000, HINT_OUT = 800, hintStart = 0, tune = [], tuneBase = 0, hintsUsed = 0, rewinds = 0, activeMs = 0, lastFrame = 0, timeLeft = null, lastSecond = -1, nudges = {};
+  var lastHintAmt = 0, wakes = [], HINT_IN = 500, HINT_HOLD = 3000, HINT_OUT = 800, bee = null, beesLeaving = [], ambience = [], windAt = 0, hintStart = 0, tune = [], tuneBase = 0, hintsUsed = 0, rewinds = 0, activeMs = 0, lastFrame = 0, timeLeft = null, lastSecond = -1, nudges = {};
 
   function openLevel(set, index) {
     var list = SETS[set], info = SET_INFO[set], lvl = list[index];
     progress.last = { set: set, index: index }; save('unwind.progress2', progress);
-    begin({ id: info.prefix + (index + 1), set: set, index: index, mode: 'levels', level: lvl, title: info.title + (index + 1),
-      chapter: chapterFor(index, list.length), sunY: 72 - Math.sin(Math.min(index / (list.length - 1), 1) * Math.PI) * 58 });
+    begin({ id: info.prefix + (index + 1), set: set, index: index, mode: 'levels', level: lvl, title: info.title + (index + 1 + (info.offset || 0)),
+      chapter: info.season ? SEASONS[set] : chapterFor(index, list.length), sunY: 72 - Math.sin(Math.min(index / (list.length - 1), 1) * Math.PI) * 58 });
   }
   function timeChapter() { var h = new Date().getHours(); return h < 6 ? 4 : h < 10 ? 0 : h < 14 ? 1 : h < 18 ? 2 : h < 21 ? 3 : 4; }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
@@ -198,7 +220,9 @@
     duck(false); stopJingle();
     tuneBase = c.mode === 'levels' ? c.index : 3;
     closeSheet();
+    E.resetBoard(c.level);
     state = E.newState(c.level);
+    bee = null; beesLeaving = []; ambience = []; windAt = 0;
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
     hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {};
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
@@ -213,7 +237,9 @@
     $('timer').hidden = timeLeft === null; $('timebar').hidden = timeLeft === null;
     $('timer').classList.remove('low');
     applyChapter(c.chapter, c.sunY);
-    $('where').textContent = c.mode === 'endless' ? c.title : c.title + ' · ' + c.chapter.name;
+    applySeason(c.level.season);
+    $('where').textContent = c.mode === 'endless' || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
+    if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
     setCaption(baseCaption());
     if (c.index === 0 && c.mode === 'levels' && c.set === 'calm') { hintArrow = E.legalMoves(c.level, state)[0]; hintStart = performance.now() + 700; }
     if (timeLeft !== null) drawTimer();
@@ -295,6 +321,7 @@
       $('lives').setAttribute('aria-label', 'Free play, no lives to lose');
     }
     shownLives = lives;
+    drawBadge();
     $('bRewind').disabled = !state.history.length || ended;
     $('bHint').disabled = hintsLeft <= 0 || ended;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
@@ -315,6 +342,7 @@
   /* ---------- Board geometry ---------- */
   var canvas = $('board'), ctx = canvas.getContext('2d'), vw = 0, vh = 0, cs = 40, ox = 0, oy = 0;
   var cam = null, fitCs = 40, viewTop = 0, viewBottom = 0, MIN_TAP = 38, MAX_ZOOM = 64;
+  function l0season() { return current && current.level.season; }
   function layout() {
     var dpr = Math.min(window.devicePixelRatio || 1, 3);
     vw = window.innerWidth; vh = window.innerHeight;
@@ -322,6 +350,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!current) return;
     viewTop = document.querySelector('header.ui').getBoundingClientRect().bottom + 10;
+    if (l0season()) { $('seasonBadge').style.top = viewTop + 'px'; viewTop += 42; }
     viewBottom = document.querySelector('nav.ui').getBoundingClientRect().top - 54;
     var l = current.level, sideW = vw - 32;
     fitCs = Math.min(sideW / l.w, (viewBottom - viewTop) / l.h, 68);
@@ -441,6 +470,13 @@
     }
     ctx.clearRect(0, 0, vw, vh);
     var l = current.level, w = Math.max(3, cs * 0.17);
+    if (l.season) {
+      drawAmbience(now, l.season);
+      // A soft panel keeps the arrows easy to read over the scenery.
+      ctx.globalAlpha = 0.62 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.card;
+      ctx.beginPath(); ctx.roundRect(ox - cs * 0.2, oy - cs * 0.2, cs * (l.w + 0.4), cs * (l.h + 0.4), cs * 0.4); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     // Big boards only draw what is near the screen.
     var offscreen = function (a) {
       if (!cam || bounces[a.id] || nudges[a.id]) return false;
@@ -453,6 +489,9 @@
     for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
       var p = px([x, y]); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill();
     }
+
+    if (l.flowers) drawFlowers(now, l);
+    if (l.season === 'summer') drawFires(now);
 
     // Mirrors.
     (l.mirrors || []).forEach(function (m) {
@@ -513,11 +552,18 @@
       }
       var nudge = nudges[a.id] && now < nudges[a.id] ? Math.sin((nudges[a.id] - now) / 40) * cs * 0.05 : 0;
       var glow = blockerGlow[a.id] && now < blockerGlow[a.id] ? 1 + 0.35 * Math.sin((blockerGlow[a.id] - now) / 420 * Math.PI) : 1;
-      var color = amt ? mixColor(arrowColor(a), colors.hint, amt) : arrowColor(a);
+      var isFrozen = state.frozen[a.id] !== undefined, burning = a.burnUntil && now < a.burnUntil;
+      var baseColor = burning ? mixColor(arrowColor(a), '#ff5a12', 0.85) : isFrozen ? '#3f9fd8' : arrowColor(a);
+      var color = amt ? mixColor(baseColor, colors.hint, amt) : baseColor;
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
-      var alpha = (isReady ? 1 : 0.62 + amt * 0.38) * f;
+      var alpha = (isReady || isFrozen ? 1 : 0.62 + amt * 0.38) * f;
       ctx.save(); ctx.translate(nudge, 0);
+      if (a.rot) {
+        var rt = (now - a.rot.start) / 800;
+        if (rt >= 1) delete a.rot;
+        else { var piv = px(a.cells[0]); ctx.translate(piv.x, piv.y); ctx.rotate(-a.rot.turn * (1 - ease(Math.max(0, rt)))); ctx.translate(-piv.x, -piv.y); }
+      }
       if (a.kind === 'compass') {
         var c = px(a.cells[0]), r = cs * 0.37, target = angles[a.id];
         setStroke(color, Math.max(1.5, cs * (0.05 + amt * 0.03)), (0.6 + amt * 0.4) * f * alpha);
@@ -533,7 +579,7 @@
       }
       var len = lengthOf(a), pts = b && b.pts ? b.pts : a.cells.concat([[E.headOf(a)[0] + E.DX[a.dir] * 2, E.headOf(a)[1] + E.DY[a.dir] * 2]]);
       setStroke(color, width, alpha);
-      if (!isReady) ctx.setLineDash([cs * 0.18, cs * 0.3]);
+      if (!isReady && !isFrozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
       var res = strokeWindow(pts, shift, shift + len * f);
       ctx.setLineDash([]);
       setStroke(color, width, alpha);
@@ -545,11 +591,15 @@
       var tailPoint = px(a.cells[0]);
       if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); });
       if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); });
+      if (isFrozen) scaled(centre, pop, function () { drawIce(centre, cs * 0.3); });
+      if (burning) drawArrowFlames(a, now);
       if (a.wait && state.launches < a.wait) scaled(centre, pop, function () { badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - state.launches), color); });
       ctx.restore();
     });
 
     drawWakes(now);
+    if (windAt) drawWind(now);
+    if (l.flowers) drawBees(now);
 
     // Arrows on their way out.
     flights = flights.filter(function (fl) {
@@ -668,6 +718,216 @@
       return true;
     });
   }
+  /* ---------- Season drawing ---------- */
+  var ICONS = {
+    winter: '<svg viewBox="0 0 24 24" fill="none" stroke="#2f8fd0" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.300 7l17.400 10M20.700 7 3.300 17M12 6 9.500 3.700M12 6l2.500-2.300M12 18l-2.500 2.300M12 18l2.500 2.300"/></svg>',
+    summer: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#ffb300"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="#ff8a00" stroke-width="2" stroke-linecap="round"/></svg>',
+    spring: '<svg viewBox="0 0 24 24"><g fill="#f06ca8"><circle cx="12" cy="6" r="4"/><circle cx="18" cy="11" r="4"/><circle cx="15.500" cy="18" r="4"/><circle cx="8.500" cy="18" r="4"/><circle cx="6" cy="11" r="4"/></g><circle cx="12" cy="13" r="3.200" fill="#ffd23f"/></svg>',
+    autumn: '<svg viewBox="0 0 24 24" fill="none" stroke="#a8591a" stroke-width="2" stroke-linecap="round"><path d="M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h6"/></svg>'
+  };
+  var shownBadge = '';
+  function drawBadge() {
+    var season = current && current.level.season, b = $('seasonBadge');
+    b.hidden = !season;
+    if (!season) return;
+    var text = season === 'winter' ? '20%' : season === 'summer' ? '25%' : season === 'autumn' ? '50%'
+      : Math.max(0, current.level.flowers.length - state.launches) + '/' + current.level.flowers.length;
+    var html = ICONS[season] + '<span>' + text + '</span>';
+    if (html !== shownBadge) { b.innerHTML = html; shownBadge = html; }
+    var names = { winter: '20% chance per launch that arrows freeze', summer: '25% chance per launch that tiles burn', autumn: '50% chance per launch of wind', spring: text + ' flowers remaining' };
+    b.setAttribute('aria-label', names[season]); b.setAttribute('role', 'img');
+  }
+  function pulseBadge() { var b = $('seasonBadge'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+  function applySeason(season) {
+    document.body.classList.toggle('season', !!season);
+    $('sun').hidden = !!season;
+    var bg = $('seasonBg');
+    bg.hidden = !season;
+    if (season && bg.getAttribute('data-season') !== season) { bg.innerHTML = seasonScene(season); bg.setAttribute('data-season', season); }
+  }
+  function seededRows(n, seed, make) {
+    var r = E.rng32(seed), out = '';
+    for (var i = 0; i < n; i++) out += make(r, i);
+    return out;
+  }
+  function svgWrap(inner) { return '<svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' + inner + '</svg>'; }
+  function seasonScene(season) {
+    if (season === 'winter') {
+      var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-4" y="0" width="8" height="14" fill="#5a4636"/><path d="M0-70 26-30H12L32 0H-32L-12-30H-26Z" fill="#2f6a5c"/><path d="M0-70 14-48 2-44-12-46Z" fill="#fff"/><path d="M-26 0 32 0 18-8-20-8Z" fill="#fff" opacity=".85"/></g>'; };
+      var man = function (x, y, k, sc) { return '<g class="sway' + (sc ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><circle cy="-14" r="22" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cy="-46" r="16" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cy="-70" r="11" fill="#fff" stroke="#c6dcea" stroke-width="1.500"/><circle cx="-4" cy="-72" r="1.600" fill="#223"/><circle cx="4" cy="-72" r="1.600" fill="#223"/><path d="M0-69l11 3-11 2Z" fill="#f08020"/><path d="M-11-60h22v5h-22Z" fill="#c23c3c"/><path d="M5-58h6v16h-6Z" fill="#c23c3c"/><rect x="-11" y="-92" width="22" height="13" fill="#2a2a3f"/><rect x="-16" y="-80" width="32" height="3" fill="#2a2a3f"/><circle cy="-46" r="1.800" fill="#223"/><circle cy="-38" r="1.800" fill="#223"/><circle cy="-20" r="1.800" fill="#223"/><path d="M-15-46-38-58M15-46 38-60" stroke="#5a4636" stroke-width="2.500" stroke-linecap="round"/></g></g>'; };
+      return svgWrap('<path d="M0 180Q100 130 210 175T400 150V800H0Z" fill="#e3f0f8"/><path d="M0 600Q110 545 220 590T400 560V800H0Z" fill="#f2f8fc"/><path d="M0 700Q140 660 260 700T400 680V800H0Z" fill="#fff"/>' +
+        pine(30, 180, 0.9) + pine(92, 165, 0.65) + pine(330, 165, 0.85) + pine(382, 160, 0.6) + pine(48, 640, 1.2) + pine(365, 625, 1.1) +
+        man(120, 690, 1, false) + man(295, 684, 0.82, true) + man(205, 180, 0.48, true));
+    }
+    if (season === 'spring') {
+      var dots = seededRows(90, 77, function (r) { var x = Math.round(r() * 400), y = Math.round(330 + r() * 460), c = ['#f06ca8', '#ffd23f', '#ffffff', '#e8485e', '#b184ea'][Math.floor(r() * 5)], k = 1.5 + (y - 330) / 110; return '<circle cx="' + x + '" cy="' + y + '" r="' + k.toFixed(1) + '" fill="' + c + '"/>'; });
+      return svgWrap('<path d="M-10 250 70 110 130 200 205 70 290 210 345 130 410 250Z" fill="#7d94b5"/><path d="M205 70 182 108 200 100 216 116 230 98ZM70 110 54 138 72 130 88 138ZM345 130 330 156 346 150 360 158Z" fill="#fff"/><path d="M0 250Q120 210 240 245T400 225V800H0Z" fill="#a6db7c"/><path d="M0 340Q130 300 250 335T400 320V800H0Z" fill="#8dd066"/><path d="M0 560Q140 510 260 555T400 530V800H0Z" fill="#74c253"/>' +
+        '<path class="sway" d="M250 245C200 330 330 390 270 480S60 590 150 800H290C210 640 400 570 380 440S300 320 280 245Z" fill="#6cc6e8"/><path class="wave" d="M262 300C240 350 320 400 300 470M210 620C170 680 190 740 215 790" stroke="#d8f3fb" stroke-width="3" fill="none" stroke-linecap="round"/>' + dots);
+    }
+    if (season === 'summer') {
+      return svgWrap('<circle cx="320" cy="84" r="46" fill="#fff0a8"/><circle cx="320" cy="84" r="66" fill="#fff0a8" opacity=".3"/><path d="M0 190H400V470H0Z" fill="#3ab3d8"/><path d="M0 190H400V250H0Z" fill="#6ccbe6"/>' +
+        '<g class="wave"><path d="M-20 300Q30 285 80 300T180 300T280 300T380 300T480 300" stroke="#c9f0f8" stroke-width="3" fill="none"/></g><g class="wave b"><path d="M-20 370Q30 355 80 370T180 370T280 370T380 370T480 370" stroke="#c9f0f8" stroke-width="3" fill="none"/></g>' +
+        '<path d="M0 470Q100 440 210 462T400 452V800H0Z" fill="#f4dc9f"/><g class="wave b"><path d="M-30 468Q70 442 210 466T430 452" stroke="#fff" stroke-width="7" fill="none" opacity=".85"/></g>' +
+        '<g class="sway" style="transform-origin:50% 100%"><path d="M46 740C52 650 70 590 90 540" stroke="#7a5230" stroke-width="10" fill="none" stroke-linecap="round"/><g fill="#2f9a5a"><path d="M90 540C60 510 26 515 8 540 40 530 66 535 90 540Z"/><path d="M90 540C70 500 40 480 12 488 44 498 70 515 90 540Z"/><path d="M90 540C100 500 130 485 158 495 130 505 108 520 90 540Z"/><path d="M90 540C120 520 154 525 172 552 140 540 114 538 90 540Z"/></g></g>' +
+        '<g><path d="M300 730V590" stroke="#fff" stroke-width="5"/><path d="M226 610C240 550 360 550 374 610Z" fill="#e8485e"/><path d="M262 610C270 565 330 565 338 610Z" fill="#fff"/></g><rect x="150" y="735" width="92" height="30" rx="3" fill="#3ab3d8" transform="rotate(-6 196 750)"/><rect x="150" y="745" width="92" height="9" fill="#fff" transform="rotate(-6 196 750)"/><circle cx="350" cy="750" r="16" fill="#fff"/><path d="M350 734a16 16 0 0 1 14 8l-14 8Z" fill="#e8485e"/><path d="M350 750l-14-8a16 16 0 0 0 0 16Z" fill="#3ab3d8"/>');
+    }
+    var tree = function (x, y, k, c, c2, cls) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><g class="sway' + (cls ? ' b' : '') + '"><path d="M-7 0-4-70 4-70 7 0Z" fill="#5a3418"/><path d="M-3-50-26-74M3-44 24-70" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/><circle cy="-92" r="38" fill="' + c + '"/><circle cx="-28" cy="-74" r="25" fill="' + c2 + '"/><circle cx="28" cy="-76" r="26" fill="' + c + '"/><circle cx="4" cy="-118" r="23" fill="' + c2 + '"/></g></g>'; };
+    var cols = [['#d65f1e', '#e8872c'], ['#c0392b', '#d65f1e'], ['#e0a12d', '#eebb47'], ['#a8501a', '#c6702a']];
+    var trees = seededRows(11, 41, function (r, i) { var y = i < 6 ? 190 + r() * 30 : 640 + r() * 70, k = i < 6 ? 0.75 + r() * 0.25 : 1 + r() * 0.35, c = cols[Math.floor(r() * 4)]; return tree(Math.round((i < 6 ? i * 76 : (i - 6) * 95) + r() * 26 - 6), Math.round(y), k.toFixed(2), c[0], c[1], i % 2); });
+    var squirrel = function (x, y, k, cls, flip) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + (flip ? -k : k) + ' ' + k + ')"><g class="squirrel ' + cls + '"><g class="tailwag"><path d="M-12-4C-34-6-38-34-24-40-14-44-10-34-16-30-22-26-18-16-8-12Z" fill="#a8501a"/></g><ellipse cy="-9" rx="13" ry="10" fill="#b85f22"/><circle cx="11" cy="-20" r="7.500" fill="#b85f22"/><path d="M9-27 11-33 14-27Z" fill="#a8501a"/><circle cx="13.500" cy="-21" r="1.400" fill="#201008"/><ellipse cx="4" cy="-7" rx="5" ry="7" fill="#e8c090"/><path d="M-8 0H-2M4 0H10" stroke="#7a3a14" stroke-width="3" stroke-linecap="round"/></g></g>'; };
+    return svgWrap('<path d="M0 220Q120 170 250 215T400 195V800H0Z" fill="#c98a45"/><path d="M0 640Q130 590 260 635T400 610V800H0Z" fill="#a8682e"/><path d="M0 720Q140 690 270 725T400 705V800H0Z" fill="#8f5522"/>' + trees +
+      squirrel(70, 722, 1.15, 'a', false) + squirrel(315, 716, 1.05, 'b', true) + squirrel(195, 700, 0.9, 'c', false) + squirrel(340, 226, 0.6, 'c', true));
+  }
+  // Falling snow and drifting leaves.
+  function drawAmbience(now, season) {
+    if (reduced || (season !== 'winter' && season !== 'autumn')) return;
+    var want = season === 'winter' ? 46 : 18;
+    while (ambience.length < want) ambience.push({ x: Math.random() * vw, y: Math.random() * vh, s: 0.5 + Math.random(), p: Math.random() * 7, c: ['#d65f1e', '#e0a12d', '#c0392b', '#a8501a'][Math.floor(Math.random() * 4)] });
+    var boost = windAt && now - windAt < 1100 ? 5 : 1;
+    ambience.forEach(function (o) {
+      o.y += o.s * (season === 'winter' ? 0.55 : 0.5);
+      o.x += (Math.sin(now / 900 + o.p) * 0.35 + (season === 'autumn' ? 0.28 : 0)) * boost;
+      if (o.y > vh + 10) { o.y = -10; o.x = Math.random() * vw; }
+      if (o.x > vw + 10) o.x = -10;
+      if (season === 'winter') {
+        ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(o.x, o.y, 1.2 + o.s * 1.5, 0, 7); ctx.fill();
+      } else {
+        ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(now / 700 + o.p); ctx.fillStyle = o.c; ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.ellipse(0, 0, 3 + o.s * 3, 1.8 + o.s, 0, 0, 7); ctx.fill(); ctx.restore();
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+  function drawFlower(p, k, seed, now) {
+    var sway = reduced ? 0 : Math.sin(now / 700 + seed) * 0.12;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(sway); ctx.scale(k, k);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = ['#f06ca8', '#e8485e', '#b184ea', '#ff9f43'][seed % 4];
+    for (var i = 0; i < 5; i++) { var a = i * Math.PI * 0.4 - Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 7, Math.sin(a) * 7, 5.2, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(0, 0, 4.4, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  function drawFlowers(now, l) {
+    l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs / 40, f[0] * 7 + f[1] * 3, now); });
+  }
+  function drawBeeAt(x, y, k, now, flap, flip) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.globalAlpha = 1;
+    var wing = flap ? Math.sin(now / 26) * 0.75 : 0.25;
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.strokeStyle = 'rgba(60,70,90,.55)'; ctx.lineWidth = 0.8;
+    [-1, 1].forEach(function (side) { ctx.save(); ctx.translate(side * 1, -6); ctx.rotate(side * 0.35 + wing * side); ctx.beginPath(); ctx.ellipse(0, -6, 4.5, 8, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); });
+    ctx.fillStyle = '#ffc61a'; ctx.strokeStyle = '#2a2008'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 10, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2a2008'; [-3.5, 2].forEach(function (sx) { ctx.fillRect(sx, -6.3, 2.6, 12.6); });
+    ctx.beginPath(); ctx.arc(9, 0, 4.2, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(10.3, -1.2, 1.1, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  // Bees come in and leave from beyond the edge of the screen.
+  function sendBee(index, start) {
+    var l = current.level;
+    if (!l.flowers || index >= l.flowers.length) { bee = null; return; }
+    var fromLeft = (index * 7 + l.flowers[index][1]) % 2 === 0;
+    bee = { index: index, start: start, from: { x: fromLeft ? -50 : vw + 50, y: 110 + ((index * 83) % Math.max(100, vh - 240)) } };
+    setTimeout(function () { if (bee && bee.index === index && !ended) seasonSound('buzzSound'); }, Math.max(0, start - performance.now()) + 500);
+  }
+  function drawBees(now) {
+    var k = cs / 34, l = current.level;
+    if (bee) {
+      var t = (now - bee.start) / 1000;
+      if (t > 0) {
+        var to = px(l.flowers[bee.index]); to = { x: to.x, y: to.y - cs * 0.28 };
+        var e = reduced ? 1 : ease(Math.min(1, t));
+        var x = bee.from.x + (to.x - bee.from.x) * e, y = bee.from.y + (to.y - bee.from.y) * e + Math.sin(e * Math.PI * 3) * (1 - e) * cs;
+        var settled = t >= 1;
+        // Waiting bees drift gently and flap in short bursts.
+        var flap = !settled || Math.sin(now / 900 + bee.index) > 0.15;
+        if (settled && !reduced) { x += Math.sin(now / 620 + bee.index) * cs * 0.05; y += Math.cos(now / 480 + bee.index) * cs * 0.05; }
+        drawBeeAt(x, y, k, now, flap, bee.from.x > to.x);
+      }
+    }
+    beesLeaving = beesLeaving.filter(function (b) {
+      var t = (now - b.start) / 1100;
+      if (t >= 1) return false;
+      var e = reduced ? 1 : t * t, x = b.from.x + (b.to.x - b.from.x) * e, y = b.from.y + (b.to.y - b.from.y) * e - Math.sin(t * Math.PI) * cs * 1.2;
+      drawFlower({ x: x, y: y + cs * 0.3 }, cs / 58, b.seed, now);
+      drawBeeAt(x, y, k, now, true, b.to.x < b.from.x);
+      return true;
+    });
+  }
+  function drawFlame(x, y, size, now, seed) {
+    var f = reduced ? 1 : 1 + Math.sin(now / 90 + seed) * 0.14, g = reduced ? 0 : Math.sin(now / 130 + seed * 2) * size * 0.14;
+    ctx.globalAlpha = 1; ctx.fillStyle = '#ff5a12';
+    ctx.beginPath(); ctx.moveTo(x - size * 0.55, y + size * 0.5);
+    ctx.quadraticCurveTo(x - size * 0.75, y - size * 0.1, x + g, y - size * f);
+    ctx.quadraticCurveTo(x + size * 0.75, y - size * 0.1, x + size * 0.55, y + size * 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffc61a';
+    ctx.beginPath(); ctx.moveTo(x - size * 0.28, y + size * 0.5);
+    ctx.quadraticCurveTo(x - size * 0.35, y, x + g * 0.6, y - size * 0.45 * f);
+    ctx.quadraticCurveTo(x + size * 0.35, y, x + size * 0.28, y + size * 0.5); ctx.closePath(); ctx.fill();
+  }
+  function drawFires(now) {
+    var l = current.level;
+    Object.keys(state.burning).forEach(function (key) {
+      var k = +key, until = state.burning[k];
+      if (until <= state.launches) return;
+      var p = px([k % l.w, Math.floor(k / l.w)]);
+      ctx.globalAlpha = 0.34; ctx.fillStyle = '#ff5a12';
+      ctx.beginPath(); ctx.roundRect(p.x - cs * 0.46, p.y - cs * 0.46, cs * 0.92, cs * 0.92, cs * 0.14); ctx.fill();
+      drawFlame(p.x - cs * 0.15, p.y + cs * 0.12, cs * 0.26, now, k);
+      drawFlame(p.x + cs * 0.17, p.y + cs * 0.14, cs * 0.22, now, k + 3);
+      drawFlame(p.x, p.y + cs * 0.04, cs * 0.34, now, k + 5);
+    });
+    ctx.globalAlpha = 1;
+  }
+  function drawArrowFlames(a, now) {
+    a.cells.forEach(function (c, i) { var p = px(c); drawFlame(p.x, p.y - cs * 0.08, cs * 0.3, now, i * 4 + a.id); });
+  }
+  function drawIce(c, r) {
+    ctx.globalAlpha = 1; ctx.fillStyle = '#e4f5ff'; ctx.strokeStyle = '#2f8fd0'; ctx.lineWidth = Math.max(1.5, r * 0.13);
+    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#2f8fd0'; ctx.lineWidth = Math.max(1.3, r * 0.13); ctx.lineCap = 'round';
+    for (var i = 0; i < 3; i++) {
+      var a = i * Math.PI / 3 + Math.PI / 6, dx = Math.cos(a) * r * 0.68, dy = Math.sin(a) * r * 0.68;
+      ctx.beginPath(); ctx.moveTo(c.x - dx, c.y - dy); ctx.lineTo(c.x + dx, c.y + dy); ctx.stroke();
+    }
+  }
+  // Streaks of wind blow across the board, whether or not any arrow turns.
+  function drawWind(now) {
+    var t = (now - windAt) / 1200;
+    if (t >= 1 || reduced) { if (t >= 1) windAt = 0; return; }
+    ctx.lineCap = 'round';
+    for (var i = 0; i < 12; i++) {
+      var y = oy + (current.level.h * cs) * ((i * 0.37 + 0.13) % 1), offset = (i * 0.17) % 0.5, q = (t - offset * 0.6) * 1.7;
+      if (q < 0 || q > 1) continue;
+      var x = -120 + (vw + 240) * q, len = 60 + (i % 4) * 28;
+      ctx.globalAlpha = Math.sin(q * Math.PI) * 0.75; ctx.strokeStyle = '#fff4e3'; ctx.lineWidth = Math.max(2, cs * 0.06);
+      ctx.beginPath(); ctx.moveTo(x - len, y); ctx.quadraticCurveTo(x - len / 2, y - 8 * Math.sin(now / 90 + i), x, y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Applies what a launch set off: frost, fire, wind or the next bee.
+  function applySeasonEvents(ev, now) {
+    var l = current.level;
+    if (ev.freeze.length) {
+      ev.freeze.forEach(function (id) { addRipple(px(l.arrows[id].cells[l.arrows[id].cells.length >> 1]), '#3f9fd8', 1.6); });
+      seasonSound('freezeSound'); pulseBadge(); buzz(12);
+    }
+    if (ev.burn.length) { seasonSound('fireSound'); pulseBadge(); buzz(12); }
+    if (ev.wind) {
+      windAt = now; seasonSound('windSound'); pulseBadge();
+      ev.rotate.forEach(function (r) { var a = l.arrows[r.id]; a.rot = { start: now, turn: (r.quarters === 3 ? -1 : r.quarters) * Math.PI / 2 }; });
+    }
+    if (l.flowers && l.flowers.length) {
+      var taken = l.flowers[state.launches - 1];
+      if (taken) {
+        var p = px(taken), right = p.x > vw / 2;
+        beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((state.launches * 61) % 200) }, start: now, seed: taken[0] * 7 + taken[1] * 3 });
+      }
+      pulseBadge();
+      sendBee(state.launches, now + 450);
+    }
+  }
   function badge(p, r, fill, text, label, edge) {
     if (!p) return;
     ctx.globalAlpha = 1; ctx.fillStyle = fill;
@@ -732,7 +992,19 @@
       nudges[id] = now + 360;
       if (l.arrows[id].key !== undefined) blockerGlow[l.arrows[id].key] = now + 500;
       pluck(220, 0, 0.07, 0.3); buzz(6);
-      track('not_ready', { arrow: id });
+      track('not_ready', { arrow: id, frozen: state.frozen[id] !== undefined });
+      return;
+    }
+    if (res.thawed) {
+      // Cracking ice: the arrow bounces back, the other arrow is free, and no life is lost.
+      res.results.forEach(function (r) {
+        var m = l.arrows[r.id];
+        bounces[r.id] = { start: now, reach: r.check.clear ? 0.18 : Math.max(0.14, r.check.dist - 0.62), pts: m.kind === 'compass' ? null : trackOf(m, r.check) };
+      });
+      res.thawed.forEach(function (t) { var a = l.arrows[t]; addRipple(px(a.cells[a.cells.length >> 1]), '#3f9fd8', 2); blockerGlow[t] = now + 420; });
+      seasonSound('crackSound'); buzz(14);
+      track('thaw', { arrows: res.thawed });
+      refresh();
       return;
     }
     if (res.ok) {
@@ -759,8 +1031,9 @@
           pluck(880, 0.42, 0.12, 0.9); pluck(1318.5, 0.5, 0.1, 1.1);
         });
       });
+      if (!res.won) applySeasonEvents(E.seasonStep(l, state), now);
       hintStillGood();
-      if (res.won) finish(true);
+      if (res.won) { bee = null; finish(true); }
     } else {
       collisions++;
       res.results.forEach(function (r) {
@@ -769,7 +1042,8 @@
         if (r.check.clear) { bounces[r.id] = { start: now, reach: 0.18, pts: pts }; return; }
         bounces[r.id] = { start: now, reach: Math.max(0.14, r.check.dist - 0.62), pts: pts };
         blockerGlow[r.check.blocker] = now + 420;
-        track('collision', { arrow: r.id, blocker: r.check.blocker });
+        if (r.check.fire) { l.arrows[r.id].burnUntil = now + 500 + Math.random() * 1000; seasonSound('fireSound'); }
+        track('collision', { arrow: r.id, blocker: r.check.blocker, fire: !!r.check.fire, flower: !!r.check.flower });
       });
       thud(); buzz(26);
       if (res.failed) finish(false, 'lives');
@@ -895,7 +1169,7 @@
       '<g class="boat" style="transform-origin:170px 122px"><path d="M152 116 H190 L183 126 H159Z" fill="#3a2a2e"/><rect x="170" y="94" width="2" height="23" fill="#3a2a2e"/><path d="M172 95 L188 112 H172Z" fill="#fff7ea"/></g>' +
       flies + lanterns + '</g></svg>';
   }
-  function allLevelCount() { return SETS.calm.length + SETS.hard.length + SETS.timed.length; }
+  function allLevelCount() { return Object.keys(SETS).reduce(function (n, k) { return n + SETS[k].length; }, 0); }
   function winSheet(c, st) {
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
     var title = st.perfect ? 'Perfect!' : 'All clear';
@@ -941,20 +1215,24 @@
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Everything together', 21, 24]];
   function levelsSheet(tab) {
     tab = tab || (current && current.set) || 'calm';
+    if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
-    html += '<div class="tabs" role="tablist">' + Object.keys(SET_INFO).map(function (k) { return '<button role="tab" aria-selected="' + (k === tab) + '" data-tab="' + k + '">' + SET_INFO[k].label + '</button>'; }).join('') + '</div>';
-    var grid = function (from, to) {
-      var out = '<div class="lv">';
+    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+    var grid = function (set, from, to) {
+      var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
-        var id = SET_INFO[tab].prefix + (i + 1);
-        out += '<button data-l="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Level ' + (i + 1) + (progress.perfect[id] ? ', perfect' : progress.done[id] ? ', cleared' : '') + '">' + (i + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
+        var id = info.prefix + (i + 1), shown = i + 1 + (info.offset || 0);
+        out += '<button data-set="' + set + '" data-l="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Level ' + shown + (progress.perfect[id] ? ', perfect' : progress.done[id] ? ', cleared' : '') + '">' + shown + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
       }
       return out + '</div>';
     };
     html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
-    if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid(sec[1], sec[2]); });
-    else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(0, SETS[tab].length);
+    if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
+    else if (tab === 'seasons') {
+      var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
+      SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
+    } else {
+      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
     }
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
@@ -964,7 +1242,7 @@
     var s = sheet(html);
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab')); }; });
-    s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(tab, +b.getAttribute('data-l')); }; });
+    s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = openEndless;
     s.querySelector('#mGo').onclick = openEndless;
@@ -1013,7 +1291,15 @@
       { key: 'mirror', title: 'Mirror', text: 'Not an arrow. It turns any arrow passing through by 90 degrees, so follow the new path.',
         art: '<circle cx="31" cy="23" r="19" stroke="' + mir + '" stroke-width="1.500" opacity=".6"/>' + line('M18 36L44 10', mir) },
       { key: 'patient', title: 'Patient arrow', text: 'Its number shows how many more launches it needs before it can leave. Tapping it early costs nothing.',
-        art: line('M4 23H50', ink, true) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) }
+        art: line('M4 23H50', ink, true) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) },
+      { key: 'ice', title: 'Frozen arrow', text: 'Winter. It cannot move, and it blocks others. Hit it with another arrow to free it, at no cost. If nothing can reach it, it thaws after 3 launches.',
+        art: line('M4 23H50', '#3f9fd8') + head(56, 23, '#3f9fd8') + '<circle cx="28" cy="23" r="11" fill="#e4f5ff" stroke="#2f8fd0" stroke-width="2"/><path d="M28 15v16M21 19l14 8M35 19l-14 8" stroke="#2f8fd0" stroke-width="1.800"/>' },
+      { key: 'fire', title: 'Burning tile', text: 'Summer. Blocks arrows for 2 to 4 launches. Hitting it costs a life.',
+        art: '<rect x="14" y="4" width="36" height="38" rx="6" fill="#ff5a12" opacity=".3"/><path d="M20 38C16 26 32 22 31 8 44 20 46 30 42 38Z" fill="#ff5a12"/><path d="M26 38C24 30 32 28 33 20 39 28 40 33 37 38Z" fill="#ffc61a"/>' },
+      { key: 'flower', title: 'Flower and bee', text: 'Spring. Flowers block arrows, and hitting one costs a life. After each launch, the bee carries its flower away.',
+        art: '<g fill="#f06ca8"><circle cx="20" cy="15" r="7"/><circle cx="30" cy="23" r="7"/><circle cx="26" cy="34" r="7"/><circle cx="14" cy="34" r="7"/><circle cx="10" cy="23" r="7"/></g><circle cx="20" cy="26" r="6" fill="#ffd23f"/><ellipse cx="46" cy="12" rx="10" ry="7" fill="#ffc61a" stroke="#2a2008"/><path d="M42 5v14M48 5v14" stroke="#2a2008" stroke-width="3"/><ellipse cx="44" cy="3" rx="5" ry="3" fill="#fff" stroke="#667"/>' },
+      { key: 'wind', title: 'Wind', text: 'Autumn. Can spin an arrow fully around its tail if there is room. Short arrows spin most often, and more can turn as the board clears.',
+        art: '<path d="M4 16h34a7 7 0 1 0-7-7M4 26h44a7 7 0 1 1-7 7M4 36h20" stroke="' + ink + '" stroke-width="4"/>' }
     ];
     var here = {}, arrows = current.level.arrows;
     arrows.forEach(function (a) {
@@ -1021,6 +1307,8 @@
       if (a.key !== undefined) here.moon = 1; if (a.isKey) here.star = 1; if (a.wait) here.patient = 1;
     });
     if ((current.level.mirrors || []).length) here.mirror = 1;
+    var seasonKey = { winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[current.level.season];
+    if (seasonKey) here[seasonKey] = 1;
     var html = '<div class="row"><h2>Arrow guide</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
       items.map(function (it) {
         return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p></div></div>';
@@ -1040,7 +1328,7 @@
     var html = '<div class="row"><h2>Music and sound</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' +
-      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the day', 'Changes with the time of day') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
+      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
     var s = sheet(html);
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
     showNow();
@@ -1077,8 +1365,11 @@
   /* ---------- Toolbar ---------- */
   $('bRewind').onclick = function () {
     audio();
-    var ids = E.rewind(state);
+    var ids = E.rewind(state, current.level);
     if (!ids) return;
+    current.level.arrows.forEach(function (x) { delete x.rot; delete x.burnUntil; });
+    beesLeaving = [];
+    if (current.level.flowers && current.level.flowers.length) { sendBee(state.launches, performance.now() - 2000); }
     current.level.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id] && ids.indexOf(x.id) < 0) angles[x.id] -= 90; });
     ids.forEach(function (id) { var a = current.level.arrows[id]; if (a.kind === 'compass') { angles[id] = E.dirOf(a, state) * 90; a.vis = angles[id]; } });
     tune.pop(); rewinds++; wakes = [];
@@ -1089,6 +1380,11 @@
   $('bHint').onclick = function () {
     audio();
     var l = current.level, sol = E.solve(l, state, l.big ? 6000 : 80000);
+    if (l.season && sol.solved && sol.sequence.length && !E.canLaunch(l, state, sol.sequence[0])) {
+      // The best arrow is frozen or waiting: point at a move that helps right now.
+      var useful = E.iceHits(l, state).concat(E.legalMoves(l, state));
+      if (useful.length) sol.sequence = [useful[0]];
+    }
     if (sol.solved && sol.sequence.length) {
       hintArrow = sol.sequence[0]; hintStart = performance.now(); hintsLeft--; hintsUsed++;
       track('hint_used', {});
@@ -1146,8 +1442,20 @@
     arrows: function () { return current.level.arrows; },
     open: function (set, i) { openLevel(set, i); },
     setTime: function (ms) { timeLeft = ms; },
-    counts: function () { return { calm: SETS.calm.length, hard: SETS.hard.length, timed: SETS.timed.length }; },
+    counts: function () { var o = {}; Object.keys(SETS).forEach(function (k) { o[k] = SETS[k].length; }); return o; },
     legal: function () { return E.legalMoves(current.level, state); },
+    nextMove: function () {
+      var l = current.level, sol = E.solve(l, state, 400000), legal = E.legalMoves(l, state), hits = E.iceHits(l, state);
+      if (sol.solved && sol.sequence.length && legal.indexOf(sol.sequence[0]) >= 0) return sol.sequence[0];
+      if (hits.length) return hits[0];
+      return legal.length ? legal[0] : -1;
+    },
+    rewind: function () { $('bRewind').click(); },
+    seasonInfo: function () { return { frozen: Object.keys(state.frozen).length, burning: Object.keys(state.burning).filter(function (k) { return state.burning[k] > state.launches; }).length, flowersLeft: current.level.flowers ? Math.max(0, current.level.flowers.length - state.launches) : null, beeIndex: bee ? bee.index : null, rotating: current.level.arrows.filter(function (a) { return a.rot; }).length, windAt: windAt, theme: M.THEMES[wantedTheme()].name, badge: $('seasonBadge').textContent, title: $('where').textContent }; },
+    setFrozen: function (id) { state.frozen[id] = 0; refresh(); },
+    burnAll: function () { var l = current.level, n = 0; for (var k = 0; k < l.w * l.h && n < 5; k++) { var o = l.grid[k]; if (o === -1 || state.removed[o]) { state.burning[k] = state.launches + 3; n++; } } return n; },
+    firePath: function () { var l = current.level; for (var i = 0; i < l.arrows.length; i++) { var a = l.arrows[i]; if (state.removed[a.id]) continue; var c = E.check(l, state, a); if (c.fire) return a.id; } return -1; },
+    iceHitFor: function () { return E.iceHits(current.level, state); },
     music: M,
     audio: function () {
       var rms = 0;
@@ -1164,6 +1472,11 @@
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   openLevel(SETS[last.set] ? last.set : 'calm', Math.min(last.index || 0, (SETS[last.set] || SETS.calm).length - 1));
+  // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
+  (function () {
+    var s = sheet('<h2>Unwind</h2><p>Sound on for the full experience</p><button class="primary" id="begin" style="width:100%">Tap to begin</button>', 'begin');
+    s.onclick = function () { audio(); closeSheet(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); };
+  })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);
   if (location.hash === '#debug' || /[?&]debug=1/.test(location.search)) debugSheet();

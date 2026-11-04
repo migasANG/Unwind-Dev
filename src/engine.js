@@ -34,6 +34,10 @@
     level.grid = grid;
     level.mirrorAt = {};
     (level.mirrors || []).forEach(function (m) { level.mirrorAt[m.y * level.w + m.x] = m.t; });
+    level.arrows.forEach(function (a) { if (!a.baseCells) { a.baseCells = a.cells; a.baseDir = a.dir; } });
+    // A flower's position in the queue is the launch on which a bee takes it.
+    level.flowerAt = {};
+    (level.flowers || []).forEach(function (f, i) { level.flowerAt[f[1] * level.w + f[0]] = i; });
     return level;
   }
   function newState(level) {
@@ -41,7 +45,7 @@
       removed: level.arrows.map(function () { return false; }),
       launches: 0,
       lives: level.lives === null ? null : (level.lives || 3),
-      history: []
+      history: [], frozen: {}, burning: {}, snaps: []
     };
   }
   function headOf(a) { return a.cells[a.cells.length - 1]; }
@@ -59,16 +63,20 @@
       x += DX[d]; y += DY[d]; dist++;
       if (x < 0 || y < 0 || x >= level.w || y >= level.h) return { clear: true, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       if (++guard > 400) return { clear: false, blocker: a.id, dist: 1, dir: dirOf(a, state), endDir: d, path: [] };
-      var mirror = level.mirrorAt && level.mirrorAt[y * level.w + x];
+      var key = y * level.w + x;
+      var mirror = level.mirrorAt && level.mirrorAt[key];
       if (mirror) { d = TURN[mirror][d]; path.push([x, y]); continue; }
-      var o = level.grid[y * level.w + x];
-      if (o !== -1 && o !== a.id && o !== partner && !state.removed[o]) return { clear: false, blocker: o, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
+      if (state.burning && state.burning[key] > state.launches) return { clear: false, fire: true, blocker: -2, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
+      if (level.flowerAt && level.flowerAt[key] >= state.launches) return { clear: false, flower: true, blocker: -3, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
+      var o = level.grid[key];
+      if (o !== -1 && o !== a.id && o !== partner && !state.removed[o]) return { clear: false, blocker: o, frozen: !!(state.frozen && state.frozen[o] !== undefined), dist: dist, dir: dirOf(a, state), endDir: d, path: path };
     }
   }
   // Sleepers wait for their key arrow to leave. Patient arrows wait for a number of launches.
   function isReady(state, a) {
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (a.wait && state.launches < a.wait) return false;
+    if (state.frozen && state.frozen[a.id] !== undefined) return false;
     return true;
   }
   function group(level, a) {
@@ -85,9 +93,20 @@
     if (!members.every(function (m) { return isReady(state, m); })) return { ok: false, notReady: true, results: [], failed: false };
     var results = members.map(function (m) { return { id: m.id, check: check(level, state, m) }; });
     var hit = results.filter(function (r) { return !r.check.clear; });
+    // Hitting a frozen arrow cracks it free. The tapped arrow bounces back and no life is lost.
+    var ice = hit.filter(function (r) { return r.check.frozen; });
+    if (ice.length && ice.length === hit.length) {
+      ice.forEach(function (r) { delete state.frozen[r.check.blocker]; });
+      return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
+    }
     if (hit.length) {
       if (state.lives !== null) state.lives--;
       return { ok: false, results: results, failed: state.lives === 0 };
+    }
+    if (level.season) {
+      state.snaps = state.snaps || [];
+      state.snaps.push({ frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
+        geo: level.arrows.map(function (a) { return { cells: a.cells, dir: a.dir }; }) });
     }
     members.forEach(function (m) { state.removed[m.id] = true; });
     state.history.push(members.map(function (m) { return m.id; }));
@@ -95,12 +114,29 @@
     return { ok: true, results: results, won: state.removed.every(Boolean) };
   }
   // Rewind restores the last launch. Lives stay as they are.
-  function rewind(state) {
+  function rewind(state, level) {
     var last = state.history.pop();
     if (!last) return null;
     last.forEach(function (id) { state.removed[id] = false; });
     state.launches--;
+    var snap = state.snaps && state.snaps.pop();
+    if (snap && level) {
+      state.frozen = snap.frozen; state.burning = snap.burning;
+      level.arrows.forEach(function (a, i) { a.cells = snap.geo[i].cells; a.dir = snap.geo[i].dir; });
+      rebuildGrid(level, state);
+    }
     return last;
+  }
+  // Cells of arrows still on the board take priority over cells of arrows that have left.
+  function rebuildGrid(level, state) {
+    var g = new Array(level.w * level.h).fill(-1);
+    level.arrows.forEach(function (a) { if (state.removed[a.id]) a.cells.forEach(function (c) { g[c[1] * level.w + c[0]] = a.id; }); });
+    level.arrows.forEach(function (a) { if (!state.removed[a.id]) a.cells.forEach(function (c) { g[c[1] * level.w + c[0]] = a.id; }); });
+    level.grid = g;
+  }
+  function resetBoard(level) {
+    level.arrows.forEach(function (a) { a.cells = a.baseCells; a.dir = a.baseDir; });
+    prepare(level);
   }
   function legalMoves(level, state) {
     var out = [];
@@ -112,11 +148,118 @@
     return out;
   }
   function isWon(state) { return state.removed.every(Boolean); }
-  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0; }
+  // An arrow that would hit a frozen arrow counts as a useful move.
+  function iceHits(level, state) {
+    var out = [];
+    level.arrows.forEach(function (a) {
+      if (state.removed[a.id] || !isReady(state, a)) return;
+      var c = check(level, state, a);
+      if (!c.clear && c.frozen) out.push(a.id);
+    });
+    return out;
+  }
+  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && iceHits(level, state).length === 0; }
+
+  /* ---------- Seasons: what happens after each successful launch ---------- */
+  // The roll depends only on the level and the launch number, so a rewound move plays out the same way.
+  function liveEmptyCells(level, state) {
+    var out = [];
+    for (var y = 0; y < level.h; y++) for (var x = 0; x < level.w; x++) {
+      var k = y * level.w + x, o = level.grid[k];
+      if (level.mirrorAt[k] || level.flowerAt[k] >= state.launches || state.burning[k] > state.launches) continue;
+      if (o === -1 || state.removed[o]) out.push(k);
+    }
+    return out;
+  }
+  function rayCellsOf(level, state, a) {
+    var d = dirOf(a, state), h = headOf(a), x = h[0], y = h[1], out = [], guard = 0;
+    while (guard++ < 300) {
+      x += DX[d]; y += DY[d];
+      if (x < 0 || y < 0 || x >= level.w || y >= level.h) break;
+      var k = y * level.w + x, mirror = level.mirrorAt[k];
+      if (mirror) d = TURN[mirror][d]; else out.push(k);
+    }
+    return out;
+  }
+  // The ways an arrow can pivot fully around its tail: quarter turns that fit in free space.
+  function pivotOptions(level, state, a) {
+    if (a.kind === 'compass') return [];
+    var t = a.cells[0], out = [];
+    [1, 2, 3].forEach(function (q) {
+      var cells = [], ok = true;
+      a.cells.forEach(function (c) {
+        var dx = c[0] - t[0], dy = c[1] - t[1];
+        for (var i = 0; i < q; i++) { var tmp = dx; dx = -dy; dy = tmp; }
+        var nx = t[0] + dx, ny = t[1] + dy, k = ny * level.w + nx;
+        if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h || level.mirrorAt[k] || level.flowerAt[k] >= state.launches || state.burning[k] > state.launches) { ok = false; return; }
+        var o = level.grid[k];
+        if (o !== -1 && o !== a.id && !state.removed[o]) ok = false;
+        cells.push([nx, ny]);
+      });
+      if (ok) out.push({ quarters: q, cells: cells, dir: (a.dir + q) % 4 });
+    });
+    return out;
+  }
+  function seasonStep(level, state) {
+    var ev = { freeze: [], thaw: [], burn: [], wind: false, rotate: [], cleared: false };
+    if (!level.season || isWon(state)) return ev;
+    var r = rng32(((level.seed || 7) * 31 + state.launches * 7919 + 13) >>> 0);
+    r(); r();
+    var live = level.arrows.filter(function (a) { return !state.removed[a.id]; });
+    // An arrow nothing can reach thaws by itself after 3 launches.
+    Object.keys(state.frozen).forEach(function (id) {
+      if (state.removed[id]) { delete state.frozen[id]; return; }
+      var reachable = live.some(function (a) { if (a.id === +id || !isReady(state, a)) return false; var c = check(level, state, a); return !c.clear && c.blocker === +id; });
+      state.frozen[id] = reachable ? 0 : state.frozen[id] + 1;
+      if (state.frozen[id] >= 3) { delete state.frozen[id]; ev.thaw.push(+id); }
+    });
+    if (level.season === 'winter' && r() < 0.2) {
+      var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && state.frozen[a.id] === undefined; }), r);
+      pool.some(function (a) {
+        if (ev.freeze.length >= want) return true;
+        if (a.kind === 'twin') return false;
+        state.frozen[a.id] = 0;
+        if (isStuck(level, state)) delete state.frozen[a.id]; else ev.freeze.push(a.id);
+        return false;
+      });
+    }
+    if (level.season === 'summer' && r() < 0.25) {
+      var tiles = 1 + Math.floor(r() * 5), turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
+      live.forEach(function (a) { rayCellsOf(level, state, a).forEach(function (k) { onPath[k] = 1; }); });
+      // Prefer tiles that arrows actually need, so the fire matters.
+      var order = shuffle(empty, r).sort(function (x, y) { return (onPath[y] || 0) - (onPath[x] || 0); });
+      order.some(function (k) {
+        if (ev.burn.length >= tiles) return true;
+        state.burning[k] = state.launches + turns;
+        if (legalMoves(level, state).length === 0) delete state.burning[k]; else ev.burn.push(k);
+        return false;
+      });
+    }
+    if (level.season === 'autumn' && r() < 0.5) {
+      ev.wind = true;
+      shuffle(live.slice(), r).forEach(function (a) {
+        var roll = r(), pick = r();
+        if (roll >= 0.5) return;
+        var options = pivotOptions(level, state, a);
+        if (!options.length) return;
+        var o = options[Math.floor(pick * options.length)], oldCells = a.cells, oldDir = a.dir;
+        a.cells = o.cells; a.dir = o.dir; rebuildGrid(level, state);
+        var res = solve(level, state, 15000);
+        if (res.solved) ev.rotate.push({ id: a.id, quarters: o.quarters });
+        else { a.cells = oldCells; a.dir = oldDir; rebuildGrid(level, state); }
+      });
+    }
+    // If nothing can move, fire dies and ice melts, so effects alone can never trap the player.
+    if (isStuck(level, state) && (Object.keys(state.frozen).length || Object.keys(state.burning).length)) {
+      ev.thaw = ev.thaw.concat(Object.keys(state.frozen).map(Number));
+      state.frozen = {}; state.burning = {}; ev.cleared = true;
+    }
+    return ev;
+  }
 
   // Depth-first search with memoised dead ends.
   function solve(level, from, budget) {
-    var state = { removed: from.removed.slice(), launches: from.launches, lives: null, history: [] };
+    var state = { removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {} };
     var dead = {}, nodes = 0, limit = budget || 200000, exhausted = false, path = [];
     function dfs() {
       if (isWon(state)) return true;
@@ -177,7 +320,7 @@
       x += DX[d]; y += DY[d];
       while (x >= 0 && y >= 0 && x < w && y < h && guard++ < 400) {
         var k = y * w + x;
-        if (mirror[k]) d = TURN[mirror[k]][d]; else out.push(k);
+        if (mirror[k]) d = TURN[mirror[k]][d]; else if (!reserved[k]) out.push(k);
         x += DX[d]; y += DY[d];
       }
       return out;
@@ -241,6 +384,13 @@
         }
       }
       return null;
+    }
+    // Cells kept free while building: flowers later, or open space for fire and wind.
+    var reserved = {};
+    var reserveCount = Math.round(w * h * ((spec.flowers || 0) + (spec.gaps || 0)));
+    for (var ri = 0; ri < reserveCount; ri++) {
+      var rx = Math.floor(r() * w), ry = Math.floor(r() * h), rk = ry * w + rx;
+      if (!occ[rk]) { occ[rk] = true; reserved[rk] = 1; }
     }
     var placedMirrors = [];
     for (var mi = 0; mi < (spec.mirrors || 0); mi++) {
@@ -354,9 +504,36 @@
     var used = occ.filter(Boolean).length;
     // Groups leave in reverse order, so this list always clears the board.
     var solution = groups.slice().reverse().map(function (g) { return g.ids[0]; });
-    return { solution: solution, w: w, h: h, mirrors: placedMirrors, arrows: arrows, lives: spec.lives === undefined ? 3 : spec.lives, density: used / (w * h) };
+    return { reserved: Object.keys(reserved).map(Number), solution: solution, w: w, h: h, mirrors: placedMirrors, arrows: arrows, lives: spec.lives === undefined ? 3 : spec.lives, density: used / (w * h) };
   }
 
+  // Orders the flowers for the bees. Each flower must go before the arrow that needs its cell in the known
+  // solution, and any legal play only ever frees more, so the board can always still be cleared.
+  function plantFlowers(level, r) {
+    var cells = level.reserved.slice(), deadline = {}, s = newState(level);
+    cells.forEach(function (k) { deadline[k] = Infinity; });
+    level.solution.forEach(function (id, step) {
+      var members = level.arrows[id].kind === 'twin' ? [level.arrows[id], level.arrows[level.arrows[id].twin]] : [level.arrows[id]];
+      members.forEach(function (a) {
+        rayCellsOf(level, s, a).forEach(function (k) { if (deadline[k] !== undefined && step < deadline[k]) deadline[k] = step; });
+      });
+      tap(level, s, id);
+    });
+    shuffle(cells, r);
+    cells.sort(function (a, b) { return deadline[a] - deadline[b]; });
+    var queue = [];
+    cells.forEach(function (k) {
+      // A bee takes queue[i] on launch i, so this flower is gone in time only if i < its deadline.
+      if (queue.length < deadline[k]) queue.push(k);
+    });
+    // Mix up the flowers that have no deadline pressure, so the bees don't look scripted.
+    for (var i = queue.length - 1; i > 0; i--) {
+      var j = Math.floor(r() * (i + 1));
+      if (Math.min(deadline[queue[i]], Infinity) > j && deadline[queue[j]] > i) { var t = queue[i]; queue[i] = queue[j]; queue[j] = t; }
+    }
+    level.flowers = queue.map(function (k) { return [k % level.w, Math.floor(k / level.w)]; });
+    prepare(level);
+  }
   function replays(level) {
     var s = newState(level); s.lives = null;
     return level.solution.every(function (id) { return tap(level, s, id).ok; }) && isWon(s);
@@ -369,6 +546,7 @@
       var lvl = buildOnce(spec, rng32(useSeed));
       if (!lvl) continue;
       prepare(lvl);
+      if (spec.flowers) plantFlowers(lvl, rng32(useSeed + 5));
       var hasCompass = (spec.compass || 0) > 0;
       var start = newState(lvl);
       var startFree = legalMoves(lvl, start).length;
@@ -425,7 +603,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };

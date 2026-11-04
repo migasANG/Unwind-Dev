@@ -70,7 +70,23 @@
     { id: 'night-swim', name: 'Night Swim', mood: 'Slow, dreamy electric piano', bpm: 46, beats: 4, style: 'dream',
       chords: [[38,57,60,65],[43,58,62,65],[36,55,58,64],[41,57,60,64],[34,53,57,62],[43,53,59,62],[36,52,55,62],[33,55,60,64]],
       melody: [[[1,69]],[[2,70],[3,67]],[[1.5,64]],[[0.5,65],[3,69]],[[1,62]],[[2,65],[3,62]],[[1,64]],[[0,61],[2.5,57]]],
-      pent: [50,53,55,57,60,62,65,67,69,72,74] }
+      pent: [50,53,55,57,60,62,65,67,69,72,74] },
+    { id: 'snowfall', name: 'Snowfall', mood: 'Winter: falling glass bells', bpm: 54, beats: 4, style: 'snow',
+      chords: [[40,59,64,67],[36,55,64,67],[38,57,62,66],[35,54,62,66],[40,59,67,71],[33,57,60,64],[36,55,60,67],[35,54,59,63]],
+      melody: [[[0,83],[1.5,79],[3,76]],[[0.5,79],[2,84]],[[0,81],[1.5,78],[3,74]],[[1,78],[2.5,71]],[[0,83],[1,86],[2.5,83]],[[0.5,81],[2,76]],[[0,79],[1.5,84],[3,79]],[[1,78],[2.5,75]]],
+      pent: [52,55,57,59,62,64,67,69,71,74,76] },
+    { id: 'meadow', name: 'Meadow', mood: 'Spring: a flute over skipping strings', bpm: 108, beats: 4, style: 'meadow',
+      chords: [[43,55,59,62],[40,55,59,64],[36,52,55,60],[38,54,57,62],[43,55,62,67],[47,55,59,62],[36,52,60,64],[38,54,60,62]],
+      melody: [[[0,74],[1,79],[2,83],[3,81]],[[0,79],[2,76]],[[0,76],[1,79],[2,84],[3,83]],[[0,81],[2,78]],[[0,83],[1,86],[2,88],[3,86]],[[0,83],[2,79]],[[0,84],[1,83],[2,81],[3,79]],[[0,78],[1,81],[2,74]]],
+      pent: [55,57,59,62,64,67,69,71,74,76,79] },
+    { id: 'sandbar', name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
+      chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
+      melody: [[[1.5,74],[3,78]],[[0.5,76],[2,73]],[[1,71],[2.5,74]],[[0,73],[1.5,69]],[[1.5,78],[3,81]],[[0.5,78],[2,74]],[[1,76],[2.5,79]],[[0,76],[2,73]]],
+      pent: [50,52,54,57,59,62,64,66,69,71,74] },
+    { id: 'amber-leaves', name: 'Amber Leaves', mood: 'Autumn: warm cello and a slow waltz', bpm: 74, beats: 3, style: 'amber',
+      chords: [[33,52,57,60],[29,53,57,60],[36,52,55,60],[28,52,56,59],[33,52,60,64],[38,53,57,62],[35,50,56,59],[28,52,56,62]],
+      melody: [[[0,64],[1,69],[2,72]],[[0,69],[2,65]],[[0,67],[1,72],[2,76]],[[0,71],[2,68]],[[0,69],[1,72],[2,76]],[[0,74],[2,69]],[[0,68],[1,71],[2,74]],[[0,71],[1,68],[2,64]]],
+      pent: [45,48,50,52,55,57,60,62,64,67,69] }
   ];
 
   var bars = {
@@ -109,6 +125,52 @@
       if (melody) melody.forEach(function (n) { vibe(ctx, dest, hz(n[1]), t + n[0] * beat, 0.11, beat * 3.4); });
     }
   };
+  Object.assign(bars, {
+    snow: function (ctx, dest, th, chord, melody, t, beat, len) {
+      swell(ctx, dest, hz(chord[0] + 12), t, 0.035, len * 1.1, 1.4, 500);
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.075, beat * 3.6, 0.003, BELL); });
+      voice(ctx, dest, hz(chord[3] + 24), t + 2.5 * beat, 0.026, beat * 2.5, 0.003, BELL);
+    },
+    meadow: function (ctx, dest, th, chord, melody, t, beat) {
+      [0, 1, 2, 3].forEach(function (b) {
+        voice(ctx, dest, hz(b % 2 ? chord[2] : chord[0] + 12), t + b * beat, b % 2 ? 0.05 : 0.09, 0.5, 0.005, PIZZ);
+        voice(ctx, dest, hz(chord[3]), t + (b + 0.5) * beat, 0.035, 0.32, 0.005, PIZZ);
+      });
+      if (melody) melody.forEach(function (n, i) {
+        var next = melody[i + 1] ? melody[i + 1][0] : th.beats;
+        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.085, (next - n[0]) * beat * 0.98, 0.05, 2600);
+      });
+    },
+    bossa: function (ctx, dest, th, chord, melody, t, beat) {
+      voice(ctx, dest, hz(chord[0]), t, 0.12, 0.9, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.09, 0.8, 0.006, PIZZ);
+      [0.5, 1.5, 2.5, 3.5, 3].forEach(function (b) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, 0.04, 0.55, 0.004, GUITAR); });
+      });
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.09, 1.2, 0.006, GUITAR); });
+    },
+    amber: function (ctx, dest, th, chord, melody, t, beat, len) {
+      swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);
+      [1, 2].forEach(function (b) { [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat, 0.028, 0.75, 0.01, FELT); }); });
+      if (melody) melody.forEach(function (n, i) {
+        var next = melody[i + 1] ? melody[i + 1][0] : th.beats;
+        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.075, (next - n[0]) * beat, 0.09, 1300);
+      });
+    }
+  });
+  // Soft season sounds. These are plain tones with no noise in them.
+  function glide(ctx, dest, from, to, t, dur, vol) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(from, t); o.frequency.exponentialRampToValueAtTime(to, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + dur * 0.35); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 0.05);
+    o.onended = function () { g.disconnect(); };
+  }
+  function windSound(ctx, dest, t) { glide(ctx, dest, 220, 520, t, 0.75, 0.06); glide(ctx, dest, 330, 260, t + 0.25, 0.8, 0.05); }
+  function freezeSound(ctx, dest, t) { [88, 91, 96].forEach(function (m, i) { voice(ctx, dest, hz(m), t + i * 0.06, 0.07, 0.9, 0.002, BELL); }); }
+  function crackSound(ctx, dest, t) { [84, 79].forEach(function (m, i) { voice(ctx, dest, hz(m), t + i * 0.05, 0.1, 0.45, 0.002, WOOD); }); }
+  function fireSound(ctx, dest, t) { glide(ctx, dest, 120, 240, t, 0.5, 0.09); glide(ctx, dest, 300, 130, t + 0.1, 0.5, 0.05); }
+  function buzzSound(ctx, dest, t) { glide(ctx, dest, 300, 420, t, 0.22, 0.03); }
   // Schedules one bar and returns its length in seconds.
   function scheduleBar(ctx, dest, themeIndex, bar, t) {
     var th = THEMES[themeIndex], beat = 60 / th.bpm, len = th.beats * beat;
@@ -151,5 +213,5 @@
     voice(ctx, dest, urgent ? 1046.5 : 784, t, urgent ? 0.26 : 0.17, 0.26, 0.002, WOOD);
     if (urgent) voice(ctx, dest, 1046.5, t + 0.13, 0.17, 0.2, 0.002, WOOD);
   }
-  return { VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
+  return { windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
 });

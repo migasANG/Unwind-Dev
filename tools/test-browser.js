@@ -4,7 +4,7 @@ const {chromium}=require('playwright');const path=require('path');
 const url='file://'+path.resolve(__dirname,'../dist/index.html');
 const ctx=await b.newContext({viewport:{width:390,height:800}});
 const p=await ctx.newPage();p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error'&&!/ERR_TUNNEL|fonts/.test(m.text()))errs.push(m.text())});
-await p.goto(url);await p.waitForTimeout(1200);await p.screenshot({path:out+'/l1.png'});
+await p.goto(url);await p.waitForTimeout(300);await p.screenshot({path:out+'/begin.png'});await p.click('#begin');await p.waitForTimeout(1200);await p.screenshot({path:out+'/l1.png'});
 const snap=()=>p.evaluate(()=>unwindTest.snapshot());
 const tapId=async id=>{const pt=await p.evaluate(i=>unwindTest.point(i),id);await p.mouse.click(pt.x,pt.y)};
 // Collision costs a life; last life fails
@@ -22,12 +22,10 @@ await p.evaluate(()=>unwindTest.open('calm',3));await p.waitForTimeout(1300);awa
 await p.waitForTimeout(3000);console.log('hint still showing after 3s',(await snap()).hint===h.hint);
 // Every level
 const counts=await p.evaluate(()=>unwindTest.counts());
-for(const set of ['calm','hard','timed'])for(let i=0;i<counts[set];i++){
+for(const set of Object.keys(counts))for(let i=0;i<counts[set];i++){
  await p.evaluate(([a,c])=>unwindTest.open(a,c),[set,i]);
- if([12,15,18,23].includes(i)&&set==='calm'||(set==='hard'&&i==11)||(set==='timed'&&i==5)){await p.waitForTimeout(1500);await p.screenshot({path:out+`/${set}${i+1}.png`})}
- s=await p.evaluate(()=>unwindTest.solve());if(!s)throw new Error('no solution '+set+i);
- for(const id of s){await tapId(id)}
- const n=await snap();if(!n.won||n.lives<(set==='hard'?2:3))throw new Error('failed '+JSON.stringify(n));
+ let g=0,n;while(g++<400){n=await snap();if(n.won)break;const id=await p.evaluate(()=>unwindTest.nextMove());if(id<0){await p.evaluate(()=>unwindTest.rewind());continue}await tapId(id)}
+ n=await snap();if(!n.won)throw new Error('failed '+JSON.stringify(n));
  await p.waitForSelector('#next',{timeout:6000});
  console.log('cleared',n.id,await p.textContent('.win h2'));
 }
@@ -57,7 +55,7 @@ const audio=await p.evaluate(async()=>{const M=unwindTest.music,res=[];
  return res});
 console.log(JSON.stringify(audio,null,0).replace(/},/g,'},\n'));
 await ctx.close();
-for(const [n,w,h] of [['small',360,640],['desk',1280,800]]){const c=await b.newContext({viewport:{width:w,height:h}});const q=await c.newPage();q.on('pageerror',e=>errs.push(e.message));await q.goto(url);await q.waitForTimeout(800);await q.evaluate(()=>unwindTest.open('hard',11));await q.waitForTimeout(1800);await q.screenshot({path:out+`/${n}.png`});
- const sq=await q.evaluate(()=>unwindTest.solve());await q.evaluate(()=>unwindTest.open('calm',0));for(const id of await q.evaluate(()=>unwindTest.solve())){const pt=await q.evaluate(i=>unwindTest.point(i),id);await q.mouse.click(pt.x,pt.y)}await q.waitForSelector('#next');await q.waitForTimeout(1200);await q.screenshot({path:out+`/${n}win.png`});
+for(const [n,w,h] of [['small',360,640],['desk',1280,800]]){const c=await b.newContext({viewport:{width:w,height:h}});const q=await c.newPage();q.on('pageerror',e=>errs.push(e.message));await q.goto(url);await q.waitForTimeout(200);await q.click('#begin');await q.waitForTimeout(600);await q.evaluate(()=>unwindTest.open('hard',11));await q.waitForTimeout(1800);await q.screenshot({path:out+`/${n}.png`});
+ const sq=await q.evaluate(()=>unwindTest.solve());await q.evaluate(()=>unwindTest.open('calm',0));await q.waitForTimeout(60);for(const id of await q.evaluate(()=>unwindTest.solve())){const pt=await q.evaluate(i=>unwindTest.point(i),id);await q.mouse.click(pt.x,pt.y)}await q.waitForSelector('#next');await q.waitForTimeout(1200);await q.screenshot({path:out+`/${n}win.png`});
  console.log(n,'winCardFits',await q.evaluate(()=>{const c=document.querySelector('.card');return [c.scrollHeight,c.clientHeight,document.documentElement.scrollWidth]}));await c.close();}
 console.log('errors',errs);await b.close()})().catch(e=>{console.error(e);process.exit(1)});

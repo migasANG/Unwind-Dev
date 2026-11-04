@@ -54,10 +54,23 @@ const timed = [
  { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,mirrors:2,sleepers:2 },
  { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,patient:2,trap:[0.05,0.5] },
 ].map(s=>({...s,timed:true}));
+
+// Early season levels focus on the new effect. The last ones bring every arrow type back.
+const seasonSet=(season,extra)=>[
+ {w:5,h:6,maxLen:4,depth:4},{w:5,h:7,maxLen:4,depth:4},{w:6,h:7,maxLen:5,depth:5},{w:6,h:8,maxLen:5,depth:5},
+ {w:7,h:8,maxLen:6,depth:6,twins:1,mirrors:1},{w:7,h:9,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,patient:1,trap:[0.02,0.5]},
+ {w:8,h:10,maxLen:7,depth:8,twins:2,compass:1,sleepers:2,mirrors:2,patient:2,trap:[0.02,0.5]},
+].map(s=>({minLen:2,season,...extra,...s}));
+const winter=seasonSet('winter',{}), spring=seasonSet('spring',{flowers:0.3}), summer=seasonSet('summer',{gaps:0.16}), autumn=seasonSet('autumn',{gaps:0.26,maxLen:4});
+winter[0].caption='Ice can trap arrows. Hit a frozen arrow with another arrow to free it.';
+spring[0].caption='Flowers block arrows. Each launch, a bee carries one away.';
+summer[0].caption='Burning tiles stop arrows for a few launches. Wait, or find another way.';
+autumn[0].caption='Wind can spin arrows around their tails when there is room.';
 const out={}, rows=[];
-[['calm',calm,1000],['hard',hard,7000],['timed',timed,13000]].forEach(([name,specs,base])=>{
+[['calm',calm,1000],['hard',hard,7000],['timed',timed,13000],['winter',winter,21000],['spring',spring,23000],['summer',summer,25000],['autumn',autumn,27000]].forEach(([name,specs,base])=>{
  out[name]=specs.map((s,i)=>{
   const l=E.generate(s,base+i*31,s.compass?500:300);
+  if(s.season)l.season=s.season;
   if(!l) throw new Error('no level '+name+' '+(i+1));
   const st=E.newState(l), sol=E.solve(l,st,3000000);
   if(!sol.solved) throw new Error('unsolvable '+name+' '+(i+1));
@@ -66,8 +79,8 @@ const out={}, rows=[];
   if(!won) throw new Error('replay did not clear '+name+(i+1));
   const c=k=>l.arrows.filter(k).length;
   const limit=s.timed?E.timeLimitFor(sol.sequence.length):null;
-  rows.push({set:name,level:i+1,grid:s.w+'x'+s.h,arrows:l.arrows.length,twin:c(a=>a.kind==='twin')/2,compass:c(a=>a.kind==='compass'),sleep:c(a=>a.key!==undefined),mirror:l.mirrors.length,patient:c(a=>a.wait),filled:Math.round(l.density*100)+'%',freeAtStart:E.legalMoves(l,E.newState(l)).length,lives:s.lives||3,limit,stuck:Math.round(E.trapRate(l,300,7)*100)+'%'});
-  return {w:l.w,h:l.h,lives:s.lives||3,hints:s.hints===undefined?1:s.hints,timeLimit:limit,seed:l.seed,caption:s.caption||null,mirrors:l.mirrors,arrows:l.arrows};
+  rows.push({set:name,level:i+1,grid:s.w+'x'+s.h,arrows:l.arrows.length,twin:c(a=>a.kind==='twin')/2,compass:c(a=>a.kind==='compass'),sleep:c(a=>a.key!==undefined),mirror:l.mirrors.length,flowers:(l.flowers||[]).length,patient:c(a=>a.wait),filled:Math.round(l.density*100)+'%',freeAtStart:E.legalMoves(l,E.newState(l)).length,lives:s.lives||3,limit,stuck:Math.round(E.trapRate(l,300,7)*100)+'%'});
+  return {w:l.w,h:l.h,lives:s.lives||3,hints:s.hints===undefined?1:s.hints,timeLimit:limit,seed:l.seed,caption:s.caption||null,season:s.season||null,flowers:l.flowers||null,mirrors:l.mirrors,arrows:l.arrows};
  });
 });
 fs.writeFileSync(__dirname+'/../src/levels.json',JSON.stringify(out));
