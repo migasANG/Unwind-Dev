@@ -276,5 +276,16 @@
     voice(ctx, dest, urgent ? 1046.5 : 784, t, urgent ? 0.26 : 0.17, 0.26, 0.002, WOOD);
     if (urgent) voice(ctx, dest, 1046.5, t + 0.13, 0.17, 0.2, 0.002, WOOD);
   }
-  return { igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
+  function redCardSound(ctx, dest, t) {
+    // A referee's whistle: a bright trilled tone, two short blasts and a long one.
+    [[0, 0.13], [0.18, 0.13], [0.36, 0.42]].forEach(function (p) {
+      var o = ctx.createOscillator(), lfo = ctx.createOscillator(), depth = ctx.createGain(), g = ctx.createGain(), st = t + p[0];
+      o.type = 'sine'; o.frequency.value = 2250; lfo.frequency.value = 31; depth.gain.value = 170;
+      lfo.connect(depth); depth.connect(o.frequency);
+      g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(0.1, st + 0.012); g.gain.setValueAtTime(0.1, st + p[1] - 0.02); g.gain.linearRampToValueAtTime(0, st + p[1]);
+      o.connect(g); g.connect(dest); o.start(st); lfo.start(st); o.stop(st + p[1] + 0.02); lfo.stop(st + p[1] + 0.02);
+      o.onended = function () { g.disconnect(); depth.disconnect(); };
+    });
+  }
+  return { redCardSound: redCardSound, igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
 });
