@@ -52,7 +52,15 @@
   function effectsOf(level) { return level.effects || (level.season ? [level.season] : []); }
   function hasEffect(level, name) { return effectsOf(level).indexOf(name) >= 0; }
   function headOf(a) { return a.cells[a.cells.length - 1]; }
-  function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : a.dir; }
+  // A reverse arrow's tip swaps to its other end on every launch, so it can leave from either end.
+  function tipAtTail(state, a) { return a.uno !== undefined && (state.launches + a.uno + (state.ghostFlip || 0)) % 2 === 1; }
+  function tipOf(a, state) { return tipAtTail(state, a) ? a.cells[0] : headOf(a); }
+  function tailDir(a) {
+    var dx = a.cells[0][0] - a.cells[1][0], dy = a.cells[0][1] - a.cells[1][1];
+    for (var d = 0; d < 4; d++) if (DX[d] === dx && DY[d] === dy) return d;
+    return a.dir;
+  }
+  function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : tipAtTail(state, a) ? tailDir(a) : a.dir; }
   function partnerOf(a) { return a.kind === 'twin' ? a.twin : -1; }
 
   // A mirror turns a travelling arrow 90 degrees. Index by direction of travel.
@@ -61,7 +69,7 @@
   // Walks from the head to the board edge, following mirrors. The arrow's own cells and its twin never block it.
   // path holds every corner, for drawing; endDir is the direction it finally leaves in.
   function check(level, state, a) {
-    var d = dirOf(a, state), h = headOf(a), x = h[0], y = h[1], dist = 0, partner = partnerOf(a), path = [], guard = 0, phased = false;
+    var d = dirOf(a, state), h = tipOf(a, state), x = h[0], y = h[1], dist = 0, partner = partnerOf(a), path = [], guard = 0, phased = false;
     for (;;) {
       x += DX[d]; y += DY[d]; dist++;
       if (x < 0 || y < 0 || x >= level.w || y >= level.h) return { clear: true, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
@@ -113,7 +121,7 @@
     var members = group(level, level.arrows[id]);
     // Tapping an arrow that is not ready yet is free: nothing moves and no life is lost.
     if (!members.every(function (m) { return isReady(state, m); })) return { ok: false, notReady: true, results: [], failed: false };
-    var results = members.map(function (m) { return { id: m.id, check: check(level, state, m) }; });
+    var results = members.map(function (m) { var c = check(level, state, m); c.fromTail = tipAtTail(state, m); return { id: m.id, check: c }; });
     var hit = results.filter(function (r) { return !r.check.clear; });
     // Hitting a frozen arrow cracks it free. The tapped arrow bounces back and no life is lost.
     var ice = hit.filter(function (r) { return r.check.frozen; });
@@ -163,7 +171,7 @@
   // If nothing can move and a ghost is waiting, it turns solid so the board never freezes up.
   function unstickGhosts(level, state) {
     if (isWon(state) || !isStuck(level, state)) return false;
-    if (!level.arrows.some(function (a) { return !state.removed[a.id] && a.ghostPhase !== undefined; })) return false;
+    if (!level.arrows.some(function (a) { return !state.removed[a.id] && (a.ghostPhase !== undefined || a.uno !== undefined); })) return false;
     state.ghostFlip = (state.ghostFlip || 0) + 1;
     if (isStuck(level, state)) { state.ghostFlip--; return false; }
     return true;
@@ -209,7 +217,7 @@
     return out;
   }
   function rayCellsOf(level, state, a) {
-    var d = dirOf(a, state), h = headOf(a), x = h[0], y = h[1], out = [], guard = 0;
+    var d = dirOf(a, state), h = tipOf(a, state), x = h[0], y = h[1], out = [], guard = 0;
     while (guard++ < 300) {
       x += DX[d]; y += DY[d];
       if (x < 0 || y < 0 || x >= level.w || y >= level.h) break;
@@ -308,30 +316,34 @@
   // Depth-first search with memoised dead ends.
   function solve(level, from, budget) {
     var state = { removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {}, ghostFlip: from.ghostFlip || 0, arrowsRef: level.arrows };
-    var hasGhosts = level.arrows.some(function (a) { return a.ghostPhase !== undefined; });
+    var hasGhosts = level.arrows.some(function (a) { return a.ghostPhase !== undefined || a.uno !== undefined; });
     var flipping = false, dead = {}, nodes = 0, limit = budget || 200000, exhausted = false, path = [];
     function dfs() {
       if (isWon(state)) return true;
       var key = state.removed.map(Number).join('') + (hasGhosts ? ((state.launches + state.ghostFlip) % 2) : '');
       if (dead[key]) return false;
       if (++nodes > limit) { exhausted = true; return false; }
-      var moves = legalMoves(level, state);
-      if (!moves.length && hasGhosts && !flipping) {
+      // Moves are looked for one at a time, since boards usually clear on the first path tried.
+      var tried = 0, arrows = level.arrows;
+      for (var i = 0; i < arrows.length; i++) {
+        var cand = arrows[i];
+        if (state.removed[cand.id] || (cand.kind === 'twin' && cand.twin < cand.id) || !canLaunch(level, state, cand.id)) continue;
+        tried++;
+        var members = group(level, cand);
+        members.forEach(function (m) { state.removed[m.id] = true; });
+        state.launches++; path.push(cand.id);
+        if (dfs()) return true;
+        path.pop(); state.launches--;
+        members.forEach(function (m) { state.removed[m.id] = false; });
+        if (exhausted) return false;
+      }
+      if (!tried && hasGhosts && !flipping) {
         flipping = true; state.ghostFlip++;
         var flipped = dfs();
         state.ghostFlip--; flipping = false;
         if (flipped) { state.ghostFlip++; return true; }
       }
       flipping = false;
-      for (var i = 0; i < moves.length; i++) {
-        var members = group(level, level.arrows[moves[i]]);
-        members.forEach(function (m) { state.removed[m.id] = true; });
-        state.launches++; path.push(moves[i]);
-        if (dfs()) return true;
-        path.pop(); state.launches--;
-        members.forEach(function (m) { state.removed[m.id] = false; });
-        if (exhausted) return false;
-      }
       dead[key] = true;
       return false;
     }
@@ -622,6 +634,28 @@
     chosen.forEach(function (a) { a.phase = true; });
     return true;
   }
+  // Each reverse arrow is timed so its tip points the right way at its turn in the known solution.
+  // Arrows whose other end is blocked at that moment come first, because for them the timing truly matters.
+  function assignReverse(level, spec, r) {
+    var s = newState(level), useful = [], others = [];
+    s.lives = null;
+    level.solution.forEach(function (id) {
+      var a = level.arrows[id];
+      if (a.kind === 'plain' && a.cells.length >= 2 && a.key === undefined && !a.isKey && !a.wait && !a.red && a.ghostPhase === undefined && !a.phase) {
+        a.uno = (s.launches + 1 + (s.ghostFlip || 0)) % 2;
+        var other = check(level, s, a);
+        delete a.uno;
+        (other.clear ? others : useful).push({ a: a, phase: (s.launches + (s.ghostFlip || 0)) % 2 });
+      }
+      tap(level, s, id);
+    });
+    if (spec.reverseStrict && useful.length < spec.unos) return false;
+    shuffle(useful, r); shuffle(others, r);
+    var chosen = useful.concat(others).slice(0, spec.unos);
+    if (chosen.length < spec.unos) return false;
+    chosen.forEach(function (c) { c.a.uno = c.phase; });
+    return true;
+  }
   function replays(level) {
     var s = newState(level); s.lives = null;
     return level.solution.every(function (id) { return tap(level, s, id).ok; }) && isWon(s);
@@ -636,6 +670,7 @@
       prepare(lvl);
       if (spec.flowers) plantFlowers(lvl, rng32(useSeed + 5));
       if (spec.phases && !assignPhases(lvl, spec, rng32(useSeed + 9))) continue;
+      if (spec.unos && (!assignReverse(lvl, spec, rng32(useSeed + 13)) || !replays(lvl))) continue;
       var hasCompass = (spec.compass || 0) > 0;
       var start = newState(lvl);
       var startFree = legalMoves(lvl, start).length;
@@ -676,7 +711,7 @@
       twins: more(Math.min(2, Math.floor(n / 3)) + (hard ? 1 : 0)), compass: more(Math.min(2, Math.floor((n + 1) / 4)) + (hard ? 1 : 0)),
       sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more((n % 5 === 3 ? 2 : 0) + (hard && n % 2 ? 2 : 0)), patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
       trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1,
-      ghosts: n % 6 === 1 ? more(1) : 0, phases: n % 6 === 5 ? more(1) : 0, reds: n % 6 === 3 && !fx.length && scale === 1 ? 1 : 0,
+      ghosts: n % 6 === 1 ? more(1) : 0, unos: n % 6 === 2 ? more(1) : 0, phases: n % 6 === 5 ? more(1) : 0, reds: n % 6 === 3 && !fx.length && scale === 1 ? 1 : 0,
       flowers: fx.indexOf('spring') >= 0 ? 0.24 : 0, gaps: Math.max(fx.indexOf('summer') >= 0 ? 0.14 : 0, fx.indexOf('autumn') >= 0 ? 0.24 : 0)
     };
   }
@@ -685,16 +720,16 @@
     var spec = endlessSpec(n, opts);
     var tries = spec.big ? 3 : 30;
     var lvl = generate(spec, seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0 }), seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, ghosts: 0, phases: 0, reds: 0 }), seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0, ghosts: 0, phases: 0, reds: 0 }), seed, tries * 2);
+      || generate(Object.assign({}, spec, { mirrors: 0, unos: 0 }), seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries * 2);
     lvl.hints = spec.hints; lvl.big = spec.big; lvl.effects = opts && opts.effects ? opts.effects.slice() : [];
     return lvl;
   }
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    isGhost: isGhost, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };

@@ -31,6 +31,9 @@ const calm = [
  { w:5,h:6,minLen:2,maxLen:4,depth:4,reds:1,caption:'Play this arrow before its count runs out, or it gets a red card.' },
  { w:6,h:8,minLen:2,maxLen:5,depth:5,reds:2 },
  { w:7,h:9,minLen:2,maxLen:6,depth:7,reds:3 },
+ { w:5,h:6,minLen:2,maxLen:4,depth:4,unos:1,reverseStrict:true,caption:'Reverse arrows swap their tip to the other end on every launch.' },
+ { w:6,h:8,minLen:2,maxLen:5,depth:5,unos:2,reverseStrict:true },
+ { w:7,h:9,minLen:2,maxLen:6,depth:7,unos:3,reverseStrict:true },
  { w:7,h:9,minLen:2,maxLen:6,depth:7,twins:1,compass:1,sleepers:1,ghosts:1,phases:1,trap:[0.05,0.5] },
  { w:8,h:10,minLen:2,maxLen:7,depth:8,twins:1,compass:2,mirrors:2,patient:1,ghosts:1,phases:1,reds:1,trap:[0.05,0.6] },
  { w:9,h:11,minLen:2,maxLen:8,depth:9,twins:2,compass:2,sleepers:2,mirrors:3,patient:2,ghosts:2,phases:2,reds:1,trap:[0.1,0.7] },
@@ -75,6 +78,9 @@ winter[0].caption='Ice can trap arrows. Hit a frozen arrow with another arrow to
 spring[0].caption='Flowers block arrows. Each launch, a bee carries one away.';
 summer[0].caption='Burning tiles stop arrows for a few launches. Wait, or find another way.';
 autumn[0].caption='Wind can spin arrows around their tails when there is room.';
+// Reverse arrows join the later levels of every set.
+calm.slice(-3).forEach((x,i)=>x.unos=1+i%2);
+[[hard,4],[timed,3],[winter,2],[spring,2],[summer,2],[autumn,2]].forEach(([set,last])=>set.slice(-last).forEach((x,i)=>x.unos=1+(i%2)));
 const out={}, rows=[];
 [['calm',calm,1000],['hard',hard,7000],['timed',timed,13000],['winter',winter,21000],['spring',spring,23000],['summer',summer,25000],['autumn',autumn,27000]].forEach(([name,specs,base])=>{
  out[name]=specs.map((s,i)=>{

@@ -5,13 +5,13 @@
   var SET_INFO = {
     calm: { label: 'Calm', prefix: 'L', title: 'Level ' },
     hard: { label: 'Hard', prefix: 'H', title: 'Hard ' },
-    timed: { label: 'Timed', prefix: 'T', title: 'Timed ', offset: 45 },
-    winter: { label: 'Winter', prefix: 'W', title: 'Winter ', offset: 57, season: true },
-    spring: { label: 'Spring', prefix: 'S', title: 'Spring ', offset: 64, season: true },
-    summer: { label: 'Summer', prefix: 'U', title: 'Summer ', offset: 71, season: true },
-    autumn: { label: 'Autumn', prefix: 'A', title: 'Autumn ', offset: 78, season: true }
+    timed: { label: 'Timed', prefix: 'T', title: 'Timed ', offset: 48 },
+    winter: { label: 'Winter', prefix: 'W', title: 'Winter ', offset: 60, season: true },
+    spring: { label: 'Spring', prefix: 'S', title: 'Spring ', offset: 67, season: true },
+    summer: { label: 'Summer', prefix: 'U', title: 'Summer ', offset: 74, season: true },
+    autumn: { label: 'Autumn', prefix: 'A', title: 'Autumn ', offset: 81, season: true }
   };
-  SET_INFO.hard.offset = 33; SET_INFO.calm.offset = 0;
+  SET_INFO.hard.offset = 36; SET_INFO.calm.offset = 0;
   var SEASON_ORDER = ['winter', 'spring', 'summer', 'autumn'];
   var SET_FLOW = ['calm', 'hard', 'timed', 'winter', 'spring', 'summer', 'autumn'];
   var HEART = '<path d="M12 20.500s-7.800-4.700-9.300-9.700C1.600 7.200 3.800 4.200 7 4.200c2 0 3.700 1 5 3 1.300-2 3-3 5-3 3.200 0 5.400 3 4.300 6.600-1.500 5-9.300 9.700-9.300 9.700Z"/>';
@@ -321,7 +321,7 @@
     bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = []; cards = [];
     c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
-    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {};
+    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {};
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
     var pairNo = 0;
     c.level.arrows.forEach(function (a) {
@@ -337,8 +337,8 @@
     applySeason(c.background ? (SEASONS[backgroundChoice()] ? backgroundChoice() : null) : c.level.season);
     $('where').textContent = c.mode === 'endless' || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
-    var rec = c.mode === 'levels' && c.level.timeLimit && progress.records && progress.records[c.id];
-    if (rec) $('where').textContent += ' · Record ' + recordText(rec);
+    var rec = progress.records && progress.records[bestKey(c)];
+    if (rec) $('where').textContent += ' · Best ' + recordText(rec);
     setCaption(baseCaption());
     if (c.index === 0 && c.mode === 'levels' && c.set === 'calm') { hintArrow = E.legalMoves(c.level, state)[0]; hintStart = performance.now() + 700; }
     if (timeLeft !== null) drawTimer();
@@ -496,9 +496,9 @@
     ox = vw / 2 - cam.cx * cs; oy = viewTop + viewH / 2 - cam.cy * cs;
   }
   // Arrows that animate are always drawn live. The rest can sit in the cached board.
-  var boardLayer = null, layerBuilding = false, boardDpr = 2;
+  var boardLayer = null, layerBuilding = false, boardDpr = 2, unoFlip = {};
   function staticArrow(a, now) {
-    if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.rot) return false;
+    if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.uno !== undefined || a.red || a.rot || state.frozen[a.id] !== undefined || (a.wait && state.launches < a.wait) || introOf(a, now) < 1) return false;
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (bounces[a.id] || (nudges[a.id] && now < nudges[a.id]) || (blockerGlow[a.id] && now < blockerGlow[a.id]) || (a.burnUntil && now < a.burnUntil)) return false;
     if (hintArrow === a.id || (hintArrow >= 0 && a.kind === 'twin' && a.twin === hintArrow)) return false;
@@ -514,7 +514,7 @@
   function focusArrow(id) {
     if (!cam) return;
     cam.zoom = null;
-    var h = E.headOf(current.level.arrows[id]), p = px(h), m = cs;
+    var h = E.tipOf(current.level.arrows[id], state), p = px(h), m = cs;
     if (p.x < m || p.x > vw - m || p.y < viewTop + m || p.y > viewBottom - m) cam.anim = { cx: h[0] + 0.5, cy: h[1] + 0.5 };
   }
   function px(c) { return { x: ox + (c[0] + 0.5) * cs, y: oy + (c[1] + 0.5) * cs }; }
@@ -523,6 +523,7 @@
   // Builds a path through the arrow's cells, around any mirrors, then on past the screen edge.
   function trackOf(a, c) {
     var pts = a.kind === 'compass' ? [a.cells[0].slice()] : a.cells.map(function (x) { return x.slice(); });
+    if (c.fromTail) pts.reverse();
     (c.path || []).forEach(function (m) { pts.push(m.slice()); });
     var last = pts[pts.length - 1], far = screenCells() + a.cells.length;
     pts.push([last[0] + E.DX[c.endDir] * far, last[1] + E.DY[c.endDir] * far]);
@@ -561,13 +562,16 @@
     ctx.stroke();
   }
   function ready(a) { return E.isReady(state, a); }
-  function arrowColor(a) { return a.phase ? (colors === CHAPTERS[3] || colors === CHAPTERS[4] ? '#d7b4ff' : '#7a3fd0') : a.kind === 'twin' ? colors.twins[(a.pair || 0) % colors.twins.length] : a.kind === 'compass' ? colors.compass : colors.ink; }
+  function arrowColor(a) { return a.uno !== undefined ? (colors === CHAPTERS[3] || colors === CHAPTERS[4] ? '#ffc069' : '#c85a00') : a.phase ? (colors === CHAPTERS[3] || colors === CHAPTERS[4] ? '#d7b4ff' : '#7a3fd0') : a.kind === 'twin' ? colors.twins[(a.pair || 0) % colors.twins.length] : a.kind === 'compass' ? colors.compass : colors.ink; }
   function setStroke(color, width, alpha) {
     ctx.strokeStyle = color; ctx.lineWidth = width; ctx.globalAlpha = alpha === undefined ? 1 : alpha;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   }
 
   /* ---------- Frame loop ---------- */
+  var lastDrawn = 0;
+  var flowersInLayer = false;
+  function settledCs(c, size) { return !!c && size < 26; }
   function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function frame(now) {
     requestAnimationFrame(frame);
@@ -593,6 +597,9 @@
       if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) { cam.anim = null; cam.settling = false; }
       applyCam();
     }
+    // Behind an open menu the board is covered and blurred, so it can draw less often.
+    if ($('sheetHost').firstChild && now - lastDrawn < 66) return;
+    lastDrawn = now;
     ctx.clearRect(0, 0, vw, vh);
     var l = current.level, w = Math.max(3, cs * 0.17);
     if (activeScene) {
@@ -665,13 +672,24 @@
         ctx.restore();
         return;
       }
-      var len = lengthOf(a), pts = b && b.pts ? b.pts : a.cells.concat([[E.headOf(a)[0] + E.DX[a.dir] * 2, E.headOf(a)[1] + E.DY[a.dir] * 2]]);
+      var len = lengthOf(a), fromTail = E.tipAtTail(state, a), restCells = fromTail ? a.cells.slice().reverse() : a.cells;
+      var tipCell = restCells[restCells.length - 1], tipDir = E.dirOf(a, state);
+      var pts = b && b.pts ? b.pts : restCells.concat([[tipCell[0] + E.DX[tipDir] * 2, tipCell[1] + E.DY[tipDir] * 2]]);
       setStroke(color, width, alpha);
       if (!isReady && !isFrozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
       var res = strokeWindow(pts, shift, shift + len * f);
       ctx.setLineDash([]);
       setStroke(color, width, alpha);
-      chevron(res.end, res.tan, head * (0.4 + 0.6 * f));
+      if (a.uno !== undefined && !shift) {
+        // The tip jumps to the other end with a quick pop, and a faint mark shows where it goes next.
+        var flipT = unoFlip[a.id] ? Math.min(1, (now - unoFlip[a.id]) / 240) : 1, flipF = ease(flipT);
+        var far = restCells[0], farP = px(far), far2 = restCells[1], farPrev = px(far2);
+        var gone = Math.hypot(farP.x - farPrev.x, farP.y - farPrev.y) || 1, farTan = [(farP.x - farPrev.x) / gone, (farP.y - farPrev.y) / gone];
+        setStroke(color, Math.max(1.5, cs * 0.05), alpha * (0.5 + 0.5 * (1 - flipF)));
+        chevron(farP, farTan, head * (0.7 + 0.3 * (1 - flipF)));
+        setStroke(color, width, alpha);
+        chevron(res.end, res.tan, head * (0.4 + 0.6 * f) * (0.4 + 0.6 * flipF + 0.35 * Math.sin(flipT * Math.PI)));
+      } else chevron(res.end, res.tan, head * (0.4 + 0.6 * f));
       var centre = pointAlong(pts, shift + len / 2);
       // Badges and icons pop in once their arrow is mostly drawn.
       var pop = Math.max(0, (intro - 0.45) / 0.55); pop = ease(pop);
@@ -680,6 +698,7 @@
       if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); });
       if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); });
       if (a.ghostPhase !== undefined) scaled(centre, pop, function () { drawGhostIcon(centre, cs * 0.3, ghostForm, now); });
+      if (a.uno !== undefined) scaled(centre, pop, function () { drawReverseIcon(centre, cs * 0.27, color); });
       if (a.phase) scaled(centre, pop, function () { drawPhaseIcon(centre, cs * 0.26, color, now); });
       if (a.red && state.launches < a.red) scaled(centre, pop, function () {
         badge(centre, cs * 0.29, colors.card, colors.ink, String(a.red - state.launches), a.red - state.launches <= 2 ? '#c8202f' : color);
@@ -693,15 +712,17 @@
     };
 
     // Everything that sits still on the board: dots, flowers and mirrors.
-    var paintBase = function () {
+    var paintBase = function (cellsOnly) {
     // Faint resting dots mark the board, and show through as arrows leave.
     ctx.globalAlpha = 0.16 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.ink;
+    if (cellsOnly) {
+      cellsOnly.forEach(function (k) { var dot = px([k % l.w, Math.floor(k / l.w)]); ctx.beginPath(); ctx.arc(dot.x, dot.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill(); });
+      return;
+    }
     var y0 = Math.max(0, Math.floor(-oy / cs) - 1), y1 = Math.min(l.h, Math.ceil((vh - oy) / cs) + 1), x0 = Math.max(0, Math.floor(-ox / cs) - 1), x1 = Math.min(l.w, Math.ceil((vw - ox) / cs) + 1);
     for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
       var p = px([x, y]); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill();
     }
-
-    if (l.flowers) drawFlowers(now, l);
 
     // Mirrors.
     (l.mirrors || []).forEach(function (m) {
@@ -714,31 +735,86 @@
     });
 
     };
-    // Big maps keep a ready-made picture of everything at rest, so moving around them costs almost nothing.
+    // Every map keeps a ready-made picture of everything at rest. Each frame stamps it, and only the
+    // tiles that changed get repainted, so a launch costs a small patch and not a whole board.
     var layerOn = false;
-    if (cam && !reduced && !window.unwindNoLayer && now > introEnd) {
-      var excluded = '';
-      l.arrows.forEach(function (a) { if (!state.removed[a.id] && !staticArrow(a, now)) excluded += a.id + ','; });
-      var sig = [current.id, state.launches, state.ghostFlip, Object.keys(state.frozen).join('.'), colors.name, excluded].join('|');
-      var stable = !cam.zoom && now - (cam.lastZoom || 0) > 160, stale = !boardLayer || boardLayer.sig !== sig;
-      if (stale || (stable && Math.abs(boardLayer.cs - cs) / cs > 0.015)) {
-        var padW = (l.w + 4) * cs, padH = (l.h + 4) * cs, res = Math.min(boardDpr, 4096 / Math.max(padW, padH));
-        var cv = boardLayer ? boardLayer.canvas : document.createElement('canvas');
-        cv.width = Math.ceil(padW * res); cv.height = Math.ceil(padH * res);
-        var saved = [ctx, ox, oy, vw, vh];
+    if (!reduced && !window.unwindNoLayer && now > introEnd) {
+      // In the whole-map view flowers are tiny, so they rest in the picture. Up close they sway live.
+      flowersInLayer = !!l.flowers && l.flowers.length > 30 && settledCs(cam, cs);
+      var layerKey = current.id + '|' + colors.name + '|' + flowersInLayer;
+      var settled = !cam || (!cam.zoom && now - (cam.lastZoom || 0) > 160);
+      var padW = (l.w + 4) * cs, padH = (l.h + 4) * cs, res = Math.min(boardDpr, 4096 / Math.max(padW, padH));
+      var enterLayer = function (cv) {
+        var kept = [ctx, ox, oy, vw, vh];
         ctx = cv.getContext('2d'); ctx.setTransform(res, 0, 0, res, 0, 0);
         ox = 2 * cs; oy = 2 * cs; vw = padW; vh = padH; layerBuilding = true;
+        return function () { ctx.globalAlpha = 1; layerBuilding = false; ctx = kept[0]; ox = kept[1]; oy = kept[2]; vw = kept[3]; vh = kept[4]; ctx.globalAlpha = 1; };
+      };
+      if (!boardLayer || boardLayer.key !== layerKey || (settled && Math.abs(boardLayer.cs - cs) / cs > 0.001)) {
+        var cv = boardLayer ? boardLayer.canvas : document.createElement('canvas');
+        var cw = Math.ceil(padW * res), ch = Math.ceil(padH * res);
+        if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; } else cv.getContext('2d').clearRect(0, 0, cw, ch);
+        var leave = enterLayer(cv);
+        var painted = {};
         paintBase();
-        l.arrows.forEach(function (a, i) { if (staticArrow(a, now)) paintArrow(a, i); });
-        layerBuilding = false; ctx = saved[0]; ox = saved[1]; oy = saved[2]; vw = saved[3]; vh = saved[4];
-        ctx.globalAlpha = 1;
-        boardLayer = { canvas: cv, sig: sig, cs: cs };
+        if (flowersInLayer) { drawFlowers(now, l); }
+        l.arrows.forEach(function (a, i) { if (staticArrow(a, now)) { paintArrow(a, i); painted[a.id] = a.cells; } });
+        leave();
+        boardLayer = { canvas: cv, key: layerKey, cs: cs, res: res, painted: painted, flowerMark: state.launches };
         window.unwindLayerBuilds = (window.unwindLayerBuilds || 0) + 1;
+      } else {
+        // Patch only the tiles of arrows that left, returned or started moving.
+        var dirty = {}, anyDirty = false, lay = boardLayer, markCells = function (cells) { cells.forEach(function (c) { dirty[c[1] * l.w + c[0]] = 1; }); anyDirty = true; };
+        if (flowersInLayer && lay.flowerMark !== state.launches) {
+          l.flowers.forEach(function (fl, i) { if (i >= Math.min(lay.flowerMark, state.launches) && i < Math.max(lay.flowerMark, state.launches)) markCells([fl]); });
+          lay.flowerMark = state.launches;
+        }
+        l.arrows.forEach(function (a) {
+          var want = staticArrow(a, now), had = lay.painted[a.id];
+          if (want === !!had && (!had || had === a.cells)) return;
+          if (had) markCells(had);
+          if (want) markCells(a.cells);
+        });
+        if (anyDirty) {
+          var saveCs = cs; cs = lay.cs;
+          var padRes = lay.res, leavePatch = (function () { var keep = res; res = padRes; var out = enterLayer(lay.canvas); res = keep; return out; })();
+          var keys = Object.keys(dirty).map(Number);
+          ctx.save(); ctx.beginPath();
+          keys.forEach(function (k) {
+            var cx = k % l.w, cy = Math.floor(k / l.w), rx = Math.floor((cx + 2) * cs * padRes) / padRes, ry = Math.floor((cy + 2) * cs * padRes) / padRes;
+            ctx.rect(rx, ry, Math.ceil(cs * padRes + 1) / padRes, Math.ceil(cs * padRes + 1) / padRes);
+          });
+          ctx.clip(); ctx.clearRect(0, 0, vw, vh);
+          paintBase(keys);
+          if (flowersInLayer) l.flowers.forEach(function (fl, i) { if (i >= state.launches && dirty[fl[1] * l.w + fl[0]]) drawFlower(px(fl), cs * 0.47, fl[0] * 7 + fl[1] * 3, now, true); });
+          var near = {};
+          keys.forEach(function (k) {
+            var cx = k % l.w, cy = Math.floor(k / l.w);
+            for (var ny = cy - 1; ny <= cy + 1; ny++) for (var nx = cx - 1; nx <= cx + 1; nx++) {
+              if (nx < 0 || ny < 0 || nx >= l.w || ny >= l.h) continue;
+              var o = l.grid[ny * l.w + nx]; if (o !== -1) near[o] = 1;
+            }
+          });
+          l.arrows.forEach(function (a, i) {
+            var want = staticArrow(a, now);
+            if (!want) { delete lay.painted[a.id]; return; }
+            if (near[a.id] || lay.painted[a.id] !== a.cells) { paintArrow(a, i); lay.painted[a.id] = a.cells; }
+          });
+          ctx.restore();
+          leavePatch(); cs = saveCs;
+          window.unwindLayerPatches = (window.unwindLayerPatches || 0) + 1;
+        }
       }
+      var tw = boardLayer.canvas.width / boardLayer.res * (cs / boardLayer.cs), th = boardLayer.canvas.height / boardLayer.res * (cs / boardLayer.cs);
       ctx.globalAlpha = 1;
-      ctx.drawImage(boardLayer.canvas, ox - 2 * cs, oy - 2 * cs, (l.w + 4) * cs, (l.h + 4) * cs);
+      // Landing on whole screen pixels keeps the picture exactly as sharp as drawing it live.
+      var exact = boardLayer.cs === cs && boardLayer.res === boardDpr;
+      ctx.imageSmoothingEnabled = !exact;
+      ctx.drawImage(boardLayer.canvas, Math.round((ox - 2 * cs) * boardDpr) / boardDpr, Math.round((oy - 2 * cs) * boardDpr) / boardDpr, tw, th);
+      ctx.imageSmoothingEnabled = true;
       layerOn = true;
     } else paintBase();
+    if (l.flowers && !(layerOn && flowersInLayer)) drawFlowers(now, l);
     if (E.hasEffect(l, 'summer')) drawFires(now);
 
     // A slow golden thread runs from each star to the moon it will wake.
@@ -974,8 +1050,65 @@
     $('sun').hidden = !!season;
     var bg = $('seasonBg');
     bg.hidden = !season;
-    if (season && bg.getAttribute('data-season') !== season) { bg.innerHTML = seasonScene(season); bg.setAttribute('data-season', season); }
+    if (season && bg.getAttribute('data-season') !== season) { bg.setAttribute('data-season', season); bakeScene(bg, season); }
   }
+  // A scene is split into stacked pieces, each cropped to what it shows. Moving pieces then glide on their own
+  // layer, so the browser never has to repaint the whole picture. It looks identical, in the same stacking order.
+  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel';
+  function bakeScene(bg, season) {
+    bg.innerHTML = seasonScene(season);
+    var src = bg.querySelector('svg');
+    if (!src || window.unwindNoBake) return;
+    bg.classList.add('baking');
+    var inv = src.getScreenCTM().inverse(), box = bg.getBoundingClientRect(), scale = Math.abs(src.getScreenCTM().a) || 1;
+    var chunks = [], last = null, stars = null;
+    Array.prototype.slice.call(src.children).forEach(function (el) {
+      var defs = el.tagName.toLowerCase() === 'defs';
+      var mover = !defs && el.matches(SCENE_MOVERS) ? el.getAttribute('class') : '';
+      var inner = !defs && !mover && el.querySelector(SCENE_MOVERS);
+      if (defs) { chunks.unshift({ defs: true, els: [el] }); return; }
+      // Stars never overlap, so a run of them shares one layer per twinkle timing.
+      if (mover.indexOf('twinkle') === 0) {
+        if (!stars) stars = {};
+        if (stars[mover]) { stars[mover].els.push(el); return; }
+        last = stars[mover] = { cls: mover, inner: false, els: [el] };
+        chunks.push(last);
+        return;
+      }
+      stars = null;
+      if (last && !inner && !last.inner && last.cls === mover && !mover) { last.els.push(el); return; }
+      last = { cls: mover, inner: !!inner, els: [el] };
+      chunks.push(last);
+    });
+    var made = document.createDocumentFragment();
+    chunks.forEach(function (c) {
+      var root = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      root.setAttribute('aria-hidden', 'true');
+      if (c.defs) {
+        root.setAttribute('style', 'position:absolute;width:0;height:0');
+        root.appendChild(c.els[0].cloneNode(true)); made.appendChild(root); return;
+      }
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      c.els.forEach(function (el) { var r = el.getBoundingClientRect(); if (!r.width && !r.height) return; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); });
+      if (x0 === Infinity) return;
+      x0 = Math.floor(x0) - 1; y0 = Math.floor(y0) - 1; x1 = Math.ceil(x1) + 1; y1 = Math.ceil(y1) + 1;
+      var a = new DOMPoint(x0, y0).matrixTransform(inv), b = new DOMPoint(x1, y1).matrixTransform(inv);
+      root.setAttribute('viewBox', [a.x, a.y, b.x - a.x, b.y - a.y].join(' '));
+      root.setAttribute('preserveAspectRatio', 'none');
+      root.setAttribute('style', 'position:absolute;inset:auto;overflow:visible;left:' + (x0 - box.left) + 'px;top:' + (y0 - box.top) + 'px;width:' + (x1 - x0) + 'px;height:' + (y1 - y0) + 'px;--s:' + scale.toFixed(3));
+      if (c.cls) root.setAttribute('class', 'mover ' + c.cls);
+      c.els.forEach(function (el) { var copy = el.cloneNode(true); if (c.cls) copy.removeAttribute('class'); root.appendChild(copy); });
+      made.appendChild(root);
+    });
+    bg.innerHTML = '';
+    bg.appendChild(made);
+    bg.classList.remove('baking');
+  }
+  var bakeTimer = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(bakeTimer);
+    bakeTimer = setTimeout(function () { var bg = $('seasonBg'), k = bg.getAttribute('data-season'); if (k && !bg.hidden) bakeScene(bg, k); }, 180);
+  });
   function seededRows(n, seed, make) {
     var r = E.rng32(seed), out = '';
     for (var i = 0; i < n; i++) out += make(r, i);
@@ -1074,32 +1207,37 @@
   }
   // Large flowers that fill their tile, so they clearly occupy the board.
   var PETALS = [['#ff7eb6', '#d93d84'], ['#ff6b6b', '#c92f3f'], ['#b58cff', '#7b4fd6'], ['#ffa94d', '#e0701a'], ['#ffffff', '#c7cdf0']];
-  function drawFlower(p, size, seed, now, withLeaves) {
-    var sway = reduced ? 0 : Math.sin(now / 760 + seed) * 0.09, pal = PETALS[seed % PETALS.length], n = 5 + seed % 2;
-    ctx.save(); ctx.translate(p.x, p.y); ctx.globalAlpha = 1;
+  // Each flower is painted once for each step of its sway, then stamped, so a whole meadow costs one image per flower.
+  var flowerSprites = {}, SWAY_STEPS = 12;
+  function flowerSprite(pal, n, size, step, withLeaves) {
+    var q = Math.max(8, Math.round(size)), key = [PETALS.indexOf(pal), n, q, step, withLeaves ? 1 : 0, boardDpr].join();
+    if (flowerSprites[key]) return flowerSprites[key];
+    var pad = q * 1.25, c = document.createElement('canvas'), g, sway = (step / SWAY_STEPS * 2 - 1) * 0.09;
+    c.width = c.height = Math.ceil(pad * 2 * boardDpr);
+    g = c.getContext('2d'); g.scale(boardDpr, boardDpr); g.translate(pad, pad);
     if (withLeaves) {
-      ctx.fillStyle = 'rgba(120,190,90,.55)';
-      ctx.beginPath(); ctx.roundRect(-size, -size, size * 2, size * 2, size * 0.35); ctx.fill();
-      ctx.fillStyle = '#3f9a45';
-      for (var l = 0; l < 4; l++) {
-        ctx.save(); ctx.rotate(l * Math.PI / 2 + Math.PI / 4 + sway * 0.5);
-        ctx.beginPath(); ctx.ellipse(0, -size * 0.72, size * 0.23, size * 0.34, 0, 0, 7); ctx.fill(); ctx.restore();
-      }
+      g.fillStyle = 'rgba(120,190,90,.55)'; g.beginPath(); g.roundRect(-q, -q, q * 2, q * 2, q * 0.35); g.fill();
+      g.fillStyle = '#3f9a45';
+      for (var l = 0; l < 4; l++) { g.save(); g.rotate(l * Math.PI / 2 + Math.PI / 4 + sway * 0.5); g.beginPath(); g.ellipse(0, -q * 0.72, q * 0.23, q * 0.34, 0, 0, 7); g.fill(); g.restore(); }
     }
-    ctx.rotate(sway);
+    g.rotate(sway);
     for (var i = 0; i < n; i++) {
-      ctx.save(); ctx.rotate(i * Math.PI * 2 / n);
-      ctx.fillStyle = pal[1];
-      ctx.beginPath(); ctx.ellipse(0, -size * 0.5, size * 0.33, size * 0.47, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = pal[0];
-      ctx.beginPath(); ctx.ellipse(0, -size * 0.52, size * 0.25, size * 0.39, 0, 0, 7); ctx.fill();
-      ctx.restore();
+      g.save(); g.rotate(i * Math.PI * 2 / n);
+      g.fillStyle = pal[1]; g.beginPath(); g.ellipse(0, -q * 0.5, q * 0.33, q * 0.47, 0, 0, 7); g.fill();
+      g.fillStyle = pal[0]; g.beginPath(); g.ellipse(0, -q * 0.52, q * 0.25, q * 0.39, 0, 0, 7); g.fill();
+      g.restore();
     }
-    ctx.fillStyle = '#d98a00'; ctx.beginPath(); ctx.arc(0, 0, size * 0.27, 0, 7); ctx.fill();
-    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(0, 0, size * 0.21, 0, 7); ctx.fill();
-    ctx.fillStyle = '#b86f00';
-    for (var d = 0; d < 6; d++) { var a = d * Math.PI / 3; ctx.beginPath(); ctx.arc(Math.cos(a) * size * 0.12, Math.sin(a) * size * 0.12, size * 0.025, 0, 7); ctx.fill(); }
-    ctx.restore();
+    g.fillStyle = '#d98a00'; g.beginPath(); g.arc(0, 0, q * 0.27, 0, 7); g.fill();
+    g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(0, 0, q * 0.21, 0, 7); g.fill();
+    g.fillStyle = '#b86f00';
+    for (var d = 0; d < 6; d++) { var t = d * Math.PI / 3; g.beginPath(); g.arc(Math.cos(t) * q * 0.12, Math.sin(t) * q * 0.12, q * 0.025, 0, 7); g.fill(); }
+    return (flowerSprites[key] = { c: c, half: pad / q });
+  }
+  function drawFlower(p, size, seed, now, withLeaves) {
+    var phase = reduced ? 0 : Math.sin(now / 760 + seed), step = Math.round((phase + 1) / 2 * SWAY_STEPS);
+    var sp = flowerSprite(PETALS[seed % PETALS.length], 5 + seed % 2, size, step, withLeaves), h = sp.half * size;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(sp.c, p.x - h, p.y - h, h * 2, h * 2);
   }
   function drawFlowers(now, l) {
     l.flowers.forEach(function (f, i) {
@@ -1329,6 +1467,17 @@
       sendBee(state.launches, now + 450);
     }
   }
+  // Two opposite arrows in a small disc.
+  function drawReverseIcon(c, r, color) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.globalAlpha = 1;
+    ctx.fillStyle = colors.card; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, r * 0.14); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+    [[-1, -0.3], [1, 0.3]].forEach(function (q) {
+      var dir = -q[0], y = q[1] * r;
+      ctx.beginPath(); ctx.moveTo(-dir * r * 0.5, y); ctx.lineTo(dir * r * 0.5, y); ctx.moveTo(dir * r * 0.18, y - r * 0.26); ctx.lineTo(dir * r * 0.5, y); ctx.lineTo(dir * r * 0.18, y + r * 0.26); ctx.stroke();
+    });
+    ctx.restore();
+  }
   function drawGhostIcon(c, r, ghostForm, now) {
     var bob = reduced || !ghostForm ? 0 : Math.sin(now / 340) * r * 0.1;
     ctx.save(); ctx.translate(c.x, c.y + bob); ctx.globalAlpha = ghostForm ? 0.7 : 1;
@@ -1476,7 +1625,7 @@
       });
       var f = noteFor(step); tune.push(f); pluck(f, 0, 0.2, 1.5);
       buzz(8);
-      l.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id]) angles[x.id] += 90; });
+      l.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id]) angles[x.id] += 90; if (x.uno !== undefined) unoFlip[x.id] = now; });
       res.results.forEach(function (r) {
         l.arrows.forEach(function (x) {
           if (x.key !== r.id || state.removed[x.id]) return;
@@ -1502,7 +1651,7 @@
         if (r.check.clear) { bounces[r.id] = { start: now, reach: 0.18, pts: pts }; return; }
         bounces[r.id] = { start: now, reach: Math.max(0.14, r.check.dist - 0.62), pts: pts };
         blockerGlow[r.check.blocker] = now + 420;
-        if (r.check.fire) { var fh = E.headOf(l.arrows[r.id]), fd = r.check.endDir; igniteArrow(l.arrows[r.id], now, px([fh[0] + E.DX[fd] * (r.check.dist - 0.5), fh[1] + E.DY[fd] * (r.check.dist - 0.5)])); seasonSound('fireSound'); }
+        if (r.check.fire) { var fh = E.tipOf(l.arrows[r.id], state), fd = r.check.endDir; igniteArrow(l.arrows[r.id], now, px([fh[0] + E.DX[fd] * (r.check.dist - 0.5), fh[1] + E.DY[fd] * (r.check.dist - 0.5)])); seasonSound('fireSound'); }
         track('collision', { arrow: r.id, blocker: r.check.blocker, fire: !!r.check.fire, flower: !!r.check.flower });
       });
       thud(); buzz(26);
@@ -1584,20 +1733,17 @@
     track(won ? 'level_complete' : 'level_fail', { launches: state.launches, collisions: collisions, seconds: secs, mode: c.mode, set: c.set, perfect: perfect, why: why });
     var stats = { secs: secs, perfect: perfect, launches: state.launches, livesLeft: state.lives, hits: collisions, hints: hintsUsed, rewinds: rewinds };
     if (won) {
-      // Timed levels keep a record, but only from a clean run: no lives lost and no Rewind.
-      if (c.mode === 'levels' && c.level.timeLimit) {
-        progress.records = progress.records || {};
-        stats.clean = collisions === 0 && rewinds === 0;
-        stats.elapsedMs = c.level.timeLimit * 1000 - timeLeft;
-        stats.oldRecord = progress.records[c.id];
-        if (stats.clean && (!stats.oldRecord || stats.elapsedMs < stats.oldRecord)) { progress.records[c.id] = Math.round(stats.elapsedMs); stats.newRecord = true; track('new_record', { ms: Math.round(stats.elapsedMs) }); }
-      }
+      // Every map keeps a personal best, but only from a clean run: no collisions and no Rewind.
+      // Open water boards never repeat, so there the best belongs to the map type.
+      progress.records = progress.records || {};
+      var pb = bestKey(c), ms = Math.round(activeMs);
+      stats.clean = collisions === 0 && rewinds === 0;
+      stats.elapsedMs = ms;
+      stats.oldBest = progress.records[pb];
+      if (stats.clean && (!stats.oldBest || ms < stats.oldBest)) { progress.records[pb] = ms; stats.newBest = true; track('personal_best', { ms: ms, map: pb }); }
       if (c.mode === 'levels') {
-        stats.previousBest = progress.best[c.id];
-        stats.newBest = !stats.previousBest || secs < stats.previousBest;
         progress.done[c.id] = true;
         if (perfect) progress.perfect[c.id] = true;
-        if (stats.newBest) progress.best[c.id] = secs;
       } else if (c.mode === 'endless') progress.endlessBy[c.endlessKey] = (progress.endlessBy[c.endlessKey] || 0) + 1;
       else progress.daily = todayKey();
       save('unwind.progress2', progress);
@@ -1644,6 +1790,7 @@
       flies + lanterns + '</g></svg>';
   }
   function allLevelCount() { return Object.keys(SETS).reduce(function (n, k) { return n + SETS[k].length; }, 0); }
+  function bestKey(c) { return c.mode === 'endless' ? 'open-' + c.endlessKey : c.id; }
   function recordText(ms) { var t = Math.round(ms / 100) / 10, m = Math.floor(t / 60), sec = t - m * 60; return m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1); }
   function winSheet(c, st) {
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
@@ -1658,16 +1805,16 @@
       for (var i = 0; i < c.level.lives; i++) hearts += heartSvg(i >= st.livesLeft ? 'gone' : '').replace('<svg ', '<svg style="animation-delay:' + (i * 0.12 + 0.2) + 's" ');
       hearts = '<div class="winhearts" role="img" aria-label="' + st.livesLeft + ' of ' + c.level.lives + ' lives left">' + hearts + '</div>';
     }
-    var fmt = function (s) { return s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's'; };
-    var record = progress.records && progress.records[c.id];
-    if (st.newRecord) line = 'New record! ' + line;
-    else if (c.level.timeLimit && c.mode === 'levels' && !st.clean) line += ' Records need a run with no mistakes.';
-    var third = c.level.timeLimit && c.mode === 'levels' ? '<div><b>' + (record ? recordText(record) : '–') + '</b><span>' + (st.newRecord ? 'New record' : 'Record') + '</span></div>' : c.mode === 'levels' ? '<div><b>' + (st.newBest ? 'New!' : fmt(progress.best[c.id])) + '</b><span>Best time</span></div>' : '<div><b>' + st.hints + '</b><span>Hints used</span></div>';
+    var best = progress.records && progress.records[bestKey(c)], kind = c.mode === 'endless' ? ' for this map type' : '';
+    var pbNote = st.newBest ? (st.oldBest ? 'Beat your old time of ' + recordText(st.oldBest) : 'Your first clean run' + kind)
+      : !st.clean ? (best ? 'Runs with mistakes do not count' : 'Clear it with no mistakes to set one')
+      : recordText(st.elapsedMs - best + 0) + ' behind it' + kind;
+    var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
     var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'On to open water' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
-      '<div class="stats"><div><b>' + fmt(st.secs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div>' + third + '</div>' +
+      '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
       '<div class="lanterns">' + lit + ' of ' + total + ' lanterns lit, ' + gold + ' golden<div class="lantern-bar"><i style="width:' + Math.round(lit / total * 100) + '%"></i></div></div>' +
       '<div class="actions"><button class="primary" id="next">' + nextLabel + '</button><button class="secondary" id="replayTune">Play my tune</button><button class="secondary" id="again">Play again</button><button class="secondary" id="winLevels">Levels</button></div>', 'win');
     s.querySelector('#next').onclick = function () {
@@ -1693,7 +1840,7 @@
   var MOON_PATH = '<path d="M11.500 3.200a9 9 0 1 0 9.300 12.600A7.800 7.800 0 0 1 11.500 3.200Z"/><path d="M18 3l.9 2 2.100.300-1.500 1.500.4 2.100-1.900-1-1.900 1 .4-2.100L15 5.300l2.100-.300Z"/>';
   var STAR_MARK = '<svg class="mk s" viewBox="0 0 24 24" aria-hidden="true">' + STAR_PATH + '</svg>';
   var MOON_MARK = '<svg class="mk m" viewBox="0 0 24 24" aria-hidden="true">' + MOON_PATH + '</svg>';
-  var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Everything together', 30, 33]];
+  var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
   function levelsSheet(tab) {
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
@@ -1713,11 +1860,13 @@
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
     } else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives. Your record is kept when you make no mistakes.') + '</p>' + grid(tab, 0, SETS[tab].length);
-      if (tab === 'timed' && progress.records && Object.keys(progress.records).length) {
-        html += '<div class="chapter">Records</div><div class="records">' + SETS.timed.map(function (_, i) { var r = progress.records['T' + (i + 1)]; return r ? '<span>' + (i + 1 + SET_INFO.timed.offset) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('') + '</div>';
-      }
+      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
     }
+    var bestList = function (set) {
+      var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
+      return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
+    };
+    (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -1791,6 +1940,8 @@
         art: line('M4 23H50', ink, true) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) },
       { key: 'ghost', title: 'Ghost arrow', text: 'Swaps form after every launch. See-through as a ghost: it cannot be played, and other arrows pass through it. Solid: it plays and blocks like any arrow.',
         art: line('M4 23H50', ink, false) + head(56, 23, ink) + '<path d="M18 33V20a10 10 0 0 1 20 0v13l-3.300-3-3.300 3-3.400-3-3.400 3-3.300-3Z" fill="#fff" stroke="#55607a" stroke-width="1.500"/><circle cx="24" cy="20" r="1.700" fill="#2a3048"/><circle cx="32" cy="20" r="1.700" fill="#2a3048"/>' },
+      { key: 'uno', title: 'Reverse arrow', text: 'Orange. Its tip swaps to the other end after every launch, and the faint mark shows where it goes next. Play it when the end it points from has a clear way out.',
+        art: line('M4 23H50', '#c85a00') + head(56, 23, '#c85a00') + '<path d="M6 16l-5 7 5 7" fill="none" stroke="#c85a00" stroke-width="1.800" opacity=".6"/><circle cx="28" cy="23" r="10" fill="' + card + '" stroke="#c85a00" stroke-width="1.800"/><path d="M22 20h12m-3-3 3 3-3 3M34 26H22m3-3-3 3 3 3" stroke="#c85a00" stroke-width="1.600" fill="none"/>' },
       { key: 'phase', title: 'Phase arrow', text: 'Purple. Can slip through one occupied tile on its way out, such as an arrow crossing its path, but not two in a row.',
         art: line('M4 23H50', '#7a3fd0') + head(56, 23, '#7a3fd0') + '<circle cx="28" cy="23" r="10" fill="' + card + '" stroke="#7a3fd0" stroke-width="1.800"/><circle cx="24.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/><circle cx="31.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/>' },
       { key: 'red', title: 'Red card arrow', text: 'Play it before its count reaches zero. If not, it is sent off: it cannot move until only sent-off arrows remain, and it can block the rest. Rewind if that traps you.',
@@ -1807,7 +1958,7 @@
     var here = {}, arrows = current.level.arrows;
     arrows.forEach(function (a) {
       if (a.kind === 'twin') here.twin = 1; else if (a.kind === 'compass') here.compass = 1; else here.plain = 1;
-      if (a.ghostPhase !== undefined) here.ghost = 1; if (a.phase) here.phase = 1; if (a.red) here.red = 1; if (a.key !== undefined) here.moon = 1; if (a.isKey) here.star = 1; if (a.wait) here.patient = 1;
+      if (a.ghostPhase !== undefined) here.ghost = 1; if (a.phase) here.phase = 1; if (a.uno !== undefined) here.uno = 1; if (a.red) here.red = 1; if (a.key !== undefined) here.moon = 1; if (a.isKey) here.star = 1; if (a.wait) here.patient = 1;
     });
     if ((current.level.mirrors || []).length) here.mirror = 1;
     E.effectsOf(current.level).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
