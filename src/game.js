@@ -41,6 +41,8 @@
 
   var progress = load('unwind.progress2', { last: { set: 'calm', index: 0 }, done: {}, perfect: {}, best: {}, endlessBy: {}, endlessOpts: { hard: false, timed: false }, daily: null });
   var audioPrefs = load('unwind.audio', { music: true, sound: true, theme: 'auto' });
+  // Every session starts on Follow the level, while music and sound on/off are remembered.
+  audioPrefs.theme = 'auto';
   var events = load('unwind.events', []);
 
   // Every analytics event goes through here. Connect a real service in this one function.
@@ -239,13 +241,7 @@
     wireBackgrounds(s, applyBackgroundNow);
   }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
-  // Very large maps take a moment to build, so a short message appears first.
-  function openEndless(ready) {
-    if (ready !== true && (endlessOpts().scale || 1) >= 10) {
-      sheet('<h2>Growing the map</h2><p>Just a moment.</p>');
-      setTimeout(function () { openEndless(true); }, 60);
-      return;
-    }
+  function endlessPlan() {
     var o = Object.assign({}, endlessOpts()), scale = o.scale || 1, picked = effectChoice();
     // Random uses a random number of effects (1 to 4) for each board.
     if (picked.random) {
@@ -256,13 +252,55 @@
     var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + (scale > 1 ? scale + 'x' : '') + (o.effects.length ? '-' + o.effects.join('') : '');
     progress.endlessBy = progress.endlessBy || {};
     var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009 + o.effects.join('').length * 977;
-    var lvl = E.endlessBoard(n, o, seed);
+    return { o: o, scale: scale, key: key, n: n, seed: seed };
+  }
+  function startEndless(plan, lvl) {
+    var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
     // Big boards get extra time, since the player also has to move around them.
     if (o.timed) lvl.timeLimit = Math.round(E.timeLimitFor(lvl.solution.length) * (scale > 1 ? 1.3 : 1));
     var tags = (o.effects.length === 1 ? ' · ' + SET_INFO[o.effects[0]].label : o.effects.length ? ' · ' + o.effects.length + ' effects' : '') + (scale > 1 ? ' · ' + scale + 'x' : '') + (o.hard ? ' · Harder' : '') + (o.timed ? ' · Timed' : '');
-    begin({ id: 'open-' + key + '-' + (n + 1), endlessKey: key, mode: 'endless', level: lvl, title: 'Open water ' + (n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
+    begin({ id: 'open-' + plan.key + '-' + (plan.n + 1), endlessKey: plan.key, mode: 'endless', level: lvl, title: 'Open water ' + (plan.n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
+  }
+  // A tangled, well-filled board plays better than one with many arrows free at the start.
+  function boardQuality(lvl) {
+    return lvl.density * 100 - 30 * E.legalMoves(lvl, E.newState(lvl)).length / Math.max(1, lvl.arrows.length);
+  }
+  // Big maps build on a loading screen: try several boards, keep the best, and only reveal it once it is ready to draw.
+  function openEndless(ready) {
+    var plan = endlessPlan();
+    if (ready === true || plan.scale < 5) { startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); return; }
+    var tries = plan.scale >= 25 ? 4 : plan.scale >= 10 ? 3 : 2, done = 0, best = null, bestScore = -Infinity, started = performance.now(), STEPS = tries + 2;
+    var s = sheet('<h2>Growing the map</h2><p id="loadLine">Planting arrows</p><div class="lantern-bar"><i id="loadBar" style="width:6%;transition:width .25s ease"></i></div>');
+    var mark = function (text, stepsDone) {
+      var line = s.querySelector('#loadLine'), bar = s.querySelector('#loadBar');
+      if (line) line.textContent = text;
+      if (bar) bar.style.width = Math.round(stepsDone / STEPS * 100) + '%';
+    };
+    var step = function () {
+      var lvl = E.endlessBoard(plan.n, plan.o, plan.seed + done * 911), q = boardQuality(lvl);
+      if (q > bestScore) { bestScore = q; best = lvl; }
+      done++;
+      mark(done < tries ? 'Choosing the best layout' : 'Painting the board', done);
+      if (done < tries) { setTimeout(step, 20); return; }
+      var fonts = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+      fonts.then(function () {
+        fireSprites();
+        setTimeout(function () {
+          startEndless(plan, best);
+          // Keep the screen up while the first frames draw, then start the map's intro from a clean slate.
+          var c = current, cover = sheet('<h2>Growing the map</h2><p>Almost ready</p><div class="lantern-bar"><i style="width:100%"></i></div>');
+          requestAnimationFrame(function () { requestAnimationFrame(function () {
+            if (current !== c) return;
+            if ($('sheetHost').firstChild === cover) closeSheet();
+            introStart = performance.now(); prepareIntro(c.level);
+            if (c.level.flowers && c.level.flowers.length) sendBee(state.launches, performance.now() + 900);
+          }); });
+        }, Math.max(30, 900 - (performance.now() - started)));
+      });
+    };
+    setTimeout(step, 60);
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -272,7 +310,7 @@
     begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: CHAPTERS[timeChapter()], sunY: 34 });
   }
   function begin(c) {
-    current = c; cam = null;
+    current = c; cam = null; boardLayer = null;
     duck(false); stopJingle();
     tuneBase = c.mode === 'levels' ? c.index : 3;
     closeSheet();
@@ -299,6 +337,8 @@
     applySeason(c.background ? (SEASONS[backgroundChoice()] ? backgroundChoice() : null) : c.level.season);
     $('where').textContent = c.mode === 'endless' || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
+    var rec = c.mode === 'levels' && c.level.timeLimit && progress.records && progress.records[c.id];
+    if (rec) $('where').textContent += ' · Record ' + recordText(rec);
     setCaption(baseCaption());
     if (c.index === 0 && c.mode === 'levels' && c.set === 'calm') { hintArrow = E.legalMoves(c.level, state)[0]; hintStart = performance.now() + 700; }
     if (timeLeft !== null) drawTimer();
@@ -407,6 +447,7 @@
     var bigBoard = current && current.level.big, area = current ? current.level.w * current.level.h : 0;
     var dpr = Math.min(window.devicePixelRatio || 1, area > 700 ? 1.5 : bigBoard ? 2 : 3);
     vw = window.innerWidth; vh = window.innerHeight;
+    boardDpr = dpr;
     canvas.width = vw * dpr; canvas.height = vh * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!current) return;
@@ -454,10 +495,19 @@
     }
     ox = vw / 2 - cam.cx * cs; oy = viewTop + viewH / 2 - cam.cy * cs;
   }
+  // Arrows that animate are always drawn live. The rest can sit in the cached board.
+  var boardLayer = null, layerBuilding = false, boardDpr = 2;
+  function staticArrow(a, now) {
+    if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.rot) return false;
+    if (a.key !== undefined && !state.removed[a.key]) return false;
+    if (bounces[a.id] || (nudges[a.id] && now < nudges[a.id]) || (blockerGlow[a.id] && now < blockerGlow[a.id]) || (a.burnUntil && now < a.burnUntil)) return false;
+    if (hintArrow === a.id || (hintArrow >= 0 && a.kind === 'twin' && a.twin === hintArrow)) return false;
+    return true;
+  }
   function zoomAt(x, y, factor) {
     if (!cam) return;
     var gx = (x - ox) / cs, gy = (y - oy) / cs;
-    cam.anim = null; cam.zoom = null; cam.cs *= factor; applyCam();
+    cam.anim = null; cam.zoom = null; cam.lastZoom = performance.now(); cam.cs *= factor; applyCam();
     cam.cx += gx - (x - ox) / cs; cam.cy += gy - (y - oy) / cs; applyCam();
   }
   // Glides the view to an arrow if it is out of sight.
@@ -554,51 +604,9 @@
     }
     // Big boards only draw what is near the screen.
     var offscreen = function (a) {
-      if (!cam || bounces[a.id] || nudges[a.id]) return false;
+      if (!cam || layerBuilding || bounces[a.id] || nudges[a.id]) return false;
       return a.cells.every(function (c) { var p = px(c); return p.x < -cs * 2 || p.x > vw + cs * 2 || p.y < -cs * 2 || p.y > vh + cs * 2; });
     };
-
-    // Faint resting dots mark the board, and show through as arrows leave.
-    ctx.globalAlpha = 0.16 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.ink;
-    var y0 = Math.max(0, Math.floor(-oy / cs) - 1), y1 = Math.min(l.h, Math.ceil((vh - oy) / cs) + 1), x0 = Math.max(0, Math.floor(-ox / cs) - 1), x1 = Math.min(l.w, Math.ceil((vw - ox) / cs) + 1);
-    for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
-      var p = px([x, y]); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill();
-    }
-
-    if (l.flowers) drawFlowers(now, l);
-    if (E.hasEffect(l, 'summer')) drawFires(now);
-
-    // Mirrors.
-    (l.mirrors || []).forEach(function (m) {
-      var c = px([m.x, m.y]), r = cs * 0.36, s = m.t === '/' ? -1 : 1, mf = ease(introOf(m, now));
-      if (mf <= 0) return;
-      setStroke(colors.mirror, Math.max(3, cs * 0.13), mf);
-      ctx.beginPath(); ctx.moveTo(c.x - r, c.y - r * s); ctx.lineTo(c.x + r, c.y + r * s); ctx.stroke();
-      setStroke(colors.mirror, Math.max(1, cs * 0.035), 0.55 * mf);
-      ctx.beginPath(); ctx.arc(c.x, c.y, cs * 0.46, 0, 7); ctx.stroke();
-    });
-
-    // A slow golden thread runs from each star to the moon it will wake.
-    l.arrows.forEach(function (a) {
-      if (a.key === undefined || state.removed[a.id] || state.removed[a.key]) return;
-      var moon = px(a.cells[0]), star = px(l.arrows[a.key].cells[0]), near = nudges[a.id] && now < nudges[a.id];
-      var threadIn = ease(Math.min(introOf(a, now), introOf(l.arrows[a.key], now)));
-      setStroke(SKY_GOLD, Math.max(1.5, cs * (near ? 0.08 : 0.045)), (near ? 1 : 0.75) * threadIn);
-      ctx.setLineDash([cs * 0.03, cs * 0.2]);
-      ctx.lineDashOffset = reduced ? 0 : -now / 45;
-      ctx.beginPath(); ctx.moveTo(star.x, star.y); ctx.lineTo(moon.x, moon.y); ctx.stroke();
-      ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    });
-
-    // Links between twins, each pair in its own colour.
-    l.arrows.forEach(function (a) {
-      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id]) return;
-      var m1 = pointAlong(a.cells, lengthOf(a) / 2), other = l.arrows[a.twin], m2 = pointAlong(other.cells, lengthOf(other) / 2);
-      setStroke(arrowColor(a), Math.max(1.5, cs * 0.05), 0.55 * ease(Math.min(introOf(a, now), introOf(other, now))));
-      ctx.setLineDash([cs * 0.06, cs * 0.17]);
-      ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
-      ctx.setLineDash([]);
-    });
 
     // Arrows at rest, or bouncing. A hinted arrow fades to a new colour and size, holds for 3 seconds, then fades back.
     var hintAmt = 0;
@@ -616,7 +624,7 @@
     }
     var hinted = {};
     if (hintArrow >= 0) { hinted[hintArrow] = 1; if (l.arrows[hintArrow].kind === 'twin') hinted[l.arrows[hintArrow].twin] = 1; }
-    l.arrows.forEach(function (a, i) {
+    var paintArrow = function (a, i) {
       if (state.removed[a.id] || offscreen(a)) return;
       var intro = introOf(a, now);
       if (intro <= 0) return;
@@ -682,6 +690,83 @@
       if (burning) drawArrowFlames(a, now);
       if (a.wait && state.launches < a.wait) scaled(centre, pop, function () { badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - state.launches), color); });
       ctx.restore();
+    };
+
+    // Everything that sits still on the board: dots, flowers and mirrors.
+    var paintBase = function () {
+    // Faint resting dots mark the board, and show through as arrows leave.
+    ctx.globalAlpha = 0.16 * (reduced ? 1 : Math.min(1, (now - introStart) / 500)); ctx.fillStyle = colors.ink;
+    var y0 = Math.max(0, Math.floor(-oy / cs) - 1), y1 = Math.min(l.h, Math.ceil((vh - oy) / cs) + 1), x0 = Math.max(0, Math.floor(-ox / cs) - 1), x1 = Math.min(l.w, Math.ceil((vw - ox) / cs) + 1);
+    for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
+      var p = px([x, y]); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill();
+    }
+
+    if (l.flowers) drawFlowers(now, l);
+
+    // Mirrors.
+    (l.mirrors || []).forEach(function (m) {
+      var c = px([m.x, m.y]), r = cs * 0.36, s = m.t === '/' ? -1 : 1, mf = ease(introOf(m, now));
+      if (mf <= 0) return;
+      setStroke(colors.mirror, Math.max(3, cs * 0.13), mf);
+      ctx.beginPath(); ctx.moveTo(c.x - r, c.y - r * s); ctx.lineTo(c.x + r, c.y + r * s); ctx.stroke();
+      setStroke(colors.mirror, Math.max(1, cs * 0.035), 0.55 * mf);
+      ctx.beginPath(); ctx.arc(c.x, c.y, cs * 0.46, 0, 7); ctx.stroke();
+    });
+
+    };
+    // Big maps keep a ready-made picture of everything at rest, so moving around them costs almost nothing.
+    var layerOn = false;
+    if (cam && !reduced && !window.unwindNoLayer && now > introEnd) {
+      var excluded = '';
+      l.arrows.forEach(function (a) { if (!state.removed[a.id] && !staticArrow(a, now)) excluded += a.id + ','; });
+      var sig = [current.id, state.launches, state.ghostFlip, Object.keys(state.frozen).join('.'), colors.name, excluded].join('|');
+      var stable = !cam.zoom && now - (cam.lastZoom || 0) > 160, stale = !boardLayer || boardLayer.sig !== sig;
+      if (stale || (stable && Math.abs(boardLayer.cs - cs) / cs > 0.015)) {
+        var padW = (l.w + 4) * cs, padH = (l.h + 4) * cs, res = Math.min(boardDpr, 4096 / Math.max(padW, padH));
+        var cv = boardLayer ? boardLayer.canvas : document.createElement('canvas');
+        cv.width = Math.ceil(padW * res); cv.height = Math.ceil(padH * res);
+        var saved = [ctx, ox, oy, vw, vh];
+        ctx = cv.getContext('2d'); ctx.setTransform(res, 0, 0, res, 0, 0);
+        ox = 2 * cs; oy = 2 * cs; vw = padW; vh = padH; layerBuilding = true;
+        paintBase();
+        l.arrows.forEach(function (a, i) { if (staticArrow(a, now)) paintArrow(a, i); });
+        layerBuilding = false; ctx = saved[0]; ox = saved[1]; oy = saved[2]; vw = saved[3]; vh = saved[4];
+        ctx.globalAlpha = 1;
+        boardLayer = { canvas: cv, sig: sig, cs: cs };
+        window.unwindLayerBuilds = (window.unwindLayerBuilds || 0) + 1;
+      }
+      ctx.globalAlpha = 1;
+      ctx.drawImage(boardLayer.canvas, ox - 2 * cs, oy - 2 * cs, (l.w + 4) * cs, (l.h + 4) * cs);
+      layerOn = true;
+    } else paintBase();
+    if (E.hasEffect(l, 'summer')) drawFires(now);
+
+    // A slow golden thread runs from each star to the moon it will wake.
+    l.arrows.forEach(function (a) {
+      if (a.key === undefined || state.removed[a.id] || state.removed[a.key]) return;
+      var moon = px(a.cells[0]), star = px(l.arrows[a.key].cells[0]), near = nudges[a.id] && now < nudges[a.id];
+      var threadIn = ease(Math.min(introOf(a, now), introOf(l.arrows[a.key], now)));
+      setStroke(SKY_GOLD, Math.max(1.5, cs * (near ? 0.08 : 0.045)), (near ? 1 : 0.75) * threadIn);
+      ctx.setLineDash([cs * 0.03, cs * 0.2]);
+      ctx.lineDashOffset = reduced ? 0 : -now / 45;
+      ctx.beginPath(); ctx.moveTo(star.x, star.y); ctx.lineTo(moon.x, moon.y); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    });
+
+    // Links between twins, each pair in its own colour.
+    l.arrows.forEach(function (a) {
+      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id]) return;
+      var m1 = pointAlong(a.cells, lengthOf(a) / 2), other = l.arrows[a.twin], m2 = pointAlong(other.cells, lengthOf(other) / 2);
+      setStroke(arrowColor(a), Math.max(1.5, cs * 0.05), 0.55 * ease(Math.min(introOf(a, now), introOf(other, now))));
+      ctx.setLineDash([cs * 0.06, cs * 0.17]);
+      ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Arrows on top. On big maps, those at rest are already part of the cached board.
+    l.arrows.forEach(function (a, i) {
+      if (layerOn && staticArrow(a, now)) return;
+      paintArrow(a, i);
     });
 
     drawWakes(now);
@@ -1489,7 +1574,7 @@
   }, { passive: false });
   $('zIn').onclick = function () { zoomAt(vw / 2, (viewTop + viewBottom) / 2, 1.3); };
   $('zOut').onclick = function () { zoomAt(vw / 2, (viewTop + viewBottom) / 2, 1 / 1.3); };
-  $('zFit').onclick = function () { if (cam) { cam.anim = null; cam.zoom = null; cam.cs = fitCs; applyCam(); } };
+  $('zFit').onclick = function () { if (cam) { cam.anim = null; cam.zoom = null; cam.lastZoom = performance.now(); cam.cs = fitCs; applyCam(); } };
 
   function finish(won, why) {
     if (ended) return;
@@ -1499,6 +1584,14 @@
     track(won ? 'level_complete' : 'level_fail', { launches: state.launches, collisions: collisions, seconds: secs, mode: c.mode, set: c.set, perfect: perfect, why: why });
     var stats = { secs: secs, perfect: perfect, launches: state.launches, livesLeft: state.lives, hits: collisions, hints: hintsUsed, rewinds: rewinds };
     if (won) {
+      // Timed levels keep a record, but only from a clean run: no lives lost and no Rewind.
+      if (c.mode === 'levels' && c.level.timeLimit) {
+        progress.records = progress.records || {};
+        stats.clean = collisions === 0 && rewinds === 0;
+        stats.elapsedMs = c.level.timeLimit * 1000 - timeLeft;
+        stats.oldRecord = progress.records[c.id];
+        if (stats.clean && (!stats.oldRecord || stats.elapsedMs < stats.oldRecord)) { progress.records[c.id] = Math.round(stats.elapsedMs); stats.newRecord = true; track('new_record', { ms: Math.round(stats.elapsedMs) }); }
+      }
       if (c.mode === 'levels') {
         stats.previousBest = progress.best[c.id];
         stats.newBest = !stats.previousBest || secs < stats.previousBest;
@@ -1551,6 +1644,7 @@
       flies + lanterns + '</g></svg>';
   }
   function allLevelCount() { return Object.keys(SETS).reduce(function (n, k) { return n + SETS[k].length; }, 0); }
+  function recordText(ms) { var t = Math.round(ms / 100) / 10, m = Math.floor(t / 60), sec = t - m * 60; return m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1); }
   function winSheet(c, st) {
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
     // The end of a group leads to the next group. Only the very last level leads to open water.
@@ -1565,7 +1659,10 @@
       hearts = '<div class="winhearts" role="img" aria-label="' + st.livesLeft + ' of ' + c.level.lives + ' lives left">' + hearts + '</div>';
     }
     var fmt = function (s) { return s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's'; };
-    var third = c.mode === 'levels' ? '<div><b>' + (st.newBest ? 'New!' : fmt(progress.best[c.id])) + '</b><span>Best time</span></div>' : '<div><b>' + st.hints + '</b><span>Hints used</span></div>';
+    var record = progress.records && progress.records[c.id];
+    if (st.newRecord) line = 'New record! ' + line;
+    else if (c.level.timeLimit && c.mode === 'levels' && !st.clean) line += ' Records need a run with no mistakes.';
+    var third = c.level.timeLimit && c.mode === 'levels' ? '<div><b>' + (record ? recordText(record) : '–') + '</b><span>' + (st.newRecord ? 'New record' : 'Record') + '</span></div>' : c.mode === 'levels' ? '<div><b>' + (st.newBest ? 'New!' : fmt(progress.best[c.id])) + '</b><span>Best time</span></div>' : '<div><b>' + st.hints + '</b><span>Hints used</span></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
     var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'On to open water' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
@@ -1616,7 +1713,10 @@
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
     } else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
+      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives. Your record is kept when you make no mistakes.') + '</p>' + grid(tab, 0, SETS[tab].length);
+      if (tab === 'timed' && progress.records && Object.keys(progress.records).length) {
+        html += '<div class="chapter">Records</div><div class="records">' + SETS.timed.map(function (_, i) { var r = progress.records['T' + (i + 1)]; return r ? '<span>' + (i + 1 + SET_INFO.timed.offset) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('') + '</div>';
+      }
     }
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
@@ -1860,6 +1960,8 @@
     levelInfo: function () { var l = current.level; return { effects: E.effectsOf(l), scene: activeScene, season: l.season, seed: l.seed, big: !!l.big, w: l.w, h: l.h, lives: state.lives, limit: l.timeLimit || null, guarantee: l.guaranteeAt, flowers: (l.flowers || []).length }; },
     openEndless: function () { openEndless(true); },
     pops: function () { return popCount; },
+    records: function () { return progress.records || {}; },
+    theme: function () { return audioPrefs.theme; },
     perfBoard: function (scale, effects, hard) { var o = endlessOpts(), saved = JSON.stringify(o); o.scale = scale; o.effectList = effects; o.effectRandom = false; o.hard = !!hard; o.timed = false; openEndless(true); progress.endlessOpts = JSON.parse(saved); },
     frameLoad: function () { return { flights: flights.length, embers: embers.length }; },
     burnAll: function () { var l = current.level, n = 0; for (var k = 0; k < l.w * l.h && n < 5; k++) { var o = l.grid[k]; if (o === -1 || state.removed[o]) { state.burning[k] = state.launches + 3; n++; } } return n; },
