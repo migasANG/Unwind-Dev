@@ -61,6 +61,8 @@
     return a.dir;
   }
   function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : tipAtTail(state, a) ? tailDir(a) : a.dir; }
+  // Flowers leave in queue order, one per launch. A bee can also take one early if it is all that holds the board up.
+  function flowerStands(level, state, key) { return level.flowerAt[key] >= state.launches && !state.noFlowers && !(state.picked && state.picked[key]); }
   function partnerOf(a) { return a.kind === 'twin' ? a.twin : -1; }
 
   // A mirror turns a travelling arrow 90 degrees. Index by direction of travel.
@@ -78,7 +80,7 @@
       var mirror = level.mirrorAt && level.mirrorAt[key];
       if (mirror) { d = TURN[mirror][d]; path.push([x, y]); continue; }
       if (state.burning && state.burning[key] > state.launches) return { clear: false, fire: true, blocker: -2, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
-      if (level.flowerAt && level.flowerAt[key] >= state.launches) return { clear: false, flower: true, blocker: -3, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
+      if (level.flowerAt && flowerStands(level, state, key)) return { clear: false, flower: true, flowerKey: key, blocker: -3, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       var o = level.grid[key];
       // Ghost-form arrows are intangible, so everything passes through them.
       if (o !== -1 && !state.removed[o] && isGhost(state, level.arrows[o])) o = -1;
@@ -138,7 +140,7 @@
     }
     {
       state.snaps = state.snaps || [];
-      state.snaps.push({ ghostFlip: state.ghostFlip, eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
+      state.snaps.push({ picked: Object.assign({}, state.picked), ghostFlip: state.ghostFlip, eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
         geo: level.arrows.map(function (a) { return { cells: a.cells, dir: a.dir }; }) });
     }
     members.forEach(function (m) { state.removed[m.id] = true; });
@@ -155,7 +157,7 @@
     state.launches--;
     var snap = state.snaps && state.snaps.pop();
     if (snap && level) {
-      state.frozen = snap.frozen; state.burning = snap.burning; state.eventDone = snap.eventDone; state.ghostFlip = snap.ghostFlip;
+      state.frozen = snap.frozen; state.burning = snap.burning; state.eventDone = snap.eventDone; state.ghostFlip = snap.ghostFlip; state.picked = snap.picked;
       level.arrows.forEach(function (a, i) { a.cells = snap.geo[i].cells; a.dir = snap.geo[i].dir; });
       rebuildGrid(level, state);
     }
@@ -171,10 +173,27 @@
   // If nothing can move and a ghost is waiting, it turns solid so the board never freezes up.
   function unstickGhosts(level, state) {
     if (isWon(state) || !isStuck(level, state)) return false;
-    if (!level.arrows.some(function (a) { return !state.removed[a.id] && (a.ghostPhase !== undefined || a.uno !== undefined); })) return false;
-    state.ghostFlip = (state.ghostFlip || 0) + 1;
-    if (isStuck(level, state)) { state.ghostFlip--; return false; }
-    return true;
+    if (level.arrows.some(function (a) { return !state.removed[a.id] && (a.ghostPhase !== undefined || a.uno !== undefined); })) {
+      state.ghostFlip = (state.ghostFlip || 0) + 1;
+      if (!isStuck(level, state)) return true;
+      state.ghostFlip--;
+    }
+    // Only flowers are in the way: a bee comes early for one, so playing in a different order can't strand the board.
+    var guard = 0;
+    while (isStuck(level, state) && guard++ < 400) {
+      var picked = -1;
+      level.arrows.some(function (a) {
+        if (state.removed[a.id] || !isReady(state, a)) return false;
+        var c = check(level, state, a);
+        if (c.flower) { picked = c.flowerKey; return true; }
+        return false;
+      });
+      if (picked < 0) return false;
+      state.picked = state.picked || {};
+      state.picked[picked] = true;
+      (state.pickedNew = state.pickedNew || []).push(picked);
+    }
+    return !isStuck(level, state);
   }
   function resetBoard(level) {
     level.arrows.forEach(function (a) { a.cells = a.baseCells; a.dir = a.baseDir; });
@@ -211,7 +230,7 @@
     var out = [];
     for (var y = 0; y < level.h; y++) for (var x = 0; x < level.w; x++) {
       var k = y * level.w + x, o = level.grid[k];
-      if (level.mirrorAt[k] || level.flowerAt[k] >= state.launches || state.burning[k] > state.launches) continue;
+      if (level.mirrorAt[k] || flowerStands(level, state, k) || state.burning[k] > state.launches) continue;
       if (o === -1 || state.removed[o]) out.push(k);
     }
     return out;
@@ -236,7 +255,7 @@
         var dx = c[0] - t[0], dy = c[1] - t[1];
         for (var i = 0; i < q; i++) { var tmp = dx; dx = -dy; dy = tmp; }
         var nx = t[0] + dx, ny = t[1] + dy, k = ny * level.w + nx;
-        if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h || level.mirrorAt[k] || level.flowerAt[k] >= state.launches || state.burning[k] > state.launches) { ok = false; return; }
+        if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h || level.mirrorAt[k] || flowerStands(level, state, k) || state.burning[k] > state.launches) { ok = false; return; }
         var o = level.grid[k];
         if (o !== -1 && o !== a.id && !state.removed[o]) ok = false;
         cells.push([nx, ny]);
@@ -315,12 +334,12 @@
 
   // Depth-first search with memoised dead ends.
   function solve(level, from, budget) {
-    var state = { removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {}, ghostFlip: from.ghostFlip || 0, arrowsRef: level.arrows };
-    var hasGhosts = level.arrows.some(function (a) { return a.ghostPhase !== undefined || a.uno !== undefined; });
+    var state = { picked: from.picked, removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {}, ghostFlip: from.ghostFlip || 0, arrowsRef: level.arrows };
+    var hasGhosts = level.arrows.some(function (a) { return a.ghostPhase !== undefined || a.uno !== undefined; }), hasFlowers = !!(level.flowers && level.flowers.length);
     var flipping = false, dead = {}, nodes = 0, limit = budget || 200000, exhausted = false, path = [];
     function dfs() {
       if (isWon(state)) return true;
-      var key = state.removed.map(Number).join('') + (hasGhosts ? ((state.launches + state.ghostFlip) % 2) : '');
+      var key = state.removed.map(Number).join('') + (hasGhosts ? ((state.launches + state.ghostFlip) % 2) : '') + (state.noFlowers ? 'f' : '');
       if (dead[key]) return false;
       if (++nodes > limit) { exhausted = true; return false; }
       // Moves are looked for one at a time, since boards usually clear on the first path tried.
@@ -344,6 +363,12 @@
         if (flipped) { state.ghostFlip++; return true; }
       }
       flipping = false;
+      if (!tried && hasFlowers && !state.noFlowers) {
+        state.noFlowers = true;
+        var freed = dfs();
+        state.noFlowers = false;
+        if (freed) return true;
+      }
       dead[key] = true;
       return false;
     }
@@ -576,7 +601,7 @@
       if (a.key !== undefined || a.isKey || a.wait) return;
       if (redsLeft > 0) {
         // The count must run out before the board can be cleared, or the card would never matter.
-        var count = Math.max(3, lb + 2 + Math.floor(r() * 2));
+        var count = Math.max(3, lb + 2 + Math.floor(r() * 2) + Math.floor(n * (spec.redSlack || 0)));
         if (count <= n - 2) { a.red = count; redsLeft--; return; }
       }
       if (ghostsLeft > 0) { a.ghostPhase = lb % 2; ghostsLeft--; return; }
@@ -704,6 +729,10 @@
     // Map size multiplies the board's area, so each side grows by its square root.
     var scale = opts.scale || 1, root = Math.sqrt(scale), fx = opts.effects || [];
     var more = function (count) { return Math.min(count * scale, 14); };
+    // Every board carries new arrows. One type at first and more as you drift further, all four on big maps.
+    var kinds = ['ghosts', 'unos', 'phases', 'reds'], step = n % 4, howMany = scale > 1 ? 4 : Math.min(4, 1 + Math.floor(n / 4) + (hard ? 1 : 0)), special = {};
+    for (var q = 0; q < howMany; q++) special[kinds[(step + q) % 4]] = 1;
+    var extraOf = hard && n % 2 ? 1 : 0;
     return {
       big: scale > 1, scale: scale,
       w: Math.round(Math.min(9, 6 + size + extra) * root), h: Math.round(Math.min(12, 7 + size + (size > 2 ? 1 : 0) + extra) * root), minLen: 2,
@@ -711,7 +740,9 @@
       twins: more(Math.min(2, Math.floor(n / 3)) + (hard ? 1 : 0)), compass: more(Math.min(2, Math.floor((n + 1) / 4)) + (hard ? 1 : 0)),
       sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more((n % 5 === 3 ? 2 : 0) + (hard && n % 2 ? 2 : 0)), patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
       trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1,
-      ghosts: n % 6 === 1 ? more(1) : 0, unos: n % 6 === 2 ? more(1) : 0, phases: n % 6 === 5 ? more(1) : 0, reds: n % 6 === 3 && !fx.length && scale === 1 ? 1 : 0,
+      ghosts: special.ghosts ? more(1 + extraOf) : 0, unos: special.unos ? more(1 + extraOf) : 0, phases: special.phases ? more(1 + extraOf) : 0,
+      // Red cards can trap you, so big maps use few of them and give them more time.
+      reds: special.reds ? Math.min(more(1), 1 + Math.floor(scale / 5)) : 0, redSlack: scale > 1 ? 0.12 : 0,
       flowers: fx.indexOf('spring') >= 0 ? 0.24 : 0, gaps: Math.max(fx.indexOf('summer') >= 0 ? 0.14 : 0, fx.indexOf('autumn') >= 0 ? 0.24 : 0)
     };
   }
@@ -720,7 +751,8 @@
     var spec = endlessSpec(n, opts);
     var tries = spec.big ? 3 : 30;
     var lvl = generate(spec, seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0, unos: 0 }), seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: 0 }), seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries * 2);
     lvl.hints = spec.hints; lvl.big = spec.big; lvl.effects = opts && opts.effects ? opts.effects.slice() : [];
@@ -729,7 +761,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };

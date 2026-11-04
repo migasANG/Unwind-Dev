@@ -741,7 +741,7 @@
     if (!reduced && !window.unwindNoLayer && now > introEnd) {
       // In the whole-map view flowers are tiny, so they rest in the picture. Up close they sway live.
       flowersInLayer = !!l.flowers && l.flowers.length > 30 && settledCs(cam, cs);
-      var layerKey = current.id + '|' + colors.name + '|' + flowersInLayer;
+      var layerKey = current.id + '|' + colors.name + '|' + flowersInLayer + '|' + (flowersInLayer && state.picked ? Object.keys(state.picked).length : 0);
       var settled = !cam || (!cam.zoom && now - (cam.lastZoom || 0) > 160);
       var padW = (l.w + 4) * cs, padH = (l.h + 4) * cs, res = Math.min(boardDpr, 4096 / Math.max(padW, padH));
       var enterLayer = function (cv) {
@@ -786,7 +786,7 @@
           });
           ctx.clip(); ctx.clearRect(0, 0, vw, vh);
           paintBase(keys);
-          if (flowersInLayer) l.flowers.forEach(function (fl, i) { if (i >= state.launches && dirty[fl[1] * l.w + fl[0]]) drawFlower(px(fl), cs * 0.47, fl[0] * 7 + fl[1] * 3, now, true); });
+          if (flowersInLayer) l.flowers.forEach(function (fl, i) { if (i >= state.launches && !(state.picked && state.picked[fl[1] * l.w + fl[0]]) && dirty[fl[1] * l.w + fl[0]]) drawFlower(px(fl), cs * 0.47, fl[0] * 7 + fl[1] * 3, now, true); });
           var near = {};
           keys.forEach(function (k) {
             var cx = k % l.w, cy = Math.floor(k / l.w);
@@ -1241,7 +1241,7 @@
   }
   function drawFlowers(now, l) {
     l.flowers.forEach(function (f, i) {
-      if (i < state.launches) return;
+      if (i < state.launches || (state.picked && state.picked[f[1] * l.w + f[0]])) return;
       var p = px(f);
       if (p.x < -cs || p.x > vw + cs || p.y < -cs || p.y > vh + cs) return;
       drawFlower(p, cs * 0.47, f[0] * 7 + f[1] * 3, now, true);
@@ -1458,7 +1458,9 @@
       ev.rotate.forEach(function (r) { var a = l.arrows[r.id]; a.rot = { start: now, turn: (r.quarters === 3 ? -1 : r.quarters) * Math.PI / 2 }; });
     }
     if (l.flowers && l.flowers.length) {
+      takeEarlyFlowers(now);
       var taken = l.flowers[state.launches - 1];
+      if (taken && state.picked && state.picked[taken[1] * l.w + taken[0]]) taken = null;
       if (taken) {
         var p = px(taken), right = p.x > vw / 2;
         beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((state.launches * 61) % 200) }, start: now, seed: taken[0] * 7 + taken[1] * 3 });
@@ -1581,14 +1583,23 @@
   function hintStillGood() {
     if (hintArrow < 0) return;
     if (state.removed[hintArrow] || !E.canLaunch(current.level, state, hintArrow)) { hintArrow = -1; return; }
-    var probe = { removed: state.removed.slice(), launches: state.launches, lives: null, history: [], frozen: {}, burning: Object.assign({}, state.burning), ghostFlip: state.ghostFlip, arrowsRef: current.level.arrows };
+    var probe = { picked: state.picked, removed: state.removed.slice(), launches: state.launches, lives: null, history: [], frozen: {}, burning: Object.assign({}, state.burning), ghostFlip: state.ghostFlip, arrowsRef: current.level.arrows };
     E.tap(current.level, probe, hintArrow);
     var sol = E.solve(current.level, probe, current.level.big ? 2000 : 30000);
     if (!sol.solved && !sol.exhausted) hintArrow = -1;
   }
+  // Flowers a bee took early, because they alone were holding up the board.
+  function takeEarlyFlowers(now) {
+    var l = current.level;
+    (state.pickedNew || []).splice(0).forEach(function (k) {
+      var p = px([k % l.w, Math.floor(k / l.w)]), right = p.x > vw / 2;
+      beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((k * 61) % 200) }, start: now, seed: (k % l.w) * 7 + Math.floor(k / l.w) * 3 });
+    });
+  }
   function onTap(id) {
     if (ended || id < 0) return;
     var l = current.level, res = E.tap(l, state, id), now = performance.now();
+    takeEarlyFlowers(now);
     if (res.notReady) {
       // Waiting arrows give a small shake and a soft sound. It costs nothing.
       nudges[id] = now + 360;

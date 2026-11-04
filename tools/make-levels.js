@@ -78,9 +78,16 @@ winter[0].caption='Ice can trap arrows. Hit a frozen arrow with another arrow to
 spring[0].caption='Flowers block arrows. Each launch, a bee carries one away.';
 summer[0].caption='Burning tiles stop arrows for a few launches. Wait, or find another way.';
 autumn[0].caption='Wind can spin arrows around their tails when there is room.';
-// Reverse arrows join the later levels of every set.
-calm.slice(-3).forEach((x,i)=>x.unos=1+i%2);
-[[hard,4],[timed,3],[winter,2],[spring,2],[summer,2],[autumn,2]].forEach(([set,last])=>set.slice(-last).forEach((x,i)=>x.unos=1+(i%2)));
+// The four newer arrows (ghost, phase, red card, reverse) spread through every set after they are taught.
+// Each list is [ghosts, phases, reds, reverse] per level. Calm 1 to 33 teach one idea at a time, so they stay as they are.
+const mix=(set,list)=>list.forEach((m,i)=>{if(!m)return;const[g,p,r,u]=m;Object.assign(set[set.length-list.length+i],{ghosts:g,phases:p,reds:r,unos:u})});
+mix(calm,[[1,1,1,1],[1,1,1,2],[2,2,1,2]]);
+mix(hard,[[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0],[1,0,0,1],[0,2,0,1],[1,0,2,0],[2,0,1,1],[2,2,1,1],[1,2,2,2],[2,2,1,2],[2,2,2,2]]);
+mix(timed,[0,0,[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0],[1,0,0,1],[0,1,1,0],[1,2,0,1],[2,1,0,1],[1,1,2,1],[2,1,1,2]]);
+// Season levels open on the effect alone, then bring the arrows back one at a time.
+const seasonMix=[[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0]];
+[winter,spring,summer,autumn].forEach((set,k)=>mix(set,[0,0,seasonMix[k],seasonMix[(k+1)%4],[1,0,0,1].map((v,i)=>k%2?[0,1,1,0][i]:v),[1,1,1,1],[1,1,1,2]]));
+
 const out={}, rows=[];
 [['calm',calm,1000],['hard',hard,7000],['timed',timed,13000],['winter',winter,21000],['spring',spring,23000],['summer',summer,25000],['autumn',autumn,27000]].forEach(([name,specs,base])=>{
  out[name]=specs.map((s,i)=>{
