@@ -71,13 +71,13 @@
       chords: [[38,57,60,65],[43,58,62,65],[36,55,58,64],[41,57,60,64],[34,53,57,62],[43,53,59,62],[36,52,55,62],[33,55,60,64]],
       melody: [[[1,69]],[[2,70],[3,67]],[[1.5,64]],[[0.5,65],[3,69]],[[1,62]],[[2,65],[3,62]],[[1,64]],[[0,61],[2.5,57]]],
       pent: [50,53,55,57,60,62,65,67,69,72,74] },
-    { id: 'snowfall', name: 'Snowfall', mood: 'Winter: falling glass bells', bpm: 54, beats: 4, style: 'snow',
-      chords: [[40,59,64,67],[36,55,64,67],[38,57,62,66],[35,54,62,66],[40,59,67,71],[33,57,60,64],[36,55,60,67],[35,54,59,63]],
-      melody: [[[0,83],[1.5,79],[3,76]],[[0.5,79],[2,84]],[[0,81],[1.5,78],[3,74]],[[1,78],[2.5,71]],[[0,83],[1,86],[2.5,83]],[[0.5,81],[2,76]],[[0,79],[1.5,84],[3,79]],[[1,78],[2.5,75]]],
+    { id: 'snowfall', name: 'Snowfall', mood: 'Winter: a tiptoeing celesta dance', bpm: 76, beats: 4, style: 'snow',
+      chords: [[40,47,55,59],[40,47,55,59],[45,52,57,60],[47,54,59,63],[40,47,55,59],[36,48,55,60],[33,45,57,60],[35,47,54,59]],
+      melody: [[[0,71],[0.5,71],[1,67],[1.5,71],[2,64],[3,66],[3.5,67]],[[0,69],[0.5,67],[1,66],[1.5,63],[2,64]],[[0,72],[0.5,72],[1,69],[1.5,72],[2,64],[3,67],[3.5,69]],[[0,71],[0.5,69],[1,67],[1.5,66],[2,63],[3,66]],[[0,71],[0.5,71],[1,67],[1.5,71],[2,76],[3,74],[3.5,72]],[[0,71],[0.5,72],[1,74],[1.5,72],[2,67],[3,64]],[[0,69],[0.5,72],[1,76],[1.5,72],[2,69],[3,66],[3.5,67]],[[0,66],[0.5,63],[1,59],[2,64]]],
       pent: [52,55,57,59,62,64,67,69,71,74,76] },
-    { id: 'meadow', name: 'Meadow', mood: 'Spring: a flute over skipping strings', bpm: 108, beats: 4, style: 'meadow',
-      chords: [[43,55,59,62],[40,55,59,64],[36,52,55,60],[38,54,57,62],[43,55,62,67],[47,55,59,62],[36,52,60,64],[38,54,60,62]],
-      melody: [[[0,74],[1,79],[2,83],[3,81]],[[0,79],[2,76]],[[0,76],[1,79],[2,84],[3,83]],[[0,81],[2,78]],[[0,83],[1,86],[2,88],[3,86]],[[0,83],[2,79]],[[0,84],[1,83],[2,81],[3,79]],[[0,78],[1,81],[2,74]]],
+    { id: 'meadow', name: 'Meadow', mood: 'Spring: easy guitar and a happy flute', bpm: 84, beats: 4, style: 'meadow',
+      chords: [[43,59,62,67],[40,59,64,67],[36,55,60,64],[38,57,62,66],[43,59,62,67],[47,59,62,66],[36,55,60,64],[38,54,60,62]],
+      melody: [[[0,71],[2,74],[3,76]],[[0,74],[2,71]],[[0,72],[1,76],[2,79]],[[0,78],[2,74]],[[0,79],[2,76],[3,74]],[[0,71],[1.5,74]],[[0,76],[1,74],[2,72],[3,71]],[[0,69],[2,74]]],
       pent: [55,57,59,62,64,67,69,71,74,76,79] },
     { id: 'sandbar', name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
       chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
@@ -126,28 +126,42 @@
     }
   };
   Object.assign(bars, {
-    snow: function (ctx, dest, th, chord, melody, t, beat, len) {
-      swell(ctx, dest, hz(chord[0] + 12), t, 0.035, len * 1.1, 1.4, 500);
-      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.075, beat * 3.6, 0.003, BELL); });
-      voice(ctx, dest, hz(chord[3] + 24), t + 2.5 * beat, 0.026, beat * 2.5, 0.003, BELL);
-    },
-    meadow: function (ctx, dest, th, chord, melody, t, beat) {
-      [0, 1, 2, 3].forEach(function (b) {
-        voice(ctx, dest, hz(b % 2 ? chord[2] : chord[0] + 12), t + b * beat, b % 2 ? 0.05 : 0.09, 0.5, 0.005, PIZZ);
-        voice(ctx, dest, hz(chord[3]), t + (b + 0.5) * beat, 0.035, 0.32, 0.005, PIZZ);
+    snow: function (ctx, dest, th, chord, melody, t, beat) {
+      // Plucked strings march softly underneath, with a low, staccato celesta on top.
+      voice(ctx, dest, hz(chord[0]), t, 0.1, 0.5, 0.004, PIZZ);
+      voice(ctx, dest, hz(chord[1]), t + 2 * beat, 0.075, 0.45, 0.004, PIZZ);
+      [1, 3].forEach(function (b) {
+        voice(ctx, dest, hz(chord[2]), t + b * beat, 0.035, 0.28, 0.004, PIZZ);
+        voice(ctx, dest, hz(chord[3]), t + b * beat, 0.035, 0.28, 0.004, PIZZ);
       });
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.07, 0.75, 0.002, CELESTA); });
+    },
+    meadow: function (ctx, dest, th, chord, melody, t, beat, len) {
+      // An unhurried fingerpicked pattern with a warm, low flute singing over it.
+      voice(ctx, dest, hz(chord[0]), t, 0.1, 1.6, 0.008, GUITAR);
+      [[0.5, 1], [1, 2], [1.5, 3], [2.5, 1], [3, 2], [3.5, 3]].forEach(function (p) {
+        voice(ctx, dest, hz(chord[p[1]]), t + p[0] * beat, 0.042, 1.15, 0.006, GUITAR);
+      });
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.065, 1.2, 0.008, GUITAR);
       if (melody) melody.forEach(function (n, i) {
         var next = melody[i + 1] ? melody[i + 1][0] : th.beats;
-        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.085, (next - n[0]) * beat * 0.98, 0.05, 2600);
+        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.058, (next - n[0]) * beat * 0.96, 0.09, 1500);
       });
     },
-    bossa: function (ctx, dest, th, chord, melody, t, beat) {
-      voice(ctx, dest, hz(chord[0]), t, 0.12, 0.9, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.09, 0.8, 0.006, PIZZ);
-      [0.5, 1.5, 2.5, 3.5, 3].forEach(function (b) {
-        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, 0.04, 0.55, 0.004, GUITAR); });
+    bossa: function (ctx, dest, th, chord, melody, t, beat, len) {
+      // A full band: warm chords underneath, walking bass, rhythm guitar, soft shaker clicks and answering vibes.
+      chord.slice(1).forEach(function (m) { swell(ctx, dest, hz(m), t, 0.03, len * 1.04, 0.4, 1100); });
+      voice(ctx, dest, hz(chord[0]), t, 0.13, 0.95, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 1.5 * beat, 0.08, 0.5, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 12), t + 2 * beat, 0.1, 0.8, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 3.5 * beat, 0.08, 0.45, 0.006, PIZZ);
+      [0.5, 1.5, 2.5, 3, 3.5].forEach(function (b) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, 0.038, 0.6, 0.004, GUITAR); });
       });
-      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.09, 1.2, 0.006, GUITAR); });
+      for (var c = 0; c < th.beats * 2; c++) voice(ctx, dest, 2100, t + c * 0.5 * beat, c % 2 ? 0.016 : 0.009, 0.05, 0.001, [[1, 1]]);
+      vibe(ctx, dest, hz(chord[3] + 12), t + 1 * beat, 0.026, beat * 1.5);
+      vibe(ctx, dest, hz(chord[2] + 12), t + 2.5 * beat, 0.026, beat * 1.5);
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.085, 1.25, 0.006, GUITAR); });
     },
     amber: function (ctx, dest, th, chord, melody, t, beat, len) {
       swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);

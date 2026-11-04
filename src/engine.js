@@ -48,6 +48,9 @@
       history: [], frozen: {}, burning: {}, snaps: [], eventDone: false
     };
   }
+  // The season effects a board uses. Pre-made levels have one, and open water can combine several.
+  function effectsOf(level) { return level.effects || (level.season ? [level.season] : []); }
+  function hasEffect(level, name) { return effectsOf(level).indexOf(name) >= 0; }
   function headOf(a) { return a.cells[a.cells.length - 1]; }
   function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : a.dir; }
   function partnerOf(a) { return a.kind === 'twin' ? a.twin : -1; }
@@ -97,13 +100,15 @@
     var ice = hit.filter(function (r) { return r.check.frozen; });
     if (ice.length && ice.length === hit.length) {
       ice.forEach(function (r) { delete state.frozen[r.check.blocker]; });
+      // Freed but still hemmed in by fire or more ice: clear them, so effects can never trap the player.
+      if (isStuck(level, state)) { state.frozen = {}; state.burning = {}; }
       return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
     }
     if (hit.length) {
       if (state.lives !== null) state.lives--;
       return { ok: false, results: results, failed: state.lives === 0 };
     }
-    if (level.season) {
+    if (effectsOf(level).length) {
       state.snaps = state.snaps || [];
       state.snaps.push({ eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
         geo: level.arrows.map(function (a) { return { cells: a.cells, dir: a.dir }; }) });
@@ -202,33 +207,31 @@
   }
   function seasonStep(level, state) {
     var ev = { triggered: false, forced: false, freeze: [], thaw: [], burn: [], wind: false, rotate: [], cleared: false };
-    if (!level.season || isWon(state)) return ev;
+    if (!effectsOf(level).length || isWon(state)) return ev;
     var r = rng32(((level.seed || 7) * 31 + state.launches * 7919 + 13) >>> 0);
     r(); r();
     var live = level.arrows.filter(function (a) { return !state.removed[a.id]; });
     // Pre-made levels promise at least one event. It keeps being retried until one really happens.
     var forced = level.guaranteeAt !== undefined && level.guaranteeAt !== null && !state.eventDone && state.launches >= level.guaranteeAt;
     ev.forced = forced;
-    // An arrow nothing can reach thaws by itself after 3 launches.
+    // Frozen arrows thaw by themselves after 3 to 5 launches, or sooner if another arrow hits them.
     Object.keys(state.frozen).forEach(function (id) {
       if (state.removed[id]) { delete state.frozen[id]; return; }
-      var reachable = live.some(function (a) { if (a.id === +id || !isReady(state, a)) return false; var c = check(level, state, a); return !c.clear && c.blocker === +id; });
-      state.frozen[id] = reachable ? 0 : state.frozen[id] + 1;
-      if (state.frozen[id] >= 3) { delete state.frozen[id]; ev.thaw.push(+id); }
+      if (state.launches >= state.frozen[id]) { delete state.frozen[id]; ev.thaw.push(+id); }
     });
-    var roll0 = r();
-    if (level.season === 'winter' && (roll0 < 0.2 || forced)) {
+    var rollWinter = r(), rollSummer = r(), rollAutumn = r();
+    if (hasEffect(level, 'winter') && (rollWinter < 0.2 || forced)) {
       ev.triggered = true;
       var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && state.frozen[a.id] === undefined; }), r);
       pool.some(function (a) {
         if (ev.freeze.length >= want) return true;
         if (a.kind === 'twin') return false;
-        state.frozen[a.id] = 0;
+        state.frozen[a.id] = state.launches + 3 + Math.floor(r() * 3);
         if (isStuck(level, state)) delete state.frozen[a.id]; else ev.freeze.push(a.id);
         return false;
       });
     }
-    if (level.season === 'summer' && (roll0 < 0.25 || forced)) {
+    if (hasEffect(level, 'summer') && (rollSummer < 0.25 || forced)) {
       ev.triggered = true;
       var tiles = 1 + Math.floor(r() * 5), turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
       live.forEach(function (a) { rayCellsOf(level, state, a).forEach(function (k) { onPath[k] = 1; }); });
@@ -241,7 +244,7 @@
         return false;
       });
     }
-    if (level.season === 'autumn' && (roll0 < 0.5 || forced)) {
+    if (hasEffect(level, 'autumn') && (rollAutumn < 0.5 || forced)) {
       ev.triggered = true; ev.wind = true;
       var attempts = 0, maxAttempts = level.big ? 4 : Infinity, windOrder = shuffle(live.slice(), r);
       var spin = function (a, pick) {
@@ -262,7 +265,7 @@
       // A promised gust must really turn something if anything can turn.
       if (forced && !ev.rotate.length) windOrder.some(function (a) { return spin(a, r()); });
     }
-    if (ev.freeze.length || ev.burn.length || ev.rotate.length || level.season === 'spring') state.eventDone = true;
+    if (ev.freeze.length || ev.burn.length || ev.rotate.length || hasEffect(level, 'spring')) state.eventDone = true;
     // If nothing can move, fire dies and ice melts, so effects alone can never trap the player.
     if (isStuck(level, state) && (Object.keys(state.frozen).length || Object.keys(state.burning).length)) {
       ev.thaw = ev.thaw.concat(Object.keys(state.frozen).map(Number));
@@ -592,7 +595,7 @@
     opts = opts || {};
     var size = Math.min(4, Math.floor(n / 4)), hard = !!opts.hard, extra = hard ? 2 : 0;
     // Map size multiplies the board's area, so each side grows by its square root.
-    var scale = opts.scale || 1, root = Math.sqrt(scale);
+    var scale = opts.scale || 1, root = Math.sqrt(scale), fx = opts.effects || [];
     var more = function (count) { return Math.min(count * scale, 14); };
     return {
       big: scale > 1, scale: scale,
@@ -601,7 +604,7 @@
       twins: more(Math.min(2, Math.floor(n / 3)) + (hard ? 1 : 0)), compass: more(Math.min(2, Math.floor((n + 1) / 4)) + (hard ? 1 : 0)),
       sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more((n % 5 === 3 ? 2 : 0) + (hard && n % 2 ? 2 : 0)), patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
       trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1,
-      flowers: opts.season === 'spring' ? 0.24 : 0, gaps: opts.season === 'summer' ? 0.14 : opts.season === 'autumn' ? 0.24 : 0
+      flowers: fx.indexOf('spring') >= 0 ? 0.24 : 0, gaps: Math.max(fx.indexOf('summer') >= 0 ? 0.14 : 0, fx.indexOf('autumn') >= 0 ? 0.24 : 0)
     };
   }
   // Builds a board, simplifying the mix of special arrows if a seed cannot fit them all.
@@ -612,13 +615,13 @@
       || generate(Object.assign({}, spec, { mirrors: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0 }), seed, tries * 2);
-    lvl.hints = spec.hints; lvl.big = spec.big; lvl.season = opts && opts.season ? opts.season : null;
+    lvl.hints = spec.hints; lvl.big = spec.big; lvl.effects = opts && opts.effects ? opts.effects.slice() : [];
     return lvl;
   }
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
