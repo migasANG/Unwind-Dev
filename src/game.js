@@ -209,14 +209,39 @@
     var o = endlessOpts(); o.background = b; progress.endlessOpts = o; save('unwind.progress2', progress);
     track('background', { background: b });
   }
+  // The next background is built out of sight first. Only once it is fully drawn does it fade in over the old one.
+  var bgRequest = 0;
   function applyBackgroundNow() {
     if (!current || current.mode !== 'endless') return;
+    var ask = ++bgRequest, choice = backgroundChoice(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
+    if ((old.getAttribute('data-season') || null) === next && !old.hidden === !!next) { commitBackground(ask, null, next); return; }
+    var fresh = document.createElement('div');
+    fresh.className = 'scenebg pending';
+    old.parentNode.insertBefore(fresh, old.nextSibling);
+    if (next) { fresh.setAttribute('data-season', next); bakeScene(fresh, next); }
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      // A newer choice replaced this one while it was getting ready.
+      if (ask !== bgRequest || !current || current.mode !== 'endless') { fresh.remove(); return; }
+      commitBackground(ask, fresh, next);
+    }); });
+  }
+  function commitBackground(ask, fresh, next) {
+    var old = $('seasonBg');
+    document.body.classList.add('bgswap');
+    if (fresh) {
+      old.removeAttribute('id');
+      fresh.id = 'seasonBg';
+      fresh.classList.remove('pending');
+      if (!next) { fresh.hidden = true; old.classList.add('leaving'); }
+      setTimeout(function () { old.remove(); }, 520);
+    }
     current.chapter = backgroundPalette();
     applyChapter(current.chapter, 34);
-    applySeason(SEASONS[backgroundChoice()] ? backgroundChoice() : null);
+    applySeason(next);
     ambience = [];
     refresh(); layout();
     musicTick();
+    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, 520);
   }
   function effectChoice() {
     var o = endlessOpts();
@@ -1769,6 +1794,15 @@
 
   /* ---------- Sheets ---------- */
   function closeSheet() { $('sheetHost').innerHTML = ''; }
+  // Changes inside an open menu swap its contents only, so the menu itself never fades out or moves.
+  function sheetInPlace(html) {
+    var host = $('sheetHost').firstChild, card = host && host.querySelector('.card');
+    if (!card) return sheet(html, 'tall');
+    var top = card.scrollTop;
+    card.innerHTML = html;
+    card.scrollTop = top;
+    return host;
+  }
   function sheet(html, cardClass) {
     $('sheetHost').innerHTML = '<div class="sheet"><div class="card ' + (cardClass || '') + '">' + html + '</div></div>';
     return $('sheetHost').firstChild;
@@ -1852,7 +1886,7 @@
   var STAR_MARK = '<svg class="mk s" viewBox="0 0 24 24" aria-hidden="true">' + STAR_PATH + '</svg>';
   var MOON_MARK = '<svg class="mk m" viewBox="0 0 24 24" aria-hidden="true">' + MOON_PATH + '</svg>';
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
-  function levelsSheet(tab) {
+  function levelsSheet(tab, inPlace) {
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
@@ -1885,9 +1919,9 @@
       '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
-    var s = sheet(html);
+    var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
     s.querySelector('#x').onclick = closeSheet;
-    s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab')); }; });
+    s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };

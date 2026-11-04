@@ -17,10 +17,15 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 #sky,#sky2{transition:opacity 2.4s ease}
 #sky2{opacity:0}
 #sun{inset:auto;left:50%;width:min(92vw,560px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);top:var(--sun-y,70%);background:var(--sun);opacity:.55;filter:blur(2px);transition:top 2.6s cubic-bezier(.3,.1,.2,1),background 2.4s ease}
-#seasonBg{position:fixed;inset:0;overflow:hidden}
-#seasonBg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-#seasonBg.baking *{animation:none!important}
-#seasonBg svg.mover{will-change:transform,opacity}
+.scenebg{position:fixed;inset:0;overflow:hidden}
+.scenebg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.scenebg.baking *{animation:none!important}
+.scenebg svg.mover{will-change:transform,opacity}
+.scenebg.pending{opacity:.001;pointer-events:none}
+.scenebg{transition:opacity .45s ease}
+.scenebg.leaving{opacity:0}
+body.bgswap #sky,body.bgswap #sky2{transition-duration:.45s}
+.card.tall{height:min(100%,860px)}
 #seasonBadge{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:58px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 #seasonBadge .chip{pointer-events:auto;cursor:help;touch-action:none;-webkit-touch-callout:none;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:17px;background:var(--card);font-weight:600;font-size:.8125rem;font-variant-numeric:tabular-nums;box-shadow:0 1px 5px rgba(0,0,0,.2)}
 #tip{position:fixed;z-index:6;max-width:min(270px,calc(100vw - 24px));padding:9px 12px;border-radius:12px;background:var(--ink);color:var(--card);font-size:.8125rem;line-height:1.35;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none}
@@ -197,7 +202,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
 @media (prefers-reduced-motion:reduce){#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
 </style>
 
-<div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" hidden></div>
+<div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>
 <canvas id="board" aria-label="Puzzle board. Tap an arrow to send it off the board."></canvas>
 
 <header class="ui">
@@ -1496,14 +1501,39 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     var o = endlessOpts(); o.background = b; progress.endlessOpts = o; save('unwind.progress2', progress);
     track('background', { background: b });
   }
+  // The next background is built out of sight first. Only once it is fully drawn does it fade in over the old one.
+  var bgRequest = 0;
   function applyBackgroundNow() {
     if (!current || current.mode !== 'endless') return;
+    var ask = ++bgRequest, choice = backgroundChoice(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
+    if ((old.getAttribute('data-season') || null) === next && !old.hidden === !!next) { commitBackground(ask, null, next); return; }
+    var fresh = document.createElement('div');
+    fresh.className = 'scenebg pending';
+    old.parentNode.insertBefore(fresh, old.nextSibling);
+    if (next) { fresh.setAttribute('data-season', next); bakeScene(fresh, next); }
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      // A newer choice replaced this one while it was getting ready.
+      if (ask !== bgRequest || !current || current.mode !== 'endless') { fresh.remove(); return; }
+      commitBackground(ask, fresh, next);
+    }); });
+  }
+  function commitBackground(ask, fresh, next) {
+    var old = $('seasonBg');
+    document.body.classList.add('bgswap');
+    if (fresh) {
+      old.removeAttribute('id');
+      fresh.id = 'seasonBg';
+      fresh.classList.remove('pending');
+      if (!next) { fresh.hidden = true; old.classList.add('leaving'); }
+      setTimeout(function () { old.remove(); }, 520);
+    }
     current.chapter = backgroundPalette();
     applyChapter(current.chapter, 34);
-    applySeason(SEASONS[backgroundChoice()] ? backgroundChoice() : null);
+    applySeason(next);
     ambience = [];
     refresh(); layout();
     musicTick();
+    setTimeout(function () { if (ask === bgRequest) document.body.classList.remove('bgswap'); }, 520);
   }
   function effectChoice() {
     var o = endlessOpts();
@@ -3056,6 +3086,15 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
 
   /* ---------- Sheets ---------- */
   function closeSheet() { $('sheetHost').innerHTML = ''; }
+  // Changes inside an open menu swap its contents only, so the menu itself never fades out or moves.
+  function sheetInPlace(html) {
+    var host = $('sheetHost').firstChild, card = host && host.querySelector('.card');
+    if (!card) return sheet(html, 'tall');
+    var top = card.scrollTop;
+    card.innerHTML = html;
+    card.scrollTop = top;
+    return host;
+  }
   function sheet(html, cardClass) {
     $('sheetHost').innerHTML = '<div class="sheet"><div class="card ' + (cardClass || '') + '">' + html + '</div></div>';
     return $('sheetHost').firstChild;
@@ -3139,7 +3178,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   var STAR_MARK = '<svg class="mk s" viewBox="0 0 24 24" aria-hidden="true">' + STAR_PATH + '</svg>';
   var MOON_MARK = '<svg class="mk m" viewBox="0 0 24 24" aria-hidden="true">' + MOON_PATH + '</svg>';
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
-  function levelsSheet(tab) {
+  function levelsSheet(tab, inPlace) {
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
@@ -3172,9 +3211,9 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
-    var s = sheet(html);
+    var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
     s.querySelector('#x').onclick = closeSheet;
-    s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab')); }; });
+    s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
