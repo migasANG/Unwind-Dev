@@ -54,6 +54,17 @@
     lfo.onended = function () { trem.disconnect(); depth.disconnect(); };
   }
 
+  var STEEL = [[1, 1], [2, 0.5, 0.6], [3.95, 0.16, 0.3]];
+  // A whistled note: a pure tone that scoops up into pitch with a slight wobble.
+  function whistle(ctx, dest, freq, t, vol, dur) {
+    var o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), depth = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(freq * 0.96, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+    lfo.frequency.value = 5.5; depth.gain.value = freq * 0.006; lfo.connect(depth); depth.connect(o.frequency);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.025);
+    g.gain.setValueAtTime(vol, t + Math.max(0.03, dur * 0.6)); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(dest); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+    o.onended = function () { g.disconnect(); depth.disconnect(); };
+  }
   var THEMES = [
     { id: 'first-light', name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
       chords: [[48,55,64,67],[45,52,60,64],[41,48,57,64],[43,50,59,62],[48,55,64,72],[40,52,59,67],[41,48,60,69],[43,50,59,65]],
@@ -75,9 +86,9 @@
       chords: [[40,47,55,59],[40,47,55,59],[45,52,57,60],[47,54,59,63],[40,47,55,59],[36,48,55,60],[33,45,57,60],[35,47,54,59]],
       melody: [[[0,71],[0.5,71],[1,67],[1.5,71],[2,64],[3,66],[3.5,67]],[[0,69],[0.5,67],[1,66],[1.5,63],[2,64]],[[0,72],[0.5,72],[1,69],[1.5,72],[2,64],[3,67],[3.5,69]],[[0,71],[0.5,69],[1,67],[1.5,66],[2,63],[3,66]],[[0,71],[0.5,71],[1,67],[1.5,71],[2,76],[3,74],[3.5,72]],[[0,71],[0.5,72],[1,74],[1.5,72],[2,67],[3,64]],[[0,69],[0.5,72],[1,76],[1.5,72],[2,69],[3,66],[3.5,67]],[[0,66],[0.5,63],[1,59],[2,64]]],
       pent: [52,55,57,59,62,64,67,69,71,74,76] },
-    { id: 'meadow', name: 'Meadow', mood: 'Spring: easy guitar and a happy flute', bpm: 84, beats: 4, style: 'meadow',
-      chords: [[43,59,62,67],[40,59,64,67],[36,55,60,64],[38,57,62,66],[43,59,62,67],[47,59,62,66],[36,55,60,64],[38,54,60,62]],
-      melody: [[[0,71],[2,74],[3,76]],[[0,74],[2,71]],[[0,72],[1,76],[2,79]],[[0,78],[2,74]],[[0,79],[2,76],[3,74]],[[0,71],[1.5,74]],[[0,76],[1,74],[2,72],[3,71]],[[0,69],[2,74]]],
+    { id: 'meadow', name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
+      chords: [[43,67,71,74],[40,67,71,76],[36,67,72,76],[38,66,69,74],[43,67,71,74],[47,66,71,74],[36,67,72,76],[38,66,72,74]],
+      melody: [[[0,79],[1,83],[1.5,81],[2,79]],[[0.5,76],[1,79],[2,83]],[[0,84],[1,83],[1.5,81],[2.5,79]],[[0,78],[1,81],[2,86]],[[0,83],[0.5,86],[1,88],[2,86],[3,83]],[[0.5,79],[1,83],[2,81]],[[0,84],[0.5,83],[1,81],[1.5,79],[2,76]],[[0,78],[1,81],[2,79]]],
       pent: [55,57,59,62,64,67,69,71,74,76,79] },
     { id: 'sandbar', name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
       chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
@@ -136,32 +147,35 @@
       });
       if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.07, 0.75, 0.002, CELESTA); });
     },
-    meadow: function (ctx, dest, th, chord, melody, t, beat, len) {
-      // An unhurried fingerpicked pattern with a warm, low flute singing over it.
-      voice(ctx, dest, hz(chord[0]), t, 0.1, 1.6, 0.008, GUITAR);
-      [[0.5, 1], [1, 2], [1.5, 3], [2.5, 1], [3, 2], [3.5, 3]].forEach(function (p) {
-        voice(ctx, dest, hz(chord[p[1]]), t + p[0] * beat, 0.042, 1.15, 0.006, GUITAR);
+    meadow: function (ctx, dest, th, chord, melody, t, beat) {
+      // A bouncy ukulele strum, a light bass and a whistled tune. Nothing is held, so it stays airy.
+      voice(ctx, dest, hz(chord[0]), t, 0.085, 0.42, 0.005, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.065, 0.38, 0.005, PIZZ);
+      [[0, 0.05], [1, 0.034], [1.5, 0.042], [2.5, 0.034], [3, 0.046], [3.5, 0.032]].forEach(function (p) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + p[0] * beat + i * 0.014, p[1], 0.3, 0.003, GUITAR); });
       });
-      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.065, 1.2, 0.008, GUITAR);
       if (melody) melody.forEach(function (n, i) {
-        var next = melody[i + 1] ? melody[i + 1][0] : th.beats;
-        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.058, (next - n[0]) * beat * 0.96, 0.09, 1500);
+        var next = melody[i + 1] ? melody[i + 1][0] : n[0] + 1, d = Math.min(1, next - n[0]) * beat;
+        whistle(ctx, dest, hz(n[1]), t + n[0] * beat, 0.05, d * 0.92);
       });
     },
-    bossa: function (ctx, dest, th, chord, melody, t, beat, len) {
-      // A full band: warm chords underneath, walking bass, rhythm guitar, soft shaker clicks and answering vibes.
-      chord.slice(1).forEach(function (m) { swell(ctx, dest, hz(m), t, 0.03, len * 1.04, 0.4, 1100); });
-      voice(ctx, dest, hz(chord[0]), t, 0.13, 0.95, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 7), t + 1.5 * beat, 0.08, 0.5, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 12), t + 2 * beat, 0.1, 0.8, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 7), t + 3.5 * beat, 0.08, 0.45, 0.006, PIZZ);
-      [0.5, 1.5, 2.5, 3, 3.5].forEach(function (b) {
-        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, 0.038, 0.6, 0.004, GUITAR); });
+    bossa: function (ctx, dest, th, chord, melody, t, beat) {
+      // A busy little beach band with no held chords: steel drum lead, marimba runs, plucky guitar, walking bass and clave.
+      [[0, 0], [1.5, 7], [2, 12], [3, 7], [3.5, 10]].forEach(function (p, i) {
+        voice(ctx, dest, hz(chord[0] + p[1]), t + p[0] * beat, i % 2 ? 0.08 : 0.125, 0.6, 0.005, PIZZ);
       });
-      for (var c = 0; c < th.beats * 2; c++) voice(ctx, dest, 2100, t + c * 0.5 * beat, c % 2 ? 0.016 : 0.009, 0.05, 0.001, [[1, 1]]);
-      vibe(ctx, dest, hz(chord[3] + 12), t + 1 * beat, 0.026, beat * 1.5);
-      vibe(ctx, dest, hz(chord[2] + 12), t + 2.5 * beat, 0.026, beat * 1.5);
-      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.085, 1.25, 0.006, GUITAR); });
+      [0.5, 1.5, 2.5, 3, 3.5].forEach(function (b) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.01, 0.036, 0.26, 0.003, GUITAR); });
+      });
+      // Marimba runs fill the gaps between phrases.
+      [[0.25, 3], [0.75, 2], [1.25, 1], [2.25, 2], [2.75, 3], [3.25, 2]].forEach(function (p) {
+        voice(ctx, dest, hz(chord[p[1]] + 12), t + p[0] * beat, 0.03, 0.34, 0.002, WOOD);
+      });
+      [0, 1, 2.5, 3.5].forEach(function (b) { voice(ctx, dest, 1250, t + b * beat, 0.03, 0.07, 0.001, [[1, 1], [2.3, 0.3, 0.5]]); });
+      if (melody) melody.forEach(function (n) {
+        voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.095, 0.85, 0.004, STEEL);
+        voice(ctx, dest, hz(n[1]), t + (n[0] + 0.25) * beat, 0.036, 0.5, 0.004, STEEL);
+      });
     },
     amber: function (ctx, dest, th, chord, melody, t, beat, len) {
       swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);

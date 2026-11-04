@@ -369,9 +369,12 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   function iceHits(level, state) {
     var out = [];
     level.arrows.forEach(function (a) {
-      if (state.removed[a.id] || !isReady(state, a)) return;
-      var c = check(level, state, a);
-      if (!c.clear && c.frozen) out.push(a.id);
+      if (state.removed[a.id]) return;
+      // Counts only if a tap would really crack the ice. Twins must both be ready, with only ice in their way.
+      var members = group(level, a);
+      if (!members.every(function (m) { return isReady(state, m); })) return;
+      var blocked = members.map(function (m) { return check(level, state, m); }).filter(function (c) { return !c.clear; });
+      if (blocked.length && blocked.every(function (c) { return c.frozen; })) out.push(a.id);
     });
     return out;
   }
@@ -896,6 +899,17 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     lfo.onended = function () { trem.disconnect(); depth.disconnect(); };
   }
 
+  var STEEL = [[1, 1], [2, 0.5, 0.6], [3.95, 0.16, 0.3]];
+  // A whistled note: a pure tone that scoops up into pitch with a slight wobble.
+  function whistle(ctx, dest, freq, t, vol, dur) {
+    var o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), depth = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(freq * 0.96, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+    lfo.frequency.value = 5.5; depth.gain.value = freq * 0.006; lfo.connect(depth); depth.connect(o.frequency);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.025);
+    g.gain.setValueAtTime(vol, t + Math.max(0.03, dur * 0.6)); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(g); g.connect(dest); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+    o.onended = function () { g.disconnect(); depth.disconnect(); };
+  }
   var THEMES = [
     { id: 'first-light', name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
       chords: [[48,55,64,67],[45,52,60,64],[41,48,57,64],[43,50,59,62],[48,55,64,72],[40,52,59,67],[41,48,60,69],[43,50,59,65]],
@@ -917,9 +931,9 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       chords: [[40,47,55,59],[40,47,55,59],[45,52,57,60],[47,54,59,63],[40,47,55,59],[36,48,55,60],[33,45,57,60],[35,47,54,59]],
       melody: [[[0,71],[0.5,71],[1,67],[1.5,71],[2,64],[3,66],[3.5,67]],[[0,69],[0.5,67],[1,66],[1.5,63],[2,64]],[[0,72],[0.5,72],[1,69],[1.5,72],[2,64],[3,67],[3.5,69]],[[0,71],[0.5,69],[1,67],[1.5,66],[2,63],[3,66]],[[0,71],[0.5,71],[1,67],[1.5,71],[2,76],[3,74],[3.5,72]],[[0,71],[0.5,72],[1,74],[1.5,72],[2,67],[3,64]],[[0,69],[0.5,72],[1,76],[1.5,72],[2,69],[3,66],[3.5,67]],[[0,66],[0.5,63],[1,59],[2,64]]],
       pent: [52,55,57,59,62,64,67,69,71,74,76] },
-    { id: 'meadow', name: 'Meadow', mood: 'Spring: easy guitar and a happy flute', bpm: 84, beats: 4, style: 'meadow',
-      chords: [[43,59,62,67],[40,59,64,67],[36,55,60,64],[38,57,62,66],[43,59,62,67],[47,59,62,66],[36,55,60,64],[38,54,60,62]],
-      melody: [[[0,71],[2,74],[3,76]],[[0,74],[2,71]],[[0,72],[1,76],[2,79]],[[0,78],[2,74]],[[0,79],[2,76],[3,74]],[[0,71],[1.5,74]],[[0,76],[1,74],[2,72],[3,71]],[[0,69],[2,74]]],
+    { id: 'meadow', name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
+      chords: [[43,67,71,74],[40,67,71,76],[36,67,72,76],[38,66,69,74],[43,67,71,74],[47,66,71,74],[36,67,72,76],[38,66,72,74]],
+      melody: [[[0,79],[1,83],[1.5,81],[2,79]],[[0.5,76],[1,79],[2,83]],[[0,84],[1,83],[1.5,81],[2.5,79]],[[0,78],[1,81],[2,86]],[[0,83],[0.5,86],[1,88],[2,86],[3,83]],[[0.5,79],[1,83],[2,81]],[[0,84],[0.5,83],[1,81],[1.5,79],[2,76]],[[0,78],[1,81],[2,79]]],
       pent: [55,57,59,62,64,67,69,71,74,76,79] },
     { id: 'sandbar', name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
       chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
@@ -978,32 +992,35 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       });
       if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.07, 0.75, 0.002, CELESTA); });
     },
-    meadow: function (ctx, dest, th, chord, melody, t, beat, len) {
-      // An unhurried fingerpicked pattern with a warm, low flute singing over it.
-      voice(ctx, dest, hz(chord[0]), t, 0.1, 1.6, 0.008, GUITAR);
-      [[0.5, 1], [1, 2], [1.5, 3], [2.5, 1], [3, 2], [3.5, 3]].forEach(function (p) {
-        voice(ctx, dest, hz(chord[p[1]]), t + p[0] * beat, 0.042, 1.15, 0.006, GUITAR);
+    meadow: function (ctx, dest, th, chord, melody, t, beat) {
+      // A bouncy ukulele strum, a light bass and a whistled tune. Nothing is held, so it stays airy.
+      voice(ctx, dest, hz(chord[0]), t, 0.085, 0.42, 0.005, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.065, 0.38, 0.005, PIZZ);
+      [[0, 0.05], [1, 0.034], [1.5, 0.042], [2.5, 0.034], [3, 0.046], [3.5, 0.032]].forEach(function (p) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + p[0] * beat + i * 0.014, p[1], 0.3, 0.003, GUITAR); });
       });
-      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.065, 1.2, 0.008, GUITAR);
       if (melody) melody.forEach(function (n, i) {
-        var next = melody[i + 1] ? melody[i + 1][0] : th.beats;
-        swell(ctx, dest, hz(n[1]), t + n[0] * beat, 0.058, (next - n[0]) * beat * 0.96, 0.09, 1500);
+        var next = melody[i + 1] ? melody[i + 1][0] : n[0] + 1, d = Math.min(1, next - n[0]) * beat;
+        whistle(ctx, dest, hz(n[1]), t + n[0] * beat, 0.05, d * 0.92);
       });
     },
-    bossa: function (ctx, dest, th, chord, melody, t, beat, len) {
-      // A full band: warm chords underneath, walking bass, rhythm guitar, soft shaker clicks and answering vibes.
-      chord.slice(1).forEach(function (m) { swell(ctx, dest, hz(m), t, 0.03, len * 1.04, 0.4, 1100); });
-      voice(ctx, dest, hz(chord[0]), t, 0.13, 0.95, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 7), t + 1.5 * beat, 0.08, 0.5, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 12), t + 2 * beat, 0.1, 0.8, 0.006, PIZZ);
-      voice(ctx, dest, hz(chord[0] + 7), t + 3.5 * beat, 0.08, 0.45, 0.006, PIZZ);
-      [0.5, 1.5, 2.5, 3, 3.5].forEach(function (b) {
-        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, 0.038, 0.6, 0.004, GUITAR); });
+    bossa: function (ctx, dest, th, chord, melody, t, beat) {
+      // A busy little beach band with no held chords: steel drum lead, marimba runs, plucky guitar, walking bass and clave.
+      [[0, 0], [1.5, 7], [2, 12], [3, 7], [3.5, 10]].forEach(function (p, i) {
+        voice(ctx, dest, hz(chord[0] + p[1]), t + p[0] * beat, i % 2 ? 0.08 : 0.125, 0.6, 0.005, PIZZ);
       });
-      for (var c = 0; c < th.beats * 2; c++) voice(ctx, dest, 2100, t + c * 0.5 * beat, c % 2 ? 0.016 : 0.009, 0.05, 0.001, [[1, 1]]);
-      vibe(ctx, dest, hz(chord[3] + 12), t + 1 * beat, 0.026, beat * 1.5);
-      vibe(ctx, dest, hz(chord[2] + 12), t + 2.5 * beat, 0.026, beat * 1.5);
-      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.085, 1.25, 0.006, GUITAR); });
+      [0.5, 1.5, 2.5, 3, 3.5].forEach(function (b) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.01, 0.036, 0.26, 0.003, GUITAR); });
+      });
+      // Marimba runs fill the gaps between phrases.
+      [[0.25, 3], [0.75, 2], [1.25, 1], [2.25, 2], [2.75, 3], [3.25, 2]].forEach(function (p) {
+        voice(ctx, dest, hz(chord[p[1]] + 12), t + p[0] * beat, 0.03, 0.34, 0.002, WOOD);
+      });
+      [0, 1, 2.5, 3.5].forEach(function (b) { voice(ctx, dest, 1250, t + b * beat, 0.03, 0.07, 0.001, [[1, 1], [2.3, 0.3, 0.5]]); });
+      if (melody) melody.forEach(function (n) {
+        voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.095, 0.85, 0.004, STEEL);
+        voice(ctx, dest, hz(n[1]), t + (n[0] + 0.25) * beat, 0.036, 0.5, 0.004, STEEL);
+      });
     },
     amber: function (ctx, dest, th, chord, melody, t, beat, len) {
       swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);
@@ -1537,8 +1554,21 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     var viewH = viewBottom - viewTop, halfW = vw / 2 / cs, halfH = viewH / 2 / cs;
     // While the mini-map is showing, extra room lets the bottom rows slide clear of it.
     var slack = cam.cs > fitCs * 1.04 ? (miniRect().h + 12) / cs : 0;
-    cam.cx = Math.max(Math.min(l.w / 2, halfW - 1), Math.min(Math.max(l.w / 2, l.w - halfW + 1), cam.cx));
-    cam.cy = Math.max(Math.min(l.h / 2, halfH - 1), Math.min(Math.max(l.h / 2, l.h - halfH + 1) + slack, cam.cy));
+    var minX = Math.min(l.w / 2, halfW - 1), maxX = Math.max(l.w / 2, l.w - halfW + 1), minY = Math.min(l.h / 2, halfH - 1), maxY = Math.max(l.h / 2, l.h - halfH + 1) + slack;
+    cam.limits = { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+    // While dragging, the map can be pulled a little past its edge, with growing resistance. It glides back on release.
+    if (cam.free || cam.settling) {
+      var soft = function (v, lo, hi, room) {
+        if (!cam.free) return v;
+        if (v > hi) return hi + room * (1 - 1 / (1 + (v - hi) / room));
+        if (v < lo) return lo - room * (1 - 1 / (1 + (lo - v) / room));
+        return v;
+      };
+      cam.cx = soft(cam.cx, minX, maxX, halfW * 0.7); cam.cy = soft(cam.cy, minY, maxY, halfH * 0.5);
+    } else {
+      cam.cx = Math.max(minX, Math.min(maxX, cam.cx));
+      cam.cy = Math.max(minY, Math.min(maxY, cam.cy));
+    }
     ox = vw / 2 - cam.cx * cs; oy = viewTop + viewH / 2 - cam.cy * cs;
   }
   function zoomAt(x, y, factor) {
@@ -1627,7 +1657,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     }
     if (cam && cam.anim) {
       cam.cx += (cam.anim.cx - cam.cx) * 0.14; cam.cy += (cam.anim.cy - cam.cy) * 0.14;
-      if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) cam.anim = null;
+      if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) { cam.anim = null; cam.settling = false; }
       applyCam();
     }
     ctx.clearRect(0, 0, vw, vh);
@@ -1716,9 +1746,9 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       var glow = blockerGlow[a.id] && now < blockerGlow[a.id] ? 1 + 0.35 * Math.sin((blockerGlow[a.id] - now) / 420 * Math.PI) : 1;
       var isFrozen = state.frozen[a.id] !== undefined, burning = a.burnUntil && now < a.burnUntil;
       var burnT = burning && a.burn ? (now - a.burn.start) / a.burn.dur : 0;
-      // The body glows, chars to near black, then recovers.
+      // The body turns red while it burns, then fades back.
       // Glowing hot at first, then briefly charred, then back to normal.
-      var baseColor = burning ? (burnT < 0.18 ? mixColor(arrowColor(a), '#ff6a14', burnT / 0.18) : burnT < 0.55 ? mixColor('#ff6a14', '#2b1208', (burnT - 0.18) / 0.37) : mixColor('#2b1208', arrowColor(a), (burnT - 0.55) / 0.45)) : isFrozen ? '#3f9fd8' : arrowColor(a);
+      var baseColor = burning ? (burnT < 0.1 ? mixColor(arrowColor(a), '#e8321a', burnT / 0.1) : burnT < 0.72 ? '#e8321a' : mixColor('#e8321a', arrowColor(a), (burnT - 0.72) / 0.28)) : isFrozen ? '#3f9fd8' : arrowColor(a);
       var color = amt ? mixColor(baseColor, colors.hint, amt) : baseColor;
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
@@ -2040,47 +2070,19 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   function drawFlowers(now, l) {
     l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
   }
-  // A plump, friendly bumblebee: soft outline, curved stripes, a big shiny eye and rounded glassy wings.
+  // A simple little bee: a soft oval, two stripes, one dot of an eye and pale wings. No outlines, in keeping with the flat, calm art.
   function drawBeeAt(x, y, k, now, flap, flip) {
-    var EDGE = '#5a3a10';
-    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.rotate(-0.1 + (reduced ? 0 : Math.sin(now / 520) * 0.05)); ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    var beat = reduced ? 0.4 : flap ? Math.sin(now / 20) : 0.32 + Math.sin(now / 700) * 0.06;
-    var wing = function (ox, oy, len, wid, base, alpha) {
-      ctx.save(); ctx.translate(ox, oy); ctx.rotate(base + beat * 0.5);
-      var g = ctx.createLinearGradient(0, 0, 0, -len * 2);
-      g.addColorStop(0, 'rgba(190,232,255,' + alpha + ')'); g.addColorStop(1, 'rgba(255,255,255,' + alpha + ')');
-      ctx.fillStyle = g; ctx.strokeStyle = 'rgba(90,130,170,.7)'; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-wid * 1.2, -len * 0.5, -wid, -len * 1.9, 0, -len * 2);
-      ctx.bezierCurveTo(wid, -len * 1.9, wid * 1.2, -len * 0.5, 0, 0);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.restore();
-    };
-    wing(-4, -9, 8, 5.6, -0.72, 0.72);
-    // Stinger.
-    ctx.fillStyle = EDGE; ctx.beginPath(); ctx.moveTo(-14, -1); ctx.quadraticCurveTo(-20, 1, -21.5, 2); ctx.quadraticCurveTo(-19, 3.5, -14, 4); ctx.closePath(); ctx.fill();
-    // Tiny feet.
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.5;
-    [[-4, 10, -5, 13], [3, 10, 3, 13.500]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
-    // Round body.
-    var body = ctx.createRadialGradient(-1, -5, 2, 0, 1, 16);
-    body.addColorStop(0, '#fff09a'); body.addColorStop(0.55, '#ffd23f'); body.addColorStop(1, '#f2a50c');
-    ctx.fillStyle = body; ctx.strokeStyle = EDGE; ctx.lineWidth = 1.3;
-    ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.clip();
-    ctx.strokeStyle = '#3d2a10'; ctx.lineWidth = 4;
-    [-9.5, -3].forEach(function (sx) { ctx.beginPath(); ctx.moveTo(sx + 2, -13); ctx.quadraticCurveTo(sx - 2.5, 1, sx + 2, 15); ctx.stroke(); });
+    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.globalAlpha = 1;
+    var lift = reduced ? 0 : flap ? Math.sin(now / 55) * 0.3 : 0;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.save(); ctx.translate(-3, -7); ctx.rotate(-0.4 - lift); ctx.beginPath(); ctx.ellipse(0, -4, 3.6, 5.6, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(2, -7); ctx.rotate(0.3 + lift); ctx.beginPath(); ctx.ellipse(0, -4, 3.6, 5.6, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#f7c948';
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 8, 0, 0, 7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 11, 8, 0, 0, 7); ctx.clip();
+    ctx.fillStyle = '#6b4a2b'; ctx.fillRect(-6.5, -9, 3, 18); ctx.fillRect(-0.5, -9, 3, 18);
     ctx.restore();
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.stroke();
-    // Antennae.
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.2; ctx.fillStyle = '#3d2a10';
-    [[6, -9, 7, -16, 11, -17], [10, -8, 13, -14, 16, -13.5]].forEach(function (a) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(a[2], a[3], a[4], a[5]); ctx.stroke(); ctx.beginPath(); ctx.arc(a[4], a[5], 1.5, 0, 7); ctx.fill(); });
-    // Face.
-    ctx.fillStyle = '#2a1c0a'; ctx.beginPath(); ctx.ellipse(8, -2, 3.5, 4.1, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(9.2, -3.6, 1.35, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(7.1, -0.6, 0.7, 0, 7); ctx.fill();
-    ctx.fillStyle = 'rgba(245,110,110,.5)'; ctx.beginPath(); ctx.ellipse(6, 4.2, 2.8, 1.8, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#5a3a10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(10.2, 2.7, 1.9, 0.25, 2.2); ctx.stroke();
-    wing(0, -9.5, 9.5, 6.8, 0.12, 0.86);
+    ctx.fillStyle = '#4a3320'; ctx.beginPath(); ctx.arc(7, -1.5, 1.3, 0, 7); ctx.fill();
     ctx.restore();
   }
   // Bees come in and leave from beyond the edge of the screen.
@@ -2091,7 +2093,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     bee = { index: index, start: start, from: { x: fromLeft ? -50 : vw + 50, y: 110 + ((index * 83) % Math.max(100, vh - 240)) } };
   }
   function drawBees(now) {
-    var k = cs / 30, l = current.level;
+    var k = cs / 34, l = current.level;
     if (bee) {
       var t = (now - bee.start) / 1000;
       if (t > 0) {
@@ -2152,13 +2154,14 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     });
     return FIRE_SPRITES;
   }
-  // The arrow as a path from head to tail, measured in tiles, so fire can run along it.
+  // A point on the arrow, measured back from its head, wherever the arrow is right now (even mid-bounce).
   function pointOnArrow(a, along) {
-    var cells = a.cells, last = cells.length - 1, pos = Math.max(0, Math.min(last, last - along)), i = Math.floor(pos), f = pos - i, p = cells[i], q = cells[Math.min(last, i + 1)];
-    return px([p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]);
+    var bo = bounces[a.id], len = lengthOf(a), pts = bo && bo.pts ? bo.pts : a.cells, shift = 0;
+    if (bo) { var bt = (performance.now() - bo.start) / 440; if (bt < 1) shift = Math.sin(bt * Math.PI) * bo.reach; }
+    return pointAlong(pts, Math.max(0, shift + len - along));
   }
   function igniteArrow(a, now, impact) {
-    var dur = 900 + Math.random() * 600;
+    var dur = 500 + Math.random() * 1000;
     a.burn = { start: now, until: now + dur, dur: dur, impact: impact, lastSpawn: now };
     a.burnUntil = now + dur;
     // A burst of sparks flung from the point of impact.
@@ -2174,10 +2177,10 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     var steps = Math.floor((now - b.lastSpawn) / 12);
     if (steps <= 0 || strength <= 0) return;
     b.lastSpawn = now;
-    var perStep = Math.ceil((1 + len) * 0.8 * strength);
+    var perStep = Math.ceil((1 + len) * 0.5 * strength);
     for (var s = 0; s < steps * perStep && embers.length < 340; s++) {
-      var p = pointOnArrow(a, Math.random() * front);
-      embers.push({ kind: 'flame', x: p.x + (Math.random() - 0.5) * cs * 0.16, y: p.y + (Math.random() - 0.5) * cs * 0.1, vx: (Math.random() - 0.5) * cs * 0.3, vy: -cs * (1 + Math.random() * 0.9), born: now, life: 260 + Math.random() * 240, size: cs * (0.2 + Math.random() * 0.14) * (0.65 + strength * 0.35), seed: Math.random() * 7 });
+      // Flames stay attached to the arrow: each remembers its spot on the body and rises from there.
+      embers.push({ kind: 'flame', arrow: a, along: Math.random() * front, x: (Math.random() - 0.5) * cs * 0.16, y: (Math.random() - 0.5) * cs * 0.1, vx: (Math.random() - 0.5) * cs * 0.3, vy: -cs * (1 + Math.random() * 0.9), born: now, life: 260 + Math.random() * 240, size: cs * (0.2 + Math.random() * 0.14) * (0.65 + strength * 0.35), seed: Math.random() * 7 });
     }
     if (Math.random() < 0.55) {
       var q = pointOnArrow(a, Math.random() * front);
@@ -2193,15 +2196,10 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     if (!b) return;
     var t = Math.min(1, (now - b.start) / b.dur), last = a.cells.length - 1;
     spawnFlames(a, now);
-    // Glowing embers creep along the burnt part of the body.
-    if (t > 0.1 && t < 0.92) {
-      ctx.save(); ctx.lineCap = 'round'; ctx.setLineDash([cs * 0.1, cs * 0.17]); ctx.lineDashOffset = now / 60;
-      ctx.strokeStyle = '#ffb12b'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.globalAlpha = Math.min(1, (0.92 - t) * 3.5);
-      ctx.beginPath(); a.cells.forEach(function (c, i) { var p = px(c); ctx[i ? 'lineTo' : 'moveTo'](p.x, p.y); }); ctx.stroke(); ctx.restore();
-    }
     if (b.impact && t < 0.2) {
-      var q = t / 0.2, sp = fireSprites()[0], fs = cs * (0.8 + q * 1.9);
-      ctx.globalAlpha = (1 - q) * 0.95; ctx.drawImage(sp, b.impact.x - fs / 2, b.impact.y - fs / 2, fs, fs);
+      var q = t / 0.2, sp = fireSprites()[0], fs = cs * (0.8 + q * 1.9), ip = pointOnArrow(a, 0);
+      b.impact = ip;
+      ctx.globalAlpha = (1 - q) * 0.95; ctx.drawImage(sp, ip.x - fs / 2, ip.y - fs / 2, fs, fs);
       ctx.globalAlpha = (1 - q) * 0.75; ctx.strokeStyle = '#ff8a22'; ctx.lineWidth = Math.max(1.5, cs * 0.05);
       ctx.beginPath(); ctx.arc(b.impact.x, b.impact.y, cs * (0.25 + q * 1.1), 0, 7); ctx.stroke();
     }
@@ -2215,12 +2213,13 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
         if (e.kind !== kind) return;
         var t = (now - e.born) / e.life;
         if (t < 0 || t >= 1) return;
-        var x = e.x + e.vx * t * (e.life / 1000) + (e.seed ? Math.sin(now / 90 + e.seed) * cs * 0.05 * t : 0), y = e.y + e.vy * t * (e.life / 1000) + (kind === 'spark' ? cs * 1.4 * t * t * (e.life / 1000) : 0);
+        var base = e.arrow && !state.removed[e.arrow.id] ? pointOnArrow(e.arrow, e.along) : { x: 0, y: 0 };
+        var x = base.x + e.x + e.vx * t * (e.life / 1000) + (e.seed ? Math.sin(now / 90 + e.seed) * cs * 0.05 * t : 0), y = base.y + e.y + e.vy * t * (e.life / 1000) + (kind === 'spark' ? cs * 1.4 * t * t * (e.life / 1000) : 0);
         if (kind === 'smoke') {
           var ss = e.size * (1 + t * 2.2);
           ctx.globalAlpha = Math.sin(t * Math.PI); ctx.drawImage(sprites[3], x - ss, y - ss, ss * 2, ss * 2);
         } else if (kind === 'flame') {
-          var fs = e.size * (1 - t * 0.72) * 1.35, stage = t < 0.28 ? 0 : t < 0.62 ? 1 : 2;
+          var fs = e.size * (1 - t * 0.72) * 1.0, stage = t < 0.28 ? 0 : t < 0.62 ? 1 : 2;
           ctx.globalAlpha = t < 0.08 ? t / 0.08 : 1 - t * t * 0.7;
           ctx.drawImage(sprites[stage], x - fs, y - fs * 1.3, fs * 2, fs * 2.6);
         } else {
@@ -2418,7 +2417,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var list = ptrList();
-    cam.anim = null; cam.zoom = null;
+    cam.anim = null; cam.zoom = null; cam.settling = false; cam.free = true;
     if (list.length === 1) gesture = { x0: ev.clientX, y0: ev.clientY, cx: cam.cx, cy: cam.cy, moved: false, pinch: null };
     else if (gesture && list.length === 2) {
       gesture.moved = true;
@@ -2445,6 +2444,12 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     if (!ptrs[ev.pointerId]) return;
     delete ptrs[ev.pointerId];
     if (!ptrList().length) {
+      if (cam) {
+        // Glide back if the map was pulled past its edge.
+        cam.free = false;
+        var lim = cam.limits, tx = lim ? Math.max(lim.minX, Math.min(lim.maxX, cam.cx)) : cam.cx, ty = lim ? Math.max(lim.minY, Math.min(lim.maxY, cam.cy)) : cam.cy;
+        if (lim && (tx !== cam.cx || ty !== cam.cy)) { cam.settling = true; cam.anim = { cx: tx, cy: ty }; }
+      }
       if (gesture && !gesture.moved && ev.type === 'pointerup') onTap(arrowAt(ev.clientX, ev.clientY));
       gesture = null;
     }
@@ -2797,11 +2802,11 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   window.unwindTest = {
     point: function (id) {
       var c = current.level.arrows[id].cells[0];
-      if (cam) { cam.anim = null; cam.zoom = null; cam.cx = c[0] + 0.5; cam.cy = c[1] + 0.5; applyCam(); }
+      if (cam) { cam.anim = null; cam.zoom = null; cam.settling = false; cam.free = false; cam.cx = c[0] + 0.5; cam.cy = c[1] + 0.5; applyCam(); }
       return px(c);
     },
     solve: function () { return current.level.solution && !state.launches ? current.level.solution : E.solve(current.level, state, 800000).sequence; },
-    cam: function () { return cam && { zooming: !!cam.zoom, cs: cs, cx: cam.cx, cy: cam.cy, fit: fitCs, w: current.level.w, h: current.level.h, n: current.level.arrows.length }; },
+    cam: function () { return cam && { ox: ox, oy: oy, settling: !!cam.settling, zooming: !!cam.zoom, cs: cs, cx: cam.cx, cy: cam.cy, fit: fitCs, w: current.level.w, h: current.level.h, n: current.level.arrows.length }; },
     snapshot: function () { return { id: current.id, launches: state.launches, lives: state.lives, won: E.isWon(state), stuck: E.isStuck(current.level, state), hint: hintArrow, timeLeft: timeLeft, sheet: !!$('sheetHost').firstChild }; },
     arrows: function () { return current.level.arrows; },
     open: function (set, i) { openLevel(set, i); },

@@ -428,8 +428,21 @@
     var viewH = viewBottom - viewTop, halfW = vw / 2 / cs, halfH = viewH / 2 / cs;
     // While the mini-map is showing, extra room lets the bottom rows slide clear of it.
     var slack = cam.cs > fitCs * 1.04 ? (miniRect().h + 12) / cs : 0;
-    cam.cx = Math.max(Math.min(l.w / 2, halfW - 1), Math.min(Math.max(l.w / 2, l.w - halfW + 1), cam.cx));
-    cam.cy = Math.max(Math.min(l.h / 2, halfH - 1), Math.min(Math.max(l.h / 2, l.h - halfH + 1) + slack, cam.cy));
+    var minX = Math.min(l.w / 2, halfW - 1), maxX = Math.max(l.w / 2, l.w - halfW + 1), minY = Math.min(l.h / 2, halfH - 1), maxY = Math.max(l.h / 2, l.h - halfH + 1) + slack;
+    cam.limits = { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
+    // While dragging, the map can be pulled a little past its edge, with growing resistance. It glides back on release.
+    if (cam.free || cam.settling) {
+      var soft = function (v, lo, hi, room) {
+        if (!cam.free) return v;
+        if (v > hi) return hi + room * (1 - 1 / (1 + (v - hi) / room));
+        if (v < lo) return lo - room * (1 - 1 / (1 + (lo - v) / room));
+        return v;
+      };
+      cam.cx = soft(cam.cx, minX, maxX, halfW * 0.7); cam.cy = soft(cam.cy, minY, maxY, halfH * 0.5);
+    } else {
+      cam.cx = Math.max(minX, Math.min(maxX, cam.cx));
+      cam.cy = Math.max(minY, Math.min(maxY, cam.cy));
+    }
     ox = vw / 2 - cam.cx * cs; oy = viewTop + viewH / 2 - cam.cy * cs;
   }
   function zoomAt(x, y, factor) {
@@ -518,7 +531,7 @@
     }
     if (cam && cam.anim) {
       cam.cx += (cam.anim.cx - cam.cx) * 0.14; cam.cy += (cam.anim.cy - cam.cy) * 0.14;
-      if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) cam.anim = null;
+      if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) { cam.anim = null; cam.settling = false; }
       applyCam();
     }
     ctx.clearRect(0, 0, vw, vh);
@@ -607,9 +620,9 @@
       var glow = blockerGlow[a.id] && now < blockerGlow[a.id] ? 1 + 0.35 * Math.sin((blockerGlow[a.id] - now) / 420 * Math.PI) : 1;
       var isFrozen = state.frozen[a.id] !== undefined, burning = a.burnUntil && now < a.burnUntil;
       var burnT = burning && a.burn ? (now - a.burn.start) / a.burn.dur : 0;
-      // The body glows, chars to near black, then recovers.
+      // The body turns red while it burns, then fades back.
       // Glowing hot at first, then briefly charred, then back to normal.
-      var baseColor = burning ? (burnT < 0.18 ? mixColor(arrowColor(a), '#ff6a14', burnT / 0.18) : burnT < 0.55 ? mixColor('#ff6a14', '#2b1208', (burnT - 0.18) / 0.37) : mixColor('#2b1208', arrowColor(a), (burnT - 0.55) / 0.45)) : isFrozen ? '#3f9fd8' : arrowColor(a);
+      var baseColor = burning ? (burnT < 0.1 ? mixColor(arrowColor(a), '#e8321a', burnT / 0.1) : burnT < 0.72 ? '#e8321a' : mixColor('#e8321a', arrowColor(a), (burnT - 0.72) / 0.28)) : isFrozen ? '#3f9fd8' : arrowColor(a);
       var color = amt ? mixColor(baseColor, colors.hint, amt) : baseColor;
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
@@ -931,47 +944,19 @@
   function drawFlowers(now, l) {
     l.flowers.forEach(function (f, i) { if (i >= state.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
   }
-  // A plump, friendly bumblebee: soft outline, curved stripes, a big shiny eye and rounded glassy wings.
+  // A simple little bee: a soft oval, two stripes, one dot of an eye and pale wings. No outlines, in keeping with the flat, calm art.
   function drawBeeAt(x, y, k, now, flap, flip) {
-    var EDGE = '#5a3a10';
-    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.rotate(-0.1 + (reduced ? 0 : Math.sin(now / 520) * 0.05)); ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    var beat = reduced ? 0.4 : flap ? Math.sin(now / 20) : 0.32 + Math.sin(now / 700) * 0.06;
-    var wing = function (ox, oy, len, wid, base, alpha) {
-      ctx.save(); ctx.translate(ox, oy); ctx.rotate(base + beat * 0.5);
-      var g = ctx.createLinearGradient(0, 0, 0, -len * 2);
-      g.addColorStop(0, 'rgba(190,232,255,' + alpha + ')'); g.addColorStop(1, 'rgba(255,255,255,' + alpha + ')');
-      ctx.fillStyle = g; ctx.strokeStyle = 'rgba(90,130,170,.7)'; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-wid * 1.2, -len * 0.5, -wid, -len * 1.9, 0, -len * 2);
-      ctx.bezierCurveTo(wid, -len * 1.9, wid * 1.2, -len * 0.5, 0, 0);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.restore();
-    };
-    wing(-4, -9, 8, 5.6, -0.72, 0.72);
-    // Stinger.
-    ctx.fillStyle = EDGE; ctx.beginPath(); ctx.moveTo(-14, -1); ctx.quadraticCurveTo(-20, 1, -21.5, 2); ctx.quadraticCurveTo(-19, 3.5, -14, 4); ctx.closePath(); ctx.fill();
-    // Tiny feet.
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.5;
-    [[-4, 10, -5, 13], [3, 10, 3, 13.500]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
-    // Round body.
-    var body = ctx.createRadialGradient(-1, -5, 2, 0, 1, 16);
-    body.addColorStop(0, '#fff09a'); body.addColorStop(0.55, '#ffd23f'); body.addColorStop(1, '#f2a50c');
-    ctx.fillStyle = body; ctx.strokeStyle = EDGE; ctx.lineWidth = 1.3;
-    ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.clip();
-    ctx.strokeStyle = '#3d2a10'; ctx.lineWidth = 4;
-    [-9.5, -3].forEach(function (sx) { ctx.beginPath(); ctx.moveTo(sx + 2, -13); ctx.quadraticCurveTo(sx - 2.5, 1, sx + 2, 15); ctx.stroke(); });
+    ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -k : k, k); ctx.globalAlpha = 1;
+    var lift = reduced ? 0 : flap ? Math.sin(now / 55) * 0.3 : 0;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.save(); ctx.translate(-3, -7); ctx.rotate(-0.4 - lift); ctx.beginPath(); ctx.ellipse(0, -4, 3.6, 5.6, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(2, -7); ctx.rotate(0.3 + lift); ctx.beginPath(); ctx.ellipse(0, -4, 3.6, 5.6, 0, 0, 7); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#f7c948';
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 8, 0, 0, 7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(0, 0, 11, 8, 0, 0, 7); ctx.clip();
+    ctx.fillStyle = '#6b4a2b'; ctx.fillRect(-6.5, -9, 3, 18); ctx.fillRect(-0.5, -9, 3, 18);
     ctx.restore();
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(0, 1, 15, 11.500, 0, 0, 7); ctx.stroke();
-    // Antennae.
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.2; ctx.fillStyle = '#3d2a10';
-    [[6, -9, 7, -16, 11, -17], [10, -8, 13, -14, 16, -13.5]].forEach(function (a) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(a[2], a[3], a[4], a[5]); ctx.stroke(); ctx.beginPath(); ctx.arc(a[4], a[5], 1.5, 0, 7); ctx.fill(); });
-    // Face.
-    ctx.fillStyle = '#2a1c0a'; ctx.beginPath(); ctx.ellipse(8, -2, 3.5, 4.1, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(9.2, -3.6, 1.35, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(7.1, -0.6, 0.7, 0, 7); ctx.fill();
-    ctx.fillStyle = 'rgba(245,110,110,.5)'; ctx.beginPath(); ctx.ellipse(6, 4.2, 2.8, 1.8, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = '#5a3a10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(10.2, 2.7, 1.9, 0.25, 2.2); ctx.stroke();
-    wing(0, -9.5, 9.5, 6.8, 0.12, 0.86);
+    ctx.fillStyle = '#4a3320'; ctx.beginPath(); ctx.arc(7, -1.5, 1.3, 0, 7); ctx.fill();
     ctx.restore();
   }
   // Bees come in and leave from beyond the edge of the screen.
@@ -982,7 +967,7 @@
     bee = { index: index, start: start, from: { x: fromLeft ? -50 : vw + 50, y: 110 + ((index * 83) % Math.max(100, vh - 240)) } };
   }
   function drawBees(now) {
-    var k = cs / 30, l = current.level;
+    var k = cs / 34, l = current.level;
     if (bee) {
       var t = (now - bee.start) / 1000;
       if (t > 0) {
@@ -1043,13 +1028,14 @@
     });
     return FIRE_SPRITES;
   }
-  // The arrow as a path from head to tail, measured in tiles, so fire can run along it.
+  // A point on the arrow, measured back from its head, wherever the arrow is right now (even mid-bounce).
   function pointOnArrow(a, along) {
-    var cells = a.cells, last = cells.length - 1, pos = Math.max(0, Math.min(last, last - along)), i = Math.floor(pos), f = pos - i, p = cells[i], q = cells[Math.min(last, i + 1)];
-    return px([p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]);
+    var bo = bounces[a.id], len = lengthOf(a), pts = bo && bo.pts ? bo.pts : a.cells, shift = 0;
+    if (bo) { var bt = (performance.now() - bo.start) / 440; if (bt < 1) shift = Math.sin(bt * Math.PI) * bo.reach; }
+    return pointAlong(pts, Math.max(0, shift + len - along));
   }
   function igniteArrow(a, now, impact) {
-    var dur = 900 + Math.random() * 600;
+    var dur = 500 + Math.random() * 1000;
     a.burn = { start: now, until: now + dur, dur: dur, impact: impact, lastSpawn: now };
     a.burnUntil = now + dur;
     // A burst of sparks flung from the point of impact.
@@ -1065,10 +1051,10 @@
     var steps = Math.floor((now - b.lastSpawn) / 12);
     if (steps <= 0 || strength <= 0) return;
     b.lastSpawn = now;
-    var perStep = Math.ceil((1 + len) * 0.8 * strength);
+    var perStep = Math.ceil((1 + len) * 0.5 * strength);
     for (var s = 0; s < steps * perStep && embers.length < 340; s++) {
-      var p = pointOnArrow(a, Math.random() * front);
-      embers.push({ kind: 'flame', x: p.x + (Math.random() - 0.5) * cs * 0.16, y: p.y + (Math.random() - 0.5) * cs * 0.1, vx: (Math.random() - 0.5) * cs * 0.3, vy: -cs * (1 + Math.random() * 0.9), born: now, life: 260 + Math.random() * 240, size: cs * (0.2 + Math.random() * 0.14) * (0.65 + strength * 0.35), seed: Math.random() * 7 });
+      // Flames stay attached to the arrow: each remembers its spot on the body and rises from there.
+      embers.push({ kind: 'flame', arrow: a, along: Math.random() * front, x: (Math.random() - 0.5) * cs * 0.16, y: (Math.random() - 0.5) * cs * 0.1, vx: (Math.random() - 0.5) * cs * 0.3, vy: -cs * (1 + Math.random() * 0.9), born: now, life: 260 + Math.random() * 240, size: cs * (0.2 + Math.random() * 0.14) * (0.65 + strength * 0.35), seed: Math.random() * 7 });
     }
     if (Math.random() < 0.55) {
       var q = pointOnArrow(a, Math.random() * front);
@@ -1084,15 +1070,10 @@
     if (!b) return;
     var t = Math.min(1, (now - b.start) / b.dur), last = a.cells.length - 1;
     spawnFlames(a, now);
-    // Glowing embers creep along the burnt part of the body.
-    if (t > 0.1 && t < 0.92) {
-      ctx.save(); ctx.lineCap = 'round'; ctx.setLineDash([cs * 0.1, cs * 0.17]); ctx.lineDashOffset = now / 60;
-      ctx.strokeStyle = '#ffb12b'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.globalAlpha = Math.min(1, (0.92 - t) * 3.5);
-      ctx.beginPath(); a.cells.forEach(function (c, i) { var p = px(c); ctx[i ? 'lineTo' : 'moveTo'](p.x, p.y); }); ctx.stroke(); ctx.restore();
-    }
     if (b.impact && t < 0.2) {
-      var q = t / 0.2, sp = fireSprites()[0], fs = cs * (0.8 + q * 1.9);
-      ctx.globalAlpha = (1 - q) * 0.95; ctx.drawImage(sp, b.impact.x - fs / 2, b.impact.y - fs / 2, fs, fs);
+      var q = t / 0.2, sp = fireSprites()[0], fs = cs * (0.8 + q * 1.9), ip = pointOnArrow(a, 0);
+      b.impact = ip;
+      ctx.globalAlpha = (1 - q) * 0.95; ctx.drawImage(sp, ip.x - fs / 2, ip.y - fs / 2, fs, fs);
       ctx.globalAlpha = (1 - q) * 0.75; ctx.strokeStyle = '#ff8a22'; ctx.lineWidth = Math.max(1.5, cs * 0.05);
       ctx.beginPath(); ctx.arc(b.impact.x, b.impact.y, cs * (0.25 + q * 1.1), 0, 7); ctx.stroke();
     }
@@ -1106,12 +1087,13 @@
         if (e.kind !== kind) return;
         var t = (now - e.born) / e.life;
         if (t < 0 || t >= 1) return;
-        var x = e.x + e.vx * t * (e.life / 1000) + (e.seed ? Math.sin(now / 90 + e.seed) * cs * 0.05 * t : 0), y = e.y + e.vy * t * (e.life / 1000) + (kind === 'spark' ? cs * 1.4 * t * t * (e.life / 1000) : 0);
+        var base = e.arrow && !state.removed[e.arrow.id] ? pointOnArrow(e.arrow, e.along) : { x: 0, y: 0 };
+        var x = base.x + e.x + e.vx * t * (e.life / 1000) + (e.seed ? Math.sin(now / 90 + e.seed) * cs * 0.05 * t : 0), y = base.y + e.y + e.vy * t * (e.life / 1000) + (kind === 'spark' ? cs * 1.4 * t * t * (e.life / 1000) : 0);
         if (kind === 'smoke') {
           var ss = e.size * (1 + t * 2.2);
           ctx.globalAlpha = Math.sin(t * Math.PI); ctx.drawImage(sprites[3], x - ss, y - ss, ss * 2, ss * 2);
         } else if (kind === 'flame') {
-          var fs = e.size * (1 - t * 0.72) * 1.35, stage = t < 0.28 ? 0 : t < 0.62 ? 1 : 2;
+          var fs = e.size * (1 - t * 0.72) * 1.0, stage = t < 0.28 ? 0 : t < 0.62 ? 1 : 2;
           ctx.globalAlpha = t < 0.08 ? t / 0.08 : 1 - t * t * 0.7;
           ctx.drawImage(sprites[stage], x - fs, y - fs * 1.3, fs * 2, fs * 2.6);
         } else {
@@ -1309,7 +1291,7 @@
     try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var list = ptrList();
-    cam.anim = null; cam.zoom = null;
+    cam.anim = null; cam.zoom = null; cam.settling = false; cam.free = true;
     if (list.length === 1) gesture = { x0: ev.clientX, y0: ev.clientY, cx: cam.cx, cy: cam.cy, moved: false, pinch: null };
     else if (gesture && list.length === 2) {
       gesture.moved = true;
@@ -1336,6 +1318,12 @@
     if (!ptrs[ev.pointerId]) return;
     delete ptrs[ev.pointerId];
     if (!ptrList().length) {
+      if (cam) {
+        // Glide back if the map was pulled past its edge.
+        cam.free = false;
+        var lim = cam.limits, tx = lim ? Math.max(lim.minX, Math.min(lim.maxX, cam.cx)) : cam.cx, ty = lim ? Math.max(lim.minY, Math.min(lim.maxY, cam.cy)) : cam.cy;
+        if (lim && (tx !== cam.cx || ty !== cam.cy)) { cam.settling = true; cam.anim = { cx: tx, cy: ty }; }
+      }
       if (gesture && !gesture.moved && ev.type === 'pointerup') onTap(arrowAt(ev.clientX, ev.clientY));
       gesture = null;
     }
@@ -1688,11 +1676,11 @@
   window.unwindTest = {
     point: function (id) {
       var c = current.level.arrows[id].cells[0];
-      if (cam) { cam.anim = null; cam.zoom = null; cam.cx = c[0] + 0.5; cam.cy = c[1] + 0.5; applyCam(); }
+      if (cam) { cam.anim = null; cam.zoom = null; cam.settling = false; cam.free = false; cam.cx = c[0] + 0.5; cam.cy = c[1] + 0.5; applyCam(); }
       return px(c);
     },
     solve: function () { return current.level.solution && !state.launches ? current.level.solution : E.solve(current.level, state, 800000).sequence; },
-    cam: function () { return cam && { zooming: !!cam.zoom, cs: cs, cx: cam.cx, cy: cam.cy, fit: fitCs, w: current.level.w, h: current.level.h, n: current.level.arrows.length }; },
+    cam: function () { return cam && { ox: ox, oy: oy, settling: !!cam.settling, zooming: !!cam.zoom, cs: cs, cx: cam.cx, cy: cam.cy, fit: fitCs, w: current.level.w, h: current.level.h, n: current.level.arrows.length }; },
     snapshot: function () { return { id: current.id, launches: state.launches, lives: state.lives, won: E.isWon(state), stuck: E.isStuck(current.level, state), hint: hintArrow, timeLeft: timeLeft, sheet: !!$('sheetHost').firstChild }; },
     arrows: function () { return current.level.arrows; },
     open: function (set, i) { openLevel(set, i); },

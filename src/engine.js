@@ -157,9 +157,12 @@
   function iceHits(level, state) {
     var out = [];
     level.arrows.forEach(function (a) {
-      if (state.removed[a.id] || !isReady(state, a)) return;
-      var c = check(level, state, a);
-      if (!c.clear && c.frozen) out.push(a.id);
+      if (state.removed[a.id]) return;
+      // Counts only if a tap would really crack the ice. Twins must both be ready, with only ice in their way.
+      var members = group(level, a);
+      if (!members.every(function (m) { return isReady(state, m); })) return;
+      var blocked = members.map(function (m) { return check(level, state, m); }).filter(function (c) { return !c.clear; });
+      if (blocked.length && blocked.every(function (c) { return c.frozen; })) out.push(a.id);
     });
     return out;
   }
