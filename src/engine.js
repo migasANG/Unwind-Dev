@@ -68,6 +68,13 @@
   // A mirror turns a travelling arrow 90 degrees. Index by direction of travel.
   var TURN = { '/': [1, 0, 3, 2], '\\': [3, 2, 1, 0] };
 
+  // Whether this tile would stop an arrow: fire, a flower, or another solid arrow.
+  function tileBlocks(level, state, a, partner, key) {
+    if (state.burning && state.burning[key] > state.launches) return true;
+    if (level.flowerAt && flowerStands(level, state, key)) return true;
+    var o = level.grid[key];
+    return o !== -1 && o !== a.id && o !== partner && !state.removed[o] && !isGhost(state, level.arrows[o]);
+  }
   // Walks from the head to the board edge, following mirrors. The arrow's own cells and its twin never block it.
   // path holds every corner, for drawing; endDir is the direction it finally leaves in.
   function check(level, state, a) {
@@ -79,17 +86,17 @@
       var key = y * level.w + x;
       var mirror = level.mirrorAt && level.mirrorAt[key];
       if (mirror) { d = TURN[mirror][d]; path.push([x, y]); continue; }
+      // A phase arrow slips through one occupied tile of anything, as long as the tile after it is open.
+      if (a.phase && !phased && tileBlocks(level, state, a, partner, key)) {
+        var nx = x + DX[d], ny = y + DY[d];
+        var nextOn = nx >= 0 && ny >= 0 && nx < level.w && ny < level.h, nextKey = ny * level.w + nx;
+        if (!nextOn || (level.mirrorAt && level.mirrorAt[nextKey]) || !tileBlocks(level, state, a, partner, nextKey)) { phased = true; continue; }
+      }
       if (state.burning && state.burning[key] > state.launches) return { clear: false, fire: true, blocker: -2, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       if (level.flowerAt && flowerStands(level, state, key)) return { clear: false, flower: true, flowerKey: key, blocker: -3, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       var o = level.grid[key];
       // Ghost-form arrows are intangible, so everything passes through them.
       if (o !== -1 && !state.removed[o] && isGhost(state, level.arrows[o])) o = -1;
-      if (o !== -1 && o !== a.id && o !== partner && !state.removed[o] && a.phase && !phased) {
-        // A phase arrow can slip through one occupied tile, but not along an arrow lying in its path.
-        var nx = x + DX[d], ny = y + DY[d], next = (nx >= 0 && ny >= 0 && nx < level.w && ny < level.h) ? level.grid[ny * level.w + nx] : -1;
-        var nextSolid = next !== -1 && next !== a.id && next !== partner && !state.removed[next] && !isGhost(state, level.arrows[next]);
-        if (!nextSolid && !(state.frozen && state.frozen[o] !== undefined)) { phased = true; continue; }
-      }
       if (o !== -1 && o !== a.id && o !== partner && !state.removed[o]) return { clear: false, blocker: o, frozen: !!(state.frozen && state.frozen[o] !== undefined), dist: dist, dir: dirOf(a, state), endDir: d, path: path };
     }
   }
@@ -293,7 +300,7 @@
     if (hasEffect(level, 'summer') && (rollSummer < 0.25 || forced)) {
       ev.triggered = true;
       // 1 to 5 tiles on a normal map, with more on bigger maps so fire stays noticeable.
-      var fireScale = Math.max(1, Math.round(level.w * level.h / 56));
+      var fireScale = Math.max(1, Math.round(level.w * level.h / 56 * 0.75));
       var tiles = (1 + Math.floor(r() * 5)) * fireScale, turns = 2 + Math.floor(r() * 3), empty = liveEmptyCells(level, state), onPath = {};
       live.forEach(function (a) { rayCellsOf(level, state, a).forEach(function (k) { onPath[k] = 1; }); });
       // Prefer tiles that arrows actually need, so the fire matters.
