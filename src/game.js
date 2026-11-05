@@ -348,6 +348,13 @@
     };
     setTimeout(step, 60);
   }
+  // A temporary test level: two arrows block each other, so after the first launch the safety net makes one golden.
+  function openGoldTest() {
+    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the arrow at the top to see the golden arrow.', arrows: [
+      { id: 0, kind: 'plain', cells: [[0, 0], [1, 0]], dir: 1 },
+      { id: 1, kind: 'plain', cells: [[1, 3], [1, 2]], dir: 1 }, { id: 2, kind: 'plain', cells: [[3, 2], [3, 3]], dir: 3 }] });
+    begin({ id: 'test-gold', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34 });
+  }
   // A temporary test level: after two launches, the only possible play is to crack the ice.
   function openIceTest() {
     var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the two arrows on the left, then watch the message here.', arrows: [
@@ -376,7 +383,7 @@
     bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = []; cards = [];
     c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
-    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {}; praises = [];
+    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {}; praises = []; capMode = '';
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
     numberPairs(c.level);
     var pairNo = 0;
@@ -402,11 +409,12 @@
     refresh(); layout();
     track('level_start', { mode: c.mode, set: c.set });
   }
+  var HARD_FIRST = 'Hard boards: two lives, no hints, and arrows with several effects at once.';
   function baseCaption() {
     if (current.level.caption) return current.level.caption;
     if (current.level.big) { var left = state.removed.filter(function (x) { return !x; }).length; return left + (left === 1 ? ' arrow left' : ' arrows left'); }
     if (current.mode === 'endless') return current.level.lives === null && !current.level.timeLimit && !E.effectsOf(current.level).length ? 'No lives to lose out here.' : '';
-    if (current.set === 'hard' && current.index === 0) return 'Hard boards: two lives and no hints.';
+    if (current.set === 'hard' && current.index === 0) return HARD_FIRST;
     if (current.set === 'timed' && current.index === 0) return 'Clear the board before the time runs out.';
     return '';
   }
@@ -434,9 +442,16 @@
     draw();
     ctx.restore();
   }
-  function setCaption(text) {
-    var cap = $('caption'), lvl = current && current.level, watch = !!text && !!lvl && text === lvl.caption && levelDemos().length > 0;
+  function setCaption(text, style) {
+    var cap = $('caption'), lvl = current && current.level, watch = !style && !!text && !!lvl && (text === lvl.caption || text === HARD_FIRST) && levelDemos().length > 0;
     cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
+    cap.classList.toggle('icewarn', style === 'ice'); cap.classList.toggle('goldwarn', style === 'gold');
+    if (style) for (var i = 0; i < 10; i++) {
+      var f = document.createElement('i');
+      f.className = 'capfx'; f.textContent = style === 'ice' ? '❄' : '✦'; f.setAttribute('aria-hidden', 'true');
+      f.style.left = (4 + i * 10) + '%'; f.style.animationDelay = (-i * 0.53) + 's'; f.style.fontSize = (11 + (i * 7) % 8) + 'px';
+      cap.appendChild(f);
+    }
   }
   function drawTimer() {
     var secs = Math.ceil(timeLeft / 1000);
@@ -463,7 +478,11 @@
     colors = ch;
   }
 
-  var shownLives = null, iceShown = false;
+  var shownLives = null, capMode = '';
+  function goldAlive() {
+    if (!state || !state.freed) return false;
+    return Object.keys(state.freed).some(function (id) { return !state.removed[id]; });
+  }
   function refresh() {
     var max = current.level.lives, lives = state.lives, hearts = $('hearts');
     if (lives !== null) {
@@ -493,11 +512,15 @@
     }
     // No launch right now, but cracking ice leads to one: say so, since it looks like a dead end.
     var iceOnly = !stuck && !ended && !E.isWon(state) && E.legalMoves(current.level, state).length === 0;
-    if (iceOnly) { setCaption('Hit a frozen arrow with another arrow to open the way. It costs nothing.'); iceShown = true; }
-    else {
+    var want = iceOnly ? 'ice' : goldAlive() && !ended ? 'gold' : '';
+    if (want !== capMode) {
+      if (want === 'ice') setCaption('Hit a frozen arrow with another arrow to open the way. It costs nothing.', 'ice');
+      else if (want === 'gold') setCaption('A golden arrow! It can fly through anything.', 'gold');
+      else if (!stuck) setCaption(baseCaption());
+      capMode = want;
+    }
+    if (!want) {
       if (!stuck && stuckShown) { stuckShown = false; setCaption(baseCaption()); }
-      if (iceShown && !stuck) setCaption(baseCaption());
-      iceShown = false;
       if (!stuck && current.level.big) setCaption(baseCaption());
     }
     $('mute').innerHTML = (audioPrefs.music || audioPrefs.sound)
@@ -631,7 +654,15 @@
     ctx.stroke();
   }
   function ready(a) { return E.isReady(state, a); }
-  function arrowColor(a) { return a.uno !== undefined ? (colors === CHAPTERS[3] || colors === CHAPTERS[4] ? '#ffc069' : '#c85a00') : a.phase ? (colors === CHAPTERS[3] || colors === CHAPTERS[4] ? '#d7b4ff' : '#7a3fd0') : a.kind === 'twin' ? colors.twins[(a.pair || 0) % colors.twins.length] : a.kind === 'compass' ? colors.compass : colors.ink; }
+  // An arrow with several effects shows the most important one: frozen, then phase, twins, reverse.
+  function arrowColor(a) {
+    var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4];
+    if (state && state.frozen && state.frozen[a.id] !== undefined) return dark ? '#8fd3ff' : '#2f8fd0';
+    if (a.phase) return dark ? '#d7b4ff' : '#7a3fd0';
+    if (a.kind === 'twin') return colors.twins[(a.pair || 0) % colors.twins.length];
+    if (a.uno !== undefined) return dark ? '#ffc069' : '#c85a00';
+    return a.kind === 'compass' ? colors.compass : colors.ink;
+  }
   function setStroke(color, width, alpha) {
     ctx.strokeStyle = color; ctx.lineWidth = width; ctx.globalAlpha = alpha === undefined ? 1 : alpha;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -639,6 +670,33 @@
 
   /* ---------- Frame loop ---------- */
   var lastDrawn = 0;
+  // While a golden arrow is on the board: a soft, steady shimmer of sound, little chimes and a ring of light.
+  var goldHum = null, nextChime = 0, nextBeacon = 0, GOLD_NOTES = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093];
+  function setGoldHum(on) {
+    if (on && !goldHum && audioPrefs.sound) {
+      var c = audio(); if (!c) return;
+      var g = c.createGain(), lfo = c.createOscillator(), depth = c.createGain(), oscs = [523.25, 526.4, 784.9].map(function (hz) { var o = c.createOscillator(); o.type = 'sine'; o.frequency.value = hz; o.connect(g); o.start(); return o; });
+      g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(0.022, c.currentTime + 0.5);
+      lfo.frequency.value = 3.2; depth.gain.value = 0.008; lfo.connect(depth); depth.connect(g.gain); lfo.start();
+      g.connect(sfxBus);
+      goldHum = { g: g, parts: oscs.concat([lfo]) };
+    } else if (goldHum && (!on || !audioPrefs.sound)) {
+      var h = goldHum, cc = audio(); goldHum = null;
+      h.g.gain.cancelScheduledValues(cc.currentTime); h.g.gain.setTargetAtTime(0, cc.currentTime, 0.12);
+      h.parts.forEach(function (o) { o.stop(cc.currentTime + 0.6); });
+      setTimeout(function () { h.g.disconnect(); }, 800);
+    }
+  }
+  function goldTick(now) {
+    var live = goldAlive() && !ended && !$('sheetHost').firstChild;
+    setGoldHum(live);
+    if (!live) return;
+    if (now > nextChime) { pluck(GOLD_NOTES[Math.floor(Math.random() * GOLD_NOTES.length)], 0, 0.045, 1.1); nextChime = now + 520 + Math.random() * 420; }
+    if (now > nextBeacon) {
+      nextBeacon = now + 1300;
+      Object.keys(state.freed).forEach(function (id) { if (state.removed[id]) return; var m = current.level.arrows[id]; addRipple(px(m.cells[m.cells.length >> 1]), '#e0a100', 4); });
+    }
+  }
   var flowersInLayer = false;
   function settledCs(c, size) { return !!c && size < 26; }
   function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
@@ -666,6 +724,7 @@
       if (Math.abs(cam.anim.cx - cam.cx) + Math.abs(cam.anim.cy - cam.cy) < 0.03) { cam.anim = null; cam.settling = false; }
       applyCam();
     }
+    goldTick(now);
     // Behind an open menu the board is covered and blurred, so it can draw less often.
     if ($('sheetHost').firstChild && now - lastDrawn < 66) return;
     lastDrawn = now;
@@ -720,7 +779,8 @@
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
       var ghostForm = E.isGhost(state, a), carded = E.isRedCarded(state, a);
-      if (state.freed && state.freed[a.id]) color = mixColor(color, '#e0a100', 0.75);
+      var golden = !!(state.freed && state.freed[a.id]);
+      if (golden) color = '#e0a100';
       if (carded && !amt) { color = mixColor(arrowColor(a), '#c8202f', 0.55); }
       var alpha = (ghostForm ? 0.3 + amt * 0.7 : isReady || isFrozen ? 1 : 0.62 + amt * 0.38) * f;
       ctx.save(); ctx.translate(nudge, 0);
@@ -745,6 +805,12 @@
       var len = lengthOf(a), fromTail = E.tipAtTail(state, a), restCells = fromTail ? a.cells.slice().reverse() : a.cells;
       var tipCell = restCells[restCells.length - 1], tipDir = E.dirOf(a, state);
       var pts = b && b.pts ? b.pts : restCells.concat([[tipCell[0] + E.DX[tipDir] * 2, tipCell[1] + E.DY[tipDir] * 2]]);
+      if (golden) {
+        // A pulsing halo behind the arrow.
+        var pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 220);
+        setStroke('#ffd23f', width * (2.6 + pulse * 1.8), 0.22 + pulse * 0.2); strokeWindow(pts, shift, shift + len);
+        setStroke('#fff3b0', width * 1.6, 0.5); strokeWindow(pts, shift, shift + len);
+      }
       setStroke(color, width, alpha);
       if (!isReady && !isFrozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
       var res = strokeWindow(pts, shift, shift + len * f);
@@ -764,6 +830,7 @@
       // Badges and icons pop in once their arrow is mostly drawn.
       var pop = Math.max(0, (intro - 0.45) / 0.55); pop = ease(pop);
       drawTraits(a, pts, shift, len, color, ghostForm, pop, now);
+      if (golden) goldSparkles(a, pts, shift, len, now);
       var tailPoint = px(a.cells[0]);
       if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
       if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
@@ -922,6 +989,7 @@
       setStroke(fl.color, w, fl.ghosty ? 0.55 + 0.25 * Math.sin(now / 45) : 1);
       var res = strokeWindow(fl.pts, travel, travel + fl.len);
       chevron(res.end, res.tan, cs * 0.24);
+      if (fl.gold) { ctx.save(); ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#a86a00'; ctx.lineWidth = 0.8; for (var gi = 0; gi < 9; gi++) { var gp = pointAlong(fl.pts, Math.max(0, travel + fl.len - gi * 0.55)); ctx.globalAlpha = 1 - gi / 9; drawStarShape(gp.x + Math.sin(gi * 2.3 + now / 90) * cs * 0.25, gp.y + Math.cos(gi * 1.7 + now / 110) * cs * 0.25, cs * 0.12, now / 120 + gi); } ctx.restore(); }
       return true;
     });
 
@@ -1461,6 +1529,8 @@
   // Bees come in and leave from beyond the edge of the screen.
   function sendBee(index, start) {
     var l = current.level;
+    // The bee goes to the next flower still standing.
+    while (l.flowers && index < l.flowers.length && state.picked && state.picked[l.flowers[index][1] * l.w + l.flowers[index][0]]) index++;
     if (!l.flowers || index >= l.flowers.length) { bee = null; return; }
     var fromLeft = (index * 7 + l.flowers[index][1]) % 2 === 0;
     bee = { index: index, start: start, from: { x: fromLeft ? -50 : vw + 50, y: 110 + ((index * 83) % Math.max(100, vh - 240)) } };
@@ -1649,8 +1719,7 @@
     }
     if (l.flowers && l.flowers.length) {
       takeEarlyFlowers(now);
-      var taken = l.flowers[state.launches - 1];
-      if (taken && state.picked && state.picked[taken[1] * l.w + taken[0]]) taken = null;
+      var taken = state.beeTaken;
       if (taken) {
         var p = px(taken), right = p.x > vw / 2;
         beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((state.launches * 61) % 200) }, start: now, seed: taken[0] * 7 + taken[1] * 3 });
@@ -1660,6 +1729,15 @@
     }
   }
   // Two opposite arrows in a small disc.
+  function goldSparkles(a, pts, shift, len, now) {
+    ctx.save(); ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#a86a00'; ctx.lineWidth = 0.8;
+    for (var i = 0; i < 7; i++) {
+      var q = reduced ? i / 7 : (now / 1500 + i / 7) % 1, p = pointAlong(pts, shift + len * q), turn = now / 300 + i * 2;
+      ctx.globalAlpha = Math.sin(q * Math.PI) * 0.6 + 0.4;
+      drawStarShape(p.x + Math.sin(now / 260 + i) * cs * 0.36, p.y + Math.cos(now / 310 + i * 2) * cs * 0.36, cs * (0.09 + (i % 3) * 0.035), turn);
+    }
+    ctx.restore();
+  }
   // An arrow's symbols, spaced evenly along it when it carries more than one.
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
@@ -1798,9 +1876,11 @@
     var l = current.level, log = state.rescued;
     if (log) {
       log.fire.forEach(function (k) { addRipple(px([k % l.w, Math.floor(k / l.w)]), '#ff8a22', 2); });
-      log.ice.concat(log.freed).forEach(function (id) { var m = l.arrows[id]; addRipple(px(m.cells[m.cells.length >> 1]), '#e0a100', 2.4); });
+      log.ice.forEach(function (id) { var m = l.arrows[id]; addRipple(px(m.cells[m.cells.length >> 1]), '#3f9fd8', 2.4); });
+      log.freed.forEach(function (id) { if (state.freed && state.freed[id]) focusArrow(id); });
       state.rescued = null;
     }
+    if (bee && l.flowers && l.flowers[bee.index] && state.picked && state.picked[l.flowers[bee.index][1] * l.w + l.flowers[bee.index][0]]) sendBee(state.launches, now + 300);
     (state.pickedNew || []).splice(0).forEach(function (k) {
       var p = px([k % l.w, Math.floor(k / l.w)]), right = p.x > vw / 2;
       beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((k * 61) % 200) }, start: now, seed: (k % l.w) * 7 + Math.floor(k / l.w) * 3 });
@@ -1846,6 +1926,10 @@
       });
       addPraise(l.arrows[id], now);
       var f = noteFor(step); tune.push(f); pluck(f, 0, 0.2, 1.5);
+      if (res.results.some(function (r) { return state.freed && state.freed[r.id]; })) {
+        [1, 1.5, 2, 3].forEach(function (x, i) { pluck(f * x, i * 0.07, 0.11, 1.2); });
+        flights.slice(-res.results.length).forEach(function (fl) { fl.color = '#e0a100'; fl.gold = true; });
+      }
       buzz(8);
       l.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id]) angles[x.id] += 90; if (x.uno !== undefined) unoFlip[x.id] = now; });
       res.results.forEach(function (r) {
@@ -2091,16 +2175,16 @@
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
     } else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives and no hints.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
+      html += '<p class="note">' + (tab === 'hard' ? 'Bigger boards. Two lives, no hints, and arrows with several effects at once.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
     }
     var bestList = function (set) {
       var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mIceTest"><b>Test level: ice warning</b><span>Temporary. After 2 launches, only hitting the ice is possible.</span></button></div>';
+    html += '<div class="modes"><button id="mIceTest"><b>Test level: ice warning</b><span>Temporary. After 2 launches, only hitting the ice is possible.</span></button><button id="mGoldTest"><b>Test level: golden arrow</b><span>Temporary. After 1 launch, two arrows block each other and one turns golden.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
-      '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
+      '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
@@ -2111,6 +2195,7 @@
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mIceTest').onclick = openIceTest;
+    s.querySelector('#mGoldTest').onclick = openGoldTest;
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () { openEndless(); };
@@ -2339,7 +2424,7 @@
   // Tapping a level's explanation plays its demo again.
   $('caption').addEventListener('click', function () {
     if (!$('caption').classList.contains('watchable') || ended || !current) return;
-    showTutorial(levelDemos(), 0, false, 'play');
+    showTutorial(current.set === 'hard' && current.index === 0 ? ['combo'] : levelDemos(), 0, false, 'play');
   });
   function guideSheet() {
     var ink = colors.ink, twin = colors.twins[0], comp = colors.compass, mir = colors.mirror, gold = '#ffd23f', disc = '#1d2350', card = colors.card;
@@ -2350,6 +2435,8 @@
     var moon = '<path d="M16 16.500a7 7 0 1 0 5.500 11A6 6 0 0 1 16 16.500Z" fill="' + gold + '"/>';
     var star = '<path d="M14 15.500l2.100 4.500 4.900.600-3.600 3.400.9 4.900-4.300-2.400-4.300 2.400.9-4.900L7 20.600l4.900-.600Z" fill="' + gold + '"/>';
     var items = [
+      { key: 'gold', title: 'Golden arrow', text: 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.',
+        art: line('M4 23H50', '#e0a100') + head(56, 23, '#e0a100') + '<path d="M18 12l2 5 5 2-5 2-2 5-2-5-5-2 5-2ZM40 26l2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" fill="#ffd23f"/>' },
       { key: 'plain', title: 'Arrow', text: 'Tap it to send it off the board. If something is in its way, it bounces back and costs a life.',
         art: line('M6 36H26V12H50', ink) + head(55, 12, ink) },
       { key: 'twin', title: 'Twins', text: 'Same colour and letter. They leave together, so both of their paths must be clear.',
@@ -2387,6 +2474,7 @@
       if (a.kind === 'twin') here.twin = 1; else if (a.kind === 'compass') here.compass = 1; else here.plain = 1;
       if (a.ghostPhase !== undefined) here.ghost = 1; if (a.phase) here.phase = 1; if (a.uno !== undefined) here.uno = 1; if (a.red) here.red = 1; if (a.key !== undefined) here.moon = 1; if (a.isKey) here.star = 1; if (a.wait) here.patient = 1;
     });
+    if (goldAlive()) here.gold = 1;
     if ((current.level.mirrors || []).length) here.mirror = 1;
     E.effectsOf(current.level).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
     var html = '<div class="row"><h2>Arrow guide</h2><button class="close" id="x" aria-label="Close">×</button></div>' +

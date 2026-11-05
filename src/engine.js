@@ -223,6 +223,19 @@
     members.forEach(function (m) { state.removed[m.id] = true; });
     state.history.push(members.map(function (m) { return m.id; }));
     state.launches++;
+    // Every launch, the bee carries a flower away. If its flower has already gone, it takes the next one.
+    state.beeTaken = null;
+    if (level.flowers && level.flowers.length) {
+      var due = level.flowers[state.launches - 1];
+      if (due && state.picked && state.picked[due[1] * level.w + due[0]]) {
+        due = null;
+        for (var fi = state.launches; fi < level.flowers.length && !due; fi++) {
+          var nf = level.flowers[fi], nk = nf[1] * level.w + nf[0];
+          if (!state.picked[nk]) { state.picked = Object.assign({}, state.picked); state.picked[nk] = true; due = nf; }
+        }
+      }
+      state.beeTaken = due || null;
+    }
     unstickGhosts(level, state);
     // Season boards run this check after their effects, once the board has settled.
     if (state.safe && !effectsOf(level).length) ensurePlay(level, state);
@@ -390,7 +403,8 @@
       if (tryRescue(level, state, function () { state.redLift[red.id] = true; })) { state.rescued.freed.push(red.id); return true; }
     }
     // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
-    var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s }; }).sort(function (p, q) { return p.s - q.s; });
+    // A compass keeps its own rule, so it is only ever freed if nothing else can be.
+    var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
     var free = function (a) { group(level, a).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
     for (i = 0; i < order.length && i < 10; i++) {
       var f = order[i].a;

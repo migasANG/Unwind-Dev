@@ -41,6 +41,13 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-fu
 .card.tutorial .primary{width:100%;margin-top:4px}
 .watch{margin-top:6px;padding:4px 10px;border-radius:10px;font-size:.8125rem;font-weight:600;color:inherit;background:color-mix(in srgb,var(--ink) 10%,transparent)}
 .sizes.langs{grid-template-columns:1fr 1fr}
+#caption.on.icewarn,#caption.on.goldwarn,body.season #caption.on.icewarn,body.season #caption.on.goldwarn,body.bigmap #caption.on.icewarn,body.bigmap #caption.on.goldwarn,body.bigmap.season #caption.on.icewarn,body.bigmap.season #caption.on.goldwarn{left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:9px 18px;font:600 1.0625rem/1.3 var(--display);overflow:visible;z-index:4}
+#caption.on.icewarn{background:#1f6fc0;color:#fff;box-shadow:0 0 0 3px #bfe4ff,0 6px 22px rgba(20,90,170,.5);animation:capglow 1.6s ease-in-out infinite alternate}
+#caption.on.goldwarn{background:#f2b705;color:#3a2a08;box-shadow:0 0 0 3px #fff0b0,0 6px 22px rgba(190,130,0,.55);animation:capglow 1s ease-in-out infinite alternate}
+.capfx{position:absolute;top:-6px;z-index:-1;font-style:normal;color:#9fd6ff;pointer-events:none;animation:capfloat 2.6s ease-in-out infinite;text-shadow:0 0 3px #1f6fc0}
+.goldwarn .capfx{color:#fff3b0;text-shadow:none}
+@keyframes capfloat{0%{transform:translateY(-16px) rotate(0);opacity:0}15%{opacity:1}55%{transform:translateY(calc(100% + 18px)) translateX(6px) rotate(120deg);opacity:.95}100%{transform:translateY(46px) translateX(-5px) rotate(260deg);opacity:0}}
+@keyframes capglow{from{filter:brightness(1)}to{filter:brightness(1.14)}}
 .pb{display:grid;grid-template-columns:1fr auto;gap:0 10px;align-items:baseline;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .pb span{font-size:.8125rem;font-weight:600}
 .pb b{font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
@@ -217,7 +224,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>
