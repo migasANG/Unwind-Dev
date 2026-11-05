@@ -1,7 +1,7 @@
 // Builds public/index.html: minified, without the test hook, with a rights notice. Needs: npm i terser
 const fs=require('fs'),path=require('path'),{minify}=require('terser');
 const p=f=>path.join(__dirname,'..',f),rd=f=>fs.readFileSync(p(f),'utf8');
-const NOTICE='© 2026 Miguel. All rights reserved. No licence is granted to copy, modify, publish or use this work without written agreement.';
+const NOTICE='© 2026 Miguel Lima. All rights reserved. No licence is granted to copy, modify, publish or use this work without written agreement.';
 (async()=>{
  const strip=s=>s.replace(/\/\*TEST-HOOK-START\*\/[\s\S]*?\/\*TEST-HOOK-END\*\//,'');
  const opts={compress:{passes:2},mangle:{toplevel:true},format:{comments:false}};
