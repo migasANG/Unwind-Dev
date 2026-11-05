@@ -353,7 +353,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       steps: [{ tap: 0, expect: 'hit', say: 'A flower blocks the way' }, { tap: 1, expect: 'ok', say: 'After a launch, a bee takes it' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
     wind: { title: 'Wind', text: 'Autumn. Wind can spin an arrow around its tail when there is room, which can change everything.', w: 5, h: 4,
       arrows: [P(0, [[2, 3], [2, 2]], 0), P(1, [[1, 0], [2, 0], [3, 0]], 1), P(2, [[1, 1], [0, 1]], 3)],
-      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { tap: 2, expect: 'ok', fast: true, say: 'Playing an arrow can bring a gust of wind' }, { spin: 0, quick: true, say: 'The gust spins the arrow around its tail' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
+      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { tap: 2, expect: 'ok', spinWith: 0, say: 'A launch can bring a gust that spins an arrow' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
   };
   // Starts a fresh copy of a demo, or plays one spin of the wind.
   function tutorialStart(key) {
@@ -3551,7 +3551,6 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
         run.phaseEnd = now + 1400; return;
       }
       var res = E.tap(l, sv, st.tap);
-      if (st.fast) run.phaseEnd = now + 420;
       if (res.notReady) { run.nudges[st.tap] = now + 500; run.acted = true; return; }
       if (res.ok) {
         res.results.forEach(function (r) {
@@ -3559,6 +3558,8 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
           run.flights.push({ pts: pts, len: len, travel: travel, start: now, duration: Math.min(1400, 480 + travel * 42), color: arrowColor(m) });
         });
         l.arrows.forEach(function (x) { if (x.uno !== undefined) run.flips[x.id] = now; });
+        // The launch and the gust happen together.
+        if (st.spinWith !== undefined) { E.tutorialSpin(l, st.spinWith); l.arrows[st.spinWith].rot = { start: now, turn: Math.PI / 2 }; run.windAt = now; run.phaseEnd = now + 1500; }
         var taken = l.flowers && l.flowers[sv.launches - 1];
         if (taken) run.bees.push({ at: taken, start: now });
       } else res.results.forEach(function (r) {

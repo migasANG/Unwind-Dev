@@ -2174,7 +2174,6 @@
         run.phaseEnd = now + 1400; return;
       }
       var res = E.tap(l, sv, st.tap);
-      if (st.fast) run.phaseEnd = now + 420;
       if (res.notReady) { run.nudges[st.tap] = now + 500; run.acted = true; return; }
       if (res.ok) {
         res.results.forEach(function (r) {
@@ -2182,6 +2181,8 @@
           run.flights.push({ pts: pts, len: len, travel: travel, start: now, duration: Math.min(1400, 480 + travel * 42), color: arrowColor(m) });
         });
         l.arrows.forEach(function (x) { if (x.uno !== undefined) run.flips[x.id] = now; });
+        // The launch and the gust happen together.
+        if (st.spinWith !== undefined) { E.tutorialSpin(l, st.spinWith); l.arrows[st.spinWith].rot = { start: now, turn: Math.PI / 2 }; run.windAt = now; run.phaseEnd = now + 1500; }
         var taken = l.flowers && l.flowers[sv.launches - 1];
         if (taken) run.bees.push({ at: taken, start: now });
       } else res.results.forEach(function (r) {

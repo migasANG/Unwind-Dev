@@ -106,7 +106,7 @@
       steps: [{ tap: 0, expect: 'hit', say: 'A flower blocks the way' }, { tap: 1, expect: 'ok', say: 'After a launch, a bee takes it' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
     wind: { title: 'Wind', text: 'Autumn. Wind can spin an arrow around its tail when there is room, which can change everything.', w: 5, h: 4,
       arrows: [P(0, [[2, 3], [2, 2]], 0), P(1, [[1, 0], [2, 0], [3, 0]], 1), P(2, [[1, 1], [0, 1]], 3)],
-      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { tap: 2, expect: 'ok', fast: true, say: 'Playing an arrow can bring a gust of wind' }, { spin: 0, quick: true, say: 'The gust spins the arrow around its tail' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
+      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { tap: 2, expect: 'ok', spinWith: 0, say: 'A launch can bring a gust that spins an arrow' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
   };
   // Starts a fresh copy of a demo, or plays one spin of the wind.
   function tutorialStart(key) {
