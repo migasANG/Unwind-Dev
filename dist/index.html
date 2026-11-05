@@ -29,6 +29,8 @@ body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,b
 .scenebg.leaving{opacity:0}
 body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-function:ease-in-out}
 .card.tall{height:min(100%,860px)}
+.card.tall>.row{display:contents}
+.card.tall>.row .close{position:sticky;top:0;order:-1;align-self:flex-end;flex:none;margin-bottom:-52px;z-index:3;border-radius:50%;background:var(--card);box-shadow:0 1px 6px color-mix(in srgb,var(--ink) 20%,transparent)}
 #seasonBadge{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:58px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 #seasonBadge .chip{pointer-events:auto;cursor:help;touch-action:none;-webkit-touch-callout:none;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:17px;background:var(--card);font-weight:600;font-size:.8125rem;font-variant-numeric:tabular-nums;box-shadow:0 1px 5px rgba(0,0,0,.2)}
 #tip{position:fixed;z-index:6;max-width:min(270px,calc(100vw - 24px));padding:9px 12px;border-radius:12px;background:var(--ink);color:var(--card);font-size:.8125rem;line-height:1.35;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none}
@@ -117,15 +119,13 @@ header.ui{top:0;padding-top:calc(14px + env(safe-area-inset-top,0px));display:fl
 @keyframes breathe{50%{opacity:.5}}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:8px}
-.corner{display:flex;flex-direction:column;align-items:center;gap:2px;margin-right:-8px}
-#mute{width:40px;height:34px;display:grid;place-items:center}
-#langBtn{min-width:34px;height:22px;padding:0 6px;border-radius:11px;font-size:.6875rem;font-weight:700;letter-spacing:.03em;background:color-mix(in srgb,currentColor 12%,transparent)}
+#mute{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px}
 #mute svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
 #caption{bottom:calc(84px + env(safe-area-inset-bottom,0px));left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:6px 14px;border-radius:14px;background:color-mix(in srgb,var(--card) 90%,transparent);text-align:center;font:600 1rem/1.3 var(--display);text-wrap:balance;opacity:0;transition:opacity .8s ease}
 #caption.on{opacity:1}
 #caption.watchable{cursor:pointer;pointer-events:auto}
 #caption.watchable::before{content:'▶';font-size:.75em;margin-right:.45em;vertical-align:.08em}
-nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(6,minmax(0,84px));justify-content:center;gap:4px}
+nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,84px));justify-content:center;gap:4px}
 nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px;transition:opacity .3s ease,background .3s ease}
 nav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 nav button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
@@ -240,7 +240,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <div id="timer" role="timer" hidden></div>
   <div class="right">
     <div id="lives" role="img"><div id="hearts"></div><div id="livesLabel"></div></div>
-    <div class="corner"><button id="mute" aria-label="Music and sound settings"></button><button id="langBtn" class="notr"></button></div>
+    <button id="mute" aria-label="Music and sound settings"></button>
   </div>
 </header>
 <div id="timebar" hidden></div>
@@ -253,7 +253,6 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <button id="bRewind"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></svg>Rewind</button>
   <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
-  <button id="bNext"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.800-3.800M11 8v3l2 2"/></svg>Next</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
@@ -2022,6 +2021,8 @@ window.UnwindI18n = (function () {
     s.querySelectorAll('[data-bg]').forEach(function (b) {
       b.onclick = function () {
         setBackground(b.getAttribute('data-bg'));
+        // The default background follows the music, so the music setting goes back to Follow the level.
+        if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         if (onPick) onPick();
       };
@@ -2049,6 +2050,7 @@ window.UnwindI18n = (function () {
   function startEndless(plan, lvl) {
     // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
     if (!current || current.mode !== 'endless') resetCycle();
+    if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -2098,20 +2100,6 @@ window.UnwindI18n = (function () {
       });
     };
     setTimeout(step, 60);
-  }
-  // A temporary test level: two arrows block each other, so after the first launch the safety net makes one golden.
-  function openGoldTest() {
-    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the arrow at the top to see the golden arrow.', arrows: [
-      { id: 0, kind: 'plain', cells: [[0, 0], [1, 0]], dir: 1 },
-      { id: 1, kind: 'plain', cells: [[1, 3], [1, 2], [2, 2]], dir: 1 }, { id: 2, kind: 'plain', cells: [[3, 1], [3, 2], [3, 3], [2, 3]], dir: 3 }] });
-    begin({ id: 'test-gold', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34 });
-  }
-  // A temporary test level: after two launches, the only possible play is to crack the ice.
-  function openIceTest() {
-    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the two arrows on the left, then watch the message here.', arrows: [
-      { id: 0, kind: 'plain', cells: [[0, 4], [0, 3]], dir: 0 }, { id: 1, kind: 'plain', cells: [[1, 4], [1, 3]], dir: 0 },
-      { id: 2, kind: 'plain', cells: [[2, 2], [3, 2]], dir: 1 }, { id: 3, kind: 'plain', cells: [[4, 1], [4, 2], [4, 3]], dir: 2 }] });
-    begin({ id: 'test-ice', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34, setup: function (st) { st.frozen[3] = 999; } });
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -3933,7 +3921,6 @@ window.UnwindI18n = (function () {
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mIceTest"><b>Test level: ice warning</b><span>Temporary. After 2 launches, only hitting the ice is possible.</span></button><button id="mGoldTest"><b>Test level: golden arrow</b><span>Temporary. After 1 launch, two arrows block each other and one turns golden.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -3945,8 +3932,6 @@ window.UnwindI18n = (function () {
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
-    s.querySelector('#mIceTest').onclick = openIceTest;
-    s.querySelector('#mGoldTest').onclick = openGoldTest;
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () { openEndless(); };
@@ -4243,18 +4228,6 @@ window.UnwindI18n = (function () {
     track('restart', { launches: state.launches });
     begin(current);
   }
-  // A clear language button under the music button: one press swaps between English and Portuguese.
-  function showLangButton() {
-    var b = $('langBtn'), cur = window.UnwindI18n.lang();
-    b.textContent = cur === 'pt' ? 'PT' : 'EN';
-    b.setAttribute('aria-label', cur === 'pt' ? 'Idioma: português. Mudar para inglês' : 'Language: English. Switch to Portuguese');
-    document.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-lang') === cur); });
-  }
-  $('langBtn').onclick = function () {
-    window.UnwindI18n.setLang(window.UnwindI18n.lang() === 'pt' ? 'en' : 'pt');
-    showLangButton(); layout();
-    track('language', { lang: window.UnwindI18n.lang() });
-  };
   function languageRow() {
     var cur = window.UnwindI18n.lang();
     return '<div class="setting"><span>Language</span></div><div class="sizes langs" role="group" aria-label="Language"><button class="notr" data-lang="en" aria-pressed="' + (cur === 'en') + '">English</button><button class="notr" data-lang="pt" aria-pressed="' + (cur === 'pt') + '">Português</button></div>';
@@ -4264,7 +4237,7 @@ window.UnwindI18n = (function () {
       b.onclick = function (ev) {
         ev.stopPropagation();
         window.UnwindI18n.setLang(b.getAttribute('data-lang'));
-        showLangButton();
+        s.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         layout();
         track('language', { lang: b.getAttribute('data-lang') });
       };
@@ -4338,18 +4311,6 @@ window.UnwindI18n = (function () {
     pluck(146.8, 0, 0.12, 0.7);
     track('rewind', { launches: state.launches });
     hintArrow = -1; refresh();
-  };
-  // A testing aid: shows the next play and confirms the board is not in a dead end. It uses no hints.
-  $('bNext').onclick = function () {
-    audio();
-    var l = current.level, legal = E.legalMoves(l, state), hits = E.iceHits(l, state), sol = E.solve(l, state, l.big ? 8000 : 120000), id = -1, msg;
-    if (sol.solved && sol.sequence.length && legal.indexOf(sol.sequence[0]) >= 0) { id = sol.sequence[0]; msg = 'Next play: the highlighted arrow.'; }
-    else if (legal.length) { id = legal[0]; msg = sol.exhausted ? 'Next play: the highlighted arrow.' : 'A play exists, but this board may not clear from here.'; }
-    else if (hits.length) { id = hits[0]; msg = 'Next play: hit the ice with the highlighted arrow. It costs nothing.'; }
-    else msg = 'Dead end: no play is possible.';
-    setCaption(msg);
-    if (id >= 0) { hintArrow = id; hintStart = performance.now(); focusArrow(id); }
-    track('next_play', { found: id >= 0, solved: !!sol.solved });
   };
   $('bHint').onclick = function () {
     audio();
@@ -4456,7 +4417,6 @@ window.UnwindI18n = (function () {
   /*TEST-HOOK-END*/
   window.UnwindI18n.start();
   window.UnwindI18n.setLang(window.UnwindI18n.lang());
-  showLangButton();
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   holdTutorials = true;

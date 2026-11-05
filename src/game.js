@@ -307,6 +307,8 @@
     s.querySelectorAll('[data-bg]').forEach(function (b) {
       b.onclick = function () {
         setBackground(b.getAttribute('data-bg'));
+        // The default background follows the music, so the music setting goes back to Follow the level.
+        if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         if (onPick) onPick();
       };
@@ -334,6 +336,7 @@
   function startEndless(plan, lvl) {
     // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
     if (!current || current.mode !== 'endless') resetCycle();
+    if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -383,20 +386,6 @@
       });
     };
     setTimeout(step, 60);
-  }
-  // A temporary test level: two arrows block each other, so after the first launch the safety net makes one golden.
-  function openGoldTest() {
-    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the arrow at the top to see the golden arrow.', arrows: [
-      { id: 0, kind: 'plain', cells: [[0, 0], [1, 0]], dir: 1 },
-      { id: 1, kind: 'plain', cells: [[1, 3], [1, 2], [2, 2]], dir: 1 }, { id: 2, kind: 'plain', cells: [[3, 1], [3, 2], [3, 3], [2, 3]], dir: 3 }] });
-    begin({ id: 'test-gold', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34 });
-  }
-  // A temporary test level: after two launches, the only possible play is to crack the ice.
-  function openIceTest() {
-    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the two arrows on the left, then watch the message here.', arrows: [
-      { id: 0, kind: 'plain', cells: [[0, 4], [0, 3]], dir: 0 }, { id: 1, kind: 'plain', cells: [[1, 4], [1, 3]], dir: 0 },
-      { id: 2, kind: 'plain', cells: [[2, 2], [3, 2]], dir: 1 }, { id: 3, kind: 'plain', cells: [[4, 1], [4, 2], [4, 3]], dir: 2 }] });
-    begin({ id: 'test-ice', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34, setup: function (st) { st.frozen[3] = 999; } });
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -2218,7 +2207,6 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mIceTest"><b>Test level: ice warning</b><span>Temporary. After 2 launches, only hitting the ice is possible.</span></button><button id="mGoldTest"><b>Test level: golden arrow</b><span>Temporary. After 1 launch, two arrows block each other and one turns golden.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -2230,8 +2218,6 @@
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
-    s.querySelector('#mIceTest').onclick = openIceTest;
-    s.querySelector('#mGoldTest').onclick = openGoldTest;
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () { openEndless(); };
@@ -2528,18 +2514,6 @@
     track('restart', { launches: state.launches });
     begin(current);
   }
-  // A clear language button under the music button: one press swaps between English and Portuguese.
-  function showLangButton() {
-    var b = $('langBtn'), cur = window.UnwindI18n.lang();
-    b.textContent = cur === 'pt' ? 'PT' : 'EN';
-    b.setAttribute('aria-label', cur === 'pt' ? 'Idioma: português. Mudar para inglês' : 'Language: English. Switch to Portuguese');
-    document.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-lang') === cur); });
-  }
-  $('langBtn').onclick = function () {
-    window.UnwindI18n.setLang(window.UnwindI18n.lang() === 'pt' ? 'en' : 'pt');
-    showLangButton(); layout();
-    track('language', { lang: window.UnwindI18n.lang() });
-  };
   function languageRow() {
     var cur = window.UnwindI18n.lang();
     return '<div class="setting"><span>Language</span></div><div class="sizes langs" role="group" aria-label="Language"><button class="notr" data-lang="en" aria-pressed="' + (cur === 'en') + '">English</button><button class="notr" data-lang="pt" aria-pressed="' + (cur === 'pt') + '">Português</button></div>';
@@ -2549,7 +2523,7 @@
       b.onclick = function (ev) {
         ev.stopPropagation();
         window.UnwindI18n.setLang(b.getAttribute('data-lang'));
-        showLangButton();
+        s.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         layout();
         track('language', { lang: b.getAttribute('data-lang') });
       };
@@ -2623,18 +2597,6 @@
     pluck(146.8, 0, 0.12, 0.7);
     track('rewind', { launches: state.launches });
     hintArrow = -1; refresh();
-  };
-  // A testing aid: shows the next play and confirms the board is not in a dead end. It uses no hints.
-  $('bNext').onclick = function () {
-    audio();
-    var l = current.level, legal = E.legalMoves(l, state), hits = E.iceHits(l, state), sol = E.solve(l, state, l.big ? 8000 : 120000), id = -1, msg;
-    if (sol.solved && sol.sequence.length && legal.indexOf(sol.sequence[0]) >= 0) { id = sol.sequence[0]; msg = 'Next play: the highlighted arrow.'; }
-    else if (legal.length) { id = legal[0]; msg = sol.exhausted ? 'Next play: the highlighted arrow.' : 'A play exists, but this board may not clear from here.'; }
-    else if (hits.length) { id = hits[0]; msg = 'Next play: hit the ice with the highlighted arrow. It costs nothing.'; }
-    else msg = 'Dead end: no play is possible.';
-    setCaption(msg);
-    if (id >= 0) { hintArrow = id; hintStart = performance.now(); focusArrow(id); }
-    track('next_play', { found: id >= 0, solved: !!sol.solved });
   };
   $('bHint').onclick = function () {
     audio();
@@ -2741,7 +2703,6 @@
   /*TEST-HOOK-END*/
   window.UnwindI18n.start();
   window.UnwindI18n.setLang(window.UnwindI18n.lang());
-  showLangButton();
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   holdTutorials = true;

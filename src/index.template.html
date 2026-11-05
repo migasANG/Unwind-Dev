@@ -27,6 +27,8 @@ body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,b
 .scenebg.leaving{opacity:0}
 body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-function:ease-in-out}
 .card.tall{height:min(100%,860px)}
+.card.tall>.row{display:contents}
+.card.tall>.row .close{position:sticky;top:0;order:-1;align-self:flex-end;flex:none;margin-bottom:-52px;z-index:3;border-radius:50%;background:var(--card);box-shadow:0 1px 6px color-mix(in srgb,var(--ink) 20%,transparent)}
 #seasonBadge{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:58px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
 #seasonBadge .chip{pointer-events:auto;cursor:help;touch-action:none;-webkit-touch-callout:none;display:flex;align-items:center;gap:4px;padding:3px 9px 3px 5px;border-radius:17px;background:var(--card);font-weight:600;font-size:.8125rem;font-variant-numeric:tabular-nums;box-shadow:0 1px 5px rgba(0,0,0,.2)}
 #tip{position:fixed;z-index:6;max-width:min(270px,calc(100vw - 24px));padding:9px 12px;border-radius:12px;background:var(--ink);color:var(--card);font-size:.8125rem;line-height:1.35;box-shadow:0 3px 12px rgba(0,0,0,.28);pointer-events:none}
@@ -115,15 +117,13 @@ header.ui{top:0;padding-top:calc(14px + env(safe-area-inset-top,0px));display:fl
 @keyframes breathe{50%{opacity:.5}}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:8px}
-.corner{display:flex;flex-direction:column;align-items:center;gap:2px;margin-right:-8px}
-#mute{width:40px;height:34px;display:grid;place-items:center}
-#langBtn{min-width:34px;height:22px;padding:0 6px;border-radius:11px;font-size:.6875rem;font-weight:700;letter-spacing:.03em;background:color-mix(in srgb,currentColor 12%,transparent)}
+#mute{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px}
 #mute svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
 #caption{bottom:calc(84px + env(safe-area-inset-bottom,0px));left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);padding:6px 14px;border-radius:14px;background:color-mix(in srgb,var(--card) 90%,transparent);text-align:center;font:600 1rem/1.3 var(--display);text-wrap:balance;opacity:0;transition:opacity .8s ease}
 #caption.on{opacity:1}
 #caption.watchable{cursor:pointer;pointer-events:auto}
 #caption.watchable::before{content:'▶';font-size:.75em;margin-right:.45em;vertical-align:.08em}
-nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(6,minmax(0,84px));justify-content:center;gap:4px}
+nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,84px));justify-content:center;gap:4px}
 nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px;transition:opacity .3s ease,background .3s ease}
 nav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 nav button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
@@ -238,7 +238,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <div id="timer" role="timer" hidden></div>
   <div class="right">
     <div id="lives" role="img"><div id="hearts"></div><div id="livesLabel"></div></div>
-    <div class="corner"><button id="mute" aria-label="Music and sound settings"></button><button id="langBtn" class="notr"></button></div>
+    <button id="mute" aria-label="Music and sound settings"></button>
   </div>
 </header>
 <div id="timebar" hidden></div>
@@ -251,7 +251,6 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <button id="bRewind"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></svg>Rewind</button>
   <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
-  <button id="bNext"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.800-3.800M11 8v3l2 2"/></svg>Next</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
