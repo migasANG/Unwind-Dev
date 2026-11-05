@@ -48,6 +48,9 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-fu
 .goldwarn .capfx{color:#fff3b0;text-shadow:none}
 @keyframes capfloat{0%{transform:translateY(-16px) rotate(0);opacity:0}15%{opacity:1}55%{transform:translateY(calc(100% + 18px)) translateX(6px) rotate(120deg);opacity:.95}100%{transform:translateY(46px) translateX(-5px) rotate(260deg);opacity:0}}
 @keyframes capglow{from{filter:brightness(1)}to{filter:brightness(1.14)}}
+.volbar{display:flex;align-items:center;gap:12px;font-size:.875rem;margin-top:-6px}
+.volbar span{flex:none;width:7.5em}
+.volbar input{flex:1;min-width:0;accent-color:var(--ink);height:24px}
 .pb{display:grid;grid-template-columns:1fr auto;gap:0 10px;align-items:baseline;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .pb span{font-size:.8125rem;font-weight:600}
 .pb b{font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}

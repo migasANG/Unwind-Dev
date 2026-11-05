@@ -57,6 +57,9 @@
   var colors = CHAPTERS[0], audioUnlocked = false;
   var ac = null, sfxBus = null, musicBus = null, duckBus = null, sectionBus = null, jingleBus = null, analyser = null, musicBar = 0, nextBarAt = 0, playingTheme = -1;
   var ARROW_SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+  // Volume bars: each is 0 to 1, on top of the game's own balance between music and sounds.
+  function musicLevel() { return audioPrefs.music ? 0.8 * (audioPrefs.musicVol === undefined ? 1 : audioPrefs.musicVol) : 0; }
+  function soundLevel() { return audioPrefs.sound ? 0.7 * (audioPrefs.soundVol === undefined ? 1 : audioPrefs.soundVol) : 0; }
   function audio() {
     if (!audioPrefs.music && !audioPrefs.sound) return null;
     if (!ac) {
@@ -64,7 +67,7 @@
       if (!C) return null;
       ac = new C();
       sfxBus = ac.createGain(); musicBus = ac.createGain(); duckBus = ac.createGain();
-      sfxBus.gain.value = audioPrefs.sound ? 0.7 : 0; musicBus.gain.value = audioPrefs.music ? 0.8 : 0; duckBus.gain.value = 1;
+      sfxBus.gain.value = soundLevel(); musicBus.gain.value = musicLevel(); duckBus.gain.value = 1;
       var delay = ac.createDelay(1), fb = ac.createGain(), wet = ac.createGain();
       delay.delayTime.value = 0.34; fb.gain.value = 0.38; wet.gain.value = 0.3;
       duckBus.connect(musicBus); sfxBus.connect(ac.destination); musicBus.connect(ac.destination);
@@ -87,10 +90,41 @@
     }
     return colors.music;
   }
+  /* ---------- Open Water's default background: each song plays once, then the scene fades to the next ---------- */
+  var CYCLE = ['0', '1', '2', '3', '4', 'winter', 'spring', 'summer', 'autumn'], CYCLE_GAP = 2000;
+  var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
+  function cycleOn() { return !!current && current.mode === 'endless' && backgroundChoice() === 'default'; }
+  function shownBackground() { var b = backgroundChoice(); return b === 'default' ? CYCLE[bgCycle.i] : b; }
+  function cycleSeconds() { return M.patternSeconds(colors.music); }
+  function startCycleSection() {
+    bgCycle.endAt = performance.now() + cycleSeconds() * 1000;
+    if (ac && audioPrefs.theme === 'auto') {
+      if (wantedTheme() === playingTheme) { musicBar = 0; nextBarAt = ac.currentTime + 0.05; }
+    }
+  }
+  function resetCycle() { bgCycle.i = 0; bgCycle.gapUntil = 0; playingTheme = -1; bgCycle.endAt = performance.now() + M.patternSeconds(CHAPTERS[0].music) * 1000; }
+  function cycleTick() {
+    if (!cycleOn()) return;
+    var now = performance.now();
+    if (bgCycle.gapUntil) {
+      if (now >= bgCycle.gapUntil) { bgCycle.gapUntil = 0; startCycleSection(); musicTick(); }
+      return;
+    }
+    var songDriven = ac && ac.state === 'running' && audioPrefs.music && audioPrefs.theme === 'auto' && playingTheme === wantedTheme();
+    var finished = songDriven ? musicBar >= M.patternBars(playingTheme) && ac.currentTime >= nextBarAt : now >= bgCycle.endAt;
+    if (!finished) return;
+    bgCycle.i = (bgCycle.i + 1) % CYCLE.length;
+    bgCycle.gapUntil = now + CYCLE_GAP;
+    applyBackgroundNow();
+    track('background_cycle', { to: CYCLE[bgCycle.i] });
+  }
+  setInterval(cycleTick, 150);
   function seasonSound(fn) { if (!audioPrefs.sound) return; var c = audio(); if (c) M[fn](c, sfxBus, c.currentTime + 0.01); }
   function musicTick() {
     if (!ac || ac.state !== 'running' || !audioPrefs.music) return;
-    var want = wantedTheme();
+    var want = wantedTheme(), cycling = cycleOn() && audioPrefs.theme === 'auto';
+    // Open Water's rotation: silent during the gap, and nothing plays past the end of the song.
+    if (cycling && (bgCycle.gapUntil || (want === playingTheme && musicBar >= M.patternBars(playingTheme)))) return;
     if (want !== playingTheme) {
       // Fade the old theme out at once, including notes already queued, and start the new one straight away.
       if (sectionBus) {
@@ -99,7 +133,7 @@
         old.gain.setTargetAtTime(0, ac.currentTime, 0.18);
         setTimeout(function () { try { old.disconnect(); } catch (e) {} }, 1500);
       }
-      sectionBus = ac.createGain(); sectionBus.gain.value = 1; sectionBus.connect(duckBus);
+      sectionBus = ac.createGain(); sectionBus.gain.value = M.THEMES[want].trim || 1; sectionBus.connect(duckBus);
       playingTheme = want; musicBar = 0; nextBarAt = ac.currentTime + 0.25;
     }
     if (ac.currentTime + 0.6 < nextBarAt) return;
@@ -202,8 +236,8 @@
   var BACKGROUNDS = [['default', 'Default'], ['0', 'Dawn'], ['1', 'Morning'], ['2', 'Noon'], ['3', 'Dusk'], ['4', 'Night'], ['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn']];
   function backgroundChoice() { return endlessOpts().background || 'default'; }
   function backgroundPalette() {
-    var b = backgroundChoice();
-    return SEASONS[b] || (b === 'default' ? CHAPTERS[timeChapter()] : CHAPTERS[+b]);
+    var b = shownBackground();
+    return SEASONS[b] || CHAPTERS[+b];
   }
   function setBackground(b) {
     var o = endlessOpts(); o.background = b; progress.endlessOpts = o; save('unwind.progress2', progress);
@@ -213,7 +247,7 @@
   var bgRequest = 0;
   function applyBackgroundNow() {
     if (!current || current.mode !== 'endless') return;
-    var ask = ++bgRequest, choice = backgroundChoice(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
+    var ask = ++bgRequest, choice = shownBackground(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
     if ((old.getAttribute('data-season') || null) === next && !old.hidden === !!next) { commitBackground(ask, null, next); return; }
     var fresh = document.createElement('div');
     fresh.className = 'scenebg pending';
@@ -281,7 +315,7 @@
   function backgroundSheet() {
     var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note">Change it any time. Your board stays as it is.</p>' + backgroundButtons('inlevel'));
     s.querySelector('#x').onclick = closeSheet;
-    wireBackgrounds(s, applyBackgroundNow);
+    wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); });
   }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
   function endlessPlan() {
@@ -298,6 +332,8 @@
     return { o: o, scale: scale, key: key, n: n, seed: seed };
   }
   function startEndless(plan, lvl) {
+    // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
+    if (!current || current.mode !== 'endless') resetCycle();
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -397,7 +433,7 @@
     $('timer').hidden = timeLeft === null; $('timebar').hidden = timeLeft === null;
     $('timer').classList.remove('low');
     applyChapter(c.chapter, c.sunY);
-    applySeason(c.background ? (SEASONS[backgroundChoice()] ? backgroundChoice() : null) : c.level.season);
+    applySeason(c.background ? (SEASONS[shownBackground()] ? shownBackground() : null) : c.level.season);
     $('where').textContent = c.mode === 'endless' || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
     var rec = progress.records && progress.records[bestKey(c)];
@@ -2519,11 +2555,15 @@
       };
     });
   }
+  function volumeBar(id, label, value) {
+    var v = Math.round((value === undefined ? 1 : value) * 100);
+    return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"></label>';
+  }
   function settingsSheet() {
     var themeRow = function (id, name, mood) { return '<button class="theme" data-theme-id="' + id + '" aria-pressed="' + (audioPrefs.theme === id) + '"><b>' + name + '</b><span>' + mood + '</span></button>'; };
     var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
-      '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' +
-      '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' +
+      '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' + volumeBar('vMusic', 'Music volume', audioPrefs.musicVol) +
+      '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
       '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
     var s = sheet(html);
     wireLanguage(s);
@@ -2533,13 +2573,22 @@
     s.querySelector('#sMusic').onclick = function () {
       audioPrefs.music = !audioPrefs.music; save('unwind.audio', audioPrefs);
       audio();
-      if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(audioPrefs.music ? 0.8 : 0, ac.currentTime, 0.2); }
+      if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(musicLevel(), ac.currentTime, 0.2); }
       this.setAttribute('aria-checked', audioPrefs.music); refresh(); showNow(); musicTick();
     };
+    s.querySelector('#vMusic').oninput = function () {
+      audioPrefs.musicVol = this.value / 100; save('unwind.audio', audioPrefs); audio();
+      if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(musicLevel(), ac.currentTime, 0.05); }
+    };
+    s.querySelector('#vSound').oninput = function () {
+      audioPrefs.soundVol = this.value / 100; save('unwind.audio', audioPrefs); audio();
+      if (sfxBus && ac) sfxBus.gain.setTargetAtTime(soundLevel(), ac.currentTime, 0.05);
+    };
+    s.querySelector('#vSound').onchange = function () { pluck(659, 0, 0.2, 0.8); };
     s.querySelector('#sSound').onclick = function () {
       audioPrefs.sound = !audioPrefs.sound; save('unwind.audio', audioPrefs);
       audio();
-      if (sfxBus && ac) sfxBus.gain.setTargetAtTime(audioPrefs.sound ? 0.75 : 0, ac.currentTime, 0.05);
+      if (sfxBus && ac) sfxBus.gain.setTargetAtTime(soundLevel(), ac.currentTime, 0.05);
       this.setAttribute('aria-checked', audioPrefs.sound); refresh();
     };
     s.querySelectorAll('[data-theme-id]').forEach(function (b) {
@@ -2551,7 +2600,7 @@
           audioPrefs.music = true; save('unwind.audio', audioPrefs);
           s.querySelector('#sMusic').setAttribute('aria-checked', true);
           audio();
-          if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(0.8, ac.currentTime, 0.2); }
+          if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(musicLevel(), ac.currentTime, 0.2); }
           refresh();
         }
         audio(); stopJingle(); duck(false); musicTick(); showNow();
@@ -2667,6 +2716,9 @@
     levelInfo: function () { var l = current.level; return { effects: E.effectsOf(l), scene: activeScene, season: l.season, seed: l.seed, big: !!l.big, w: l.w, h: l.h, lives: state.lives, limit: l.timeLimit || null, guarantee: l.guaranteeAt, flowers: (l.flowers || []).length }; },
     openEndless: function () { openEndless(true); },
     pops: function () { return popCount; },
+    cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
+    cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
+    levels: function () { return audioPrefs; },
     records: function () { return progress.records || {}; },
     theme: function () { return audioPrefs.theme; },
     perfBoard: function (scale, effects, hard) { var o = endlessOpts(), saved = JSON.stringify(o); o.scale = scale; o.effectList = effects; o.effectRandom = false; o.hard = !!hard; o.timed = false; openEndless(true); progress.endlessOpts = JSON.parse(saved); },
