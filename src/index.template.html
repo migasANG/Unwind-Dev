@@ -63,15 +63,16 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 .drift{animation:drift 26s ease-in-out infinite alternate}.drift.b{animation-duration:38s}
 .flit{animation:flit 6s ease-in-out infinite alternate;transform-box:fill-box}
 .twinkle{animation:twinkle 2.4s ease-in-out infinite alternate}.twinkle.b{animation-delay:.9s}.twinkle.c{animation-delay:1.6s}
-.crab{animation:crab 9s ease-in-out infinite alternate}
+.crab{animation:crab 9s ease-in-out infinite}
 @keyframes drift{from{transform:translateX(calc(-30px*var(--s,1)))}to{transform:translateX(calc(40px*var(--s,1)))}}
 @keyframes flit{0%{transform:translate(0,0)}35%{transform:translate(calc(26px*var(--s,1)),calc(-18px*var(--s,1)))}70%{transform:translate(calc(-14px*var(--s,1)),calc(-30px*var(--s,1)))}100%{transform:translate(calc(20px*var(--s,1)),calc(6px*var(--s,1)))}}
 @keyframes twinkle{from{opacity:.25}to{opacity:1}}
-.crableg{animation:crableg .5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:0% 30%}.crableg.b{animation-delay:-.5s}
+.crableg{animation:crableg var(--d,10s) linear var(--dl,0s) infinite;transform-box:fill-box;transform-origin:0% 30%}.crableg.b{animation-name:crablegb}
 .crabclaw{animation:crabclaw 1.5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:30% 100%}.crabclaw.b{animation-delay:-.7s}
-@keyframes crableg{from{transform:rotate(-5deg)}to{transform:rotate(6deg)}}
+@keyframes crableg{0.00%{transform:rotate(0deg)}2.33%{transform:rotate(6deg)}4.67%{transform:rotate(-5deg)}7.00%{transform:rotate(6deg)}9.33%{transform:rotate(-5deg)}11.67%{transform:rotate(6deg)}14.00%{transform:rotate(-5deg)}16.33%{transform:rotate(6deg)}18.67%{transform:rotate(-5deg)}21.00%{transform:rotate(6deg)}23.33%{transform:rotate(-5deg)}25.67%{transform:rotate(6deg)}28.00%{transform:rotate(0deg)}50.00%{transform:rotate(0deg)}52.33%{transform:rotate(6deg)}54.67%{transform:rotate(-5deg)}57.00%{transform:rotate(6deg)}59.33%{transform:rotate(-5deg)}61.67%{transform:rotate(6deg)}64.00%{transform:rotate(-5deg)}66.33%{transform:rotate(6deg)}68.67%{transform:rotate(-5deg)}71.00%{transform:rotate(6deg)}73.33%{transform:rotate(-5deg)}75.67%{transform:rotate(6deg)}78.00%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+@keyframes crablegb{0.00%{transform:rotate(0deg)}2.33%{transform:rotate(-6deg)}4.67%{transform:rotate(5deg)}7.00%{transform:rotate(-6deg)}9.33%{transform:rotate(5deg)}11.67%{transform:rotate(-6deg)}14.00%{transform:rotate(5deg)}16.33%{transform:rotate(-6deg)}18.67%{transform:rotate(5deg)}21.00%{transform:rotate(-6deg)}23.33%{transform:rotate(5deg)}25.67%{transform:rotate(-6deg)}28.00%{transform:rotate(0deg)}50.00%{transform:rotate(0deg)}52.33%{transform:rotate(-6deg)}54.67%{transform:rotate(5deg)}57.00%{transform:rotate(-6deg)}59.33%{transform:rotate(5deg)}61.67%{transform:rotate(-6deg)}64.00%{transform:rotate(5deg)}66.33%{transform:rotate(-6deg)}68.67%{transform:rotate(5deg)}71.00%{transform:rotate(-6deg)}73.33%{transform:rotate(5deg)}75.67%{transform:rotate(-6deg)}78.00%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
 @keyframes crabclaw{from{transform:rotate(-16deg)}to{transform:rotate(6deg)}}
-@keyframes crab{from{transform:translateX(calc(-26px*var(--s,1)))}to{transform:translateX(calc(30px*var(--s,1)))}}
+@keyframes crab{0%,100%{transform:translateX(calc(-26px*var(--s,1)))}28%,50%{transform:translateX(calc(30px*var(--s,1)))}78%{transform:translateX(calc(-26px*var(--s,1)))}}
 .wave{animation:wave 4s ease-in-out infinite alternate}.wave.b{animation-delay:1.2s}
 .sway{animation:sway 5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
 .sway.b{animation-delay:1.6s}

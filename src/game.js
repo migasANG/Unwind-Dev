@@ -1336,7 +1336,7 @@
           return '<g transform="scale(' + s2 + ' 1)">' + legs +
             '<path d="M13-3 22-9" stroke="' + c2 + '" stroke-width="3" stroke-linecap="round"/><g class="crabclaw' + cls + '"><path d="M22-9C18-16 22-23 30-23 28-19 28-16 29-15 26-14 24-12 22-9Z" fill="' + c + '"/></g><path d="M22-9C28-8 34-12 33-20 31-17 29-16 27-15 25-13 23-11 22-9Z" fill="' + c + '"/></g>';
         };
-        return '<g class="crab" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="15" rx="22" ry="4" fill="#b8843f" opacity=".35"/>' + side(-1, b2 ? ' b' : '') + side(1, b2 ? '' : ' b') +
+        return '<g class="crab" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's;--d:' + dur + 's;--dl:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="15" rx="22" ry="4" fill="#b8843f" opacity=".35"/>' + side(-1, b2 ? ' b' : '') + side(1, b2 ? '' : ' b') +
           '<path d="M-5-9V-16M5-9V-16" stroke="' + c2 + '" stroke-width="2.200"/><circle cx="-5" cy="-17" r="2.800" fill="#2a1a12"/><circle cx="5" cy="-17" r="2.800" fill="#2a1a12"/>' +
           '<ellipse rx="17" ry="12" fill="' + c + '"/><path d="M-16 3C-10 12 10 12 16 3 10 7-10 7-16 3Z" fill="' + c2 + '" opacity=".5"/></g></g>';
       };
@@ -2163,7 +2163,7 @@
       var st = run.steps[run.at];
       if (sayEl) sayEl.textContent = st.say || '\u00a0';
       run.tapping = st.tap !== undefined; run.pending = true;
-      run.phaseEnd = now + (run.tapping ? 950 : 700);
+      run.phaseEnd = now + (run.tapping ? 950 : st.quick ? 120 : 700);
     };
     var act = function (now) {
       var st = run.steps[run.at], l = run.level, sv = run.state;
@@ -2174,6 +2174,7 @@
         run.phaseEnd = now + 1400; return;
       }
       var res = E.tap(l, sv, st.tap);
+      if (st.fast) run.phaseEnd = now + 420;
       if (res.notReady) { run.nudges[st.tap] = now + 500; run.acted = true; return; }
       if (res.ok) {
         res.results.forEach(function (r) {
