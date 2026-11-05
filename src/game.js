@@ -348,6 +348,13 @@
     };
     setTimeout(step, 60);
   }
+  // A temporary test level: after two launches, the only possible play is to crack the ice.
+  function openIceTest() {
+    var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the two arrows on the left, then watch the message here.', arrows: [
+      { id: 0, kind: 'plain', cells: [[0, 4], [0, 3]], dir: 0 }, { id: 1, kind: 'plain', cells: [[1, 4], [1, 3]], dir: 0 },
+      { id: 2, kind: 'plain', cells: [[2, 2], [3, 2]], dir: 1 }, { id: 3, kind: 'plain', cells: [[4, 1], [4, 2], [4, 3]], dir: 2 }] });
+    begin({ id: 'test-ice', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34, setup: function (st) { st.frozen[3] = 999; } });
+  }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
     var k = todayKey();
@@ -364,6 +371,8 @@
     if (c.mode === 'endless') c.level.seed = Math.floor(Math.random() * 1e9);
     E.resetBoard(c.level);
     state = E.newState(c.level);
+    state.safe = true;
+    if (c.setup) c.setup(state);
     bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = []; cards = [];
     c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
@@ -558,7 +567,7 @@
   // Arrows that animate are always drawn live. The rest can sit in the cached board.
   var boardLayer = null, layerBuilding = false, boardDpr = 2, unoFlip = {};
   function staticArrow(a, now) {
-    if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.uno !== undefined || a.red || a.rot || state.frozen[a.id] !== undefined || (a.wait && state.launches < a.wait) || introOf(a, now) < 1) return false;
+    if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.uno !== undefined || a.red || (state.freed && state.freed[a.id]) || a.rot || state.frozen[a.id] !== undefined || (a.wait && state.launches < a.wait) || introOf(a, now) < 1) return false;
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (bounces[a.id] || (nudges[a.id] && now < nudges[a.id]) || (blockerGlow[a.id] && now < blockerGlow[a.id]) || (a.burnUntil && now < a.burnUntil)) return false;
     if (hintArrow === a.id || (hintArrow >= 0 && a.kind === 'twin' && a.twin === hintArrow)) return false;
@@ -711,6 +720,7 @@
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
       var ghostForm = E.isGhost(state, a), carded = E.isRedCarded(state, a);
+      if (state.freed && state.freed[a.id]) color = mixColor(color, '#e0a100', 0.75);
       if (carded && !amt) { color = mixColor(arrowColor(a), '#c8202f', 0.55); }
       var alpha = (ghostForm ? 0.3 + amt * 0.7 : isReady || isFrozen ? 1 : 0.62 + amt * 0.38) * f;
       ctx.save(); ctx.translate(nudge, 0);
@@ -753,21 +763,12 @@
       var centre = pointAlong(pts, shift + len / 2);
       // Badges and icons pop in once their arrow is mostly drawn.
       var pop = Math.max(0, (intro - 0.45) / 0.55); pop = ease(pop);
-      if (a.kind === 'twin') scaled(centre, pop, function () { badge(centre, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+      drawTraits(a, pts, shift, len, color, ghostForm, pop, now);
       var tailPoint = px(a.cells[0]);
       if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
       if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
-      if (a.ghostPhase !== undefined) scaled(centre, pop, function () { drawGhostIcon(centre, cs * 0.3, ghostForm, now); });
-      if (a.uno !== undefined) scaled(centre, pop, function () { drawReverseIcon(centre, cs * 0.27, color); });
-      if (a.phase) scaled(centre, pop, function () { drawPhaseIcon(centre, cs * 0.26, color, now); });
-      if (a.red && state.launches < a.red) scaled(centre, pop, function () {
-        badge(centre, cs * 0.29, colors.card, colors.ink, String(a.red - state.launches), a.red - state.launches <= 2 ? '#c8202f' : color);
-        drawMiniCard({ x: centre.x + cs * 0.21, y: centre.y + cs * 0.21 }, cs * 0.17);
-      });
-      if (a.red && state.launches >= a.red) scaled(centre, pop, function () { drawMiniCard(centre, cs * 0.34); });
       if (isFrozen) scaled(centre, pop, function () { drawIce(centre, cs * 0.3); });
       if (burning) drawArrowFlames(a, now);
-      if (a.wait && state.launches < a.wait) scaled(centre, pop, function () { badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - state.launches), color); });
       ctx.restore();
     };
 
@@ -1123,7 +1124,7 @@
     b.hidden = !fx.length;
     if (!fx.length) { shownBadge = ''; return; }
     var names = { winter: '20% chance per launch that arrows freeze', summer: '25% chance per launch that tiles burn', autumn: '50% chance per launch of wind', spring: ' flowers remaining' };
-    var keys = SEASON_ORDER.filter(function (k) { return fx.indexOf(k) >= 0; }), label = function (k) { return k === 'winter' ? '20%' : k === 'summer' ? '25%' : k === 'autumn' ? '50%' : Math.max(0, current.level.flowers.length - state.launches) + '/' + current.level.flowers.length; };
+    var keys = SEASON_ORDER.filter(function (k) { return fx.indexOf(k) >= 0; }), label = function (k) { return k === 'winter' ? '20%' : k === 'summer' ? '25%' : k === 'autumn' ? '50%' : flowersLeft() + '/' + current.level.flowers.length; };
     var signature = keys.join();
     if (signature !== shownBadge) {
       b.innerHTML = keys.map(function (k) { return '<span class="chip" data-tip="' + k + '" role="img">' + ICONS[k] + '<span class="val"></span></span>'; }).join('');
@@ -1418,6 +1419,10 @@
     for (var d = 0; d < 6; d++) { var t = d * Math.PI / 3; g.beginPath(); g.arc(Math.cos(t) * q * 0.12, Math.sin(t) * q * 0.12, q * 0.025, 0, 7); g.fill(); }
     return (flowerSprites[key] = { c: c, half: pad / q });
   }
+  function flowersLeft() {
+    var l = current.level;
+    return (l.flowers || []).filter(function (f, i) { return i >= state.launches && !(state.picked && state.picked[f[1] * l.w + f[0]]); }).length;
+  }
   function drawFlower(p, size, seed, now, withLeaves) {
     var phase = reduced ? 0 : Math.sin(now / 760 + seed), step = Math.round((phase + 1) / 2 * SWAY_STEPS);
     var sp = flowerSprite(PETALS[seed % PETALS.length], 5 + seed % 2, size, step, withLeaves), h = sp.half * size;
@@ -1655,6 +1660,21 @@
     }
   }
   // Two opposite arrows in a small disc.
+  // An arrow's symbols, spaced evenly along it when it carries more than one.
+  function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
+    var items = [], left = state.launches;
+    if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+    if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
+    if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
+    if (a.uno !== undefined) items.push(function (c) { drawReverseIcon(c, cs * 0.27, color); });
+    if (a.phase) items.push(function (c) { drawPhaseIcon(c, cs * 0.26, color, now); });
+    if (a.red && left < a.red) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.red - left), a.red - left <= 2 ? '#c8202f' : color); drawMiniCard({ x: c.x + cs * 0.21, y: c.y + cs * 0.21 }, cs * 0.17); });
+    if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.34); });
+    items.forEach(function (draw, i) {
+      var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
+      scaled(c, pop, function () { draw(c); });
+    });
+  }
   function drawReverseIcon(c, r, color) {
     ctx.save(); ctx.translate(c.x, c.y); ctx.globalAlpha = 1;
     ctx.fillStyle = colors.card; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, r * 0.14); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -1775,7 +1795,12 @@
   }
   // Flowers a bee took early, because they alone were holding up the board.
   function takeEarlyFlowers(now) {
-    var l = current.level;
+    var l = current.level, log = state.rescued;
+    if (log) {
+      log.fire.forEach(function (k) { addRipple(px([k % l.w, Math.floor(k / l.w)]), '#ff8a22', 2); });
+      log.ice.concat(log.freed).forEach(function (id) { var m = l.arrows[id]; addRipple(px(m.cells[m.cells.length >> 1]), '#e0a100', 2.4); });
+      state.rescued = null;
+    }
     (state.pickedNew || []).splice(0).forEach(function (k) {
       var p = px([k % l.w, Math.floor(k / l.w)]), right = p.x > vw / 2;
       beesLeaving.push({ from: { x: p.x, y: p.y - cs * 0.28 }, to: { x: right ? vw + 70 : -70, y: 40 + ((k * 61) % 200) }, start: now, seed: (k % l.w) * 7 + Math.floor(k / l.w) * 3 });
@@ -2073,6 +2098,7 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
+    html += '<div class="modes"><button id="mIceTest"><b>Test level: ice warning</b><span>Temporary. After 2 launches, only hitting the ice is possible.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -2084,6 +2110,7 @@
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
+    s.querySelector('#mIceTest').onclick = openIceTest;
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () { openEndless(); };
@@ -2134,7 +2161,8 @@
   }
   // The very first level also explains the point of the game.
   function levelDemos() {
-    return (current.set === 'calm' && current.index === 0 ? ['goal'] : []).concat(mechanicsOf(current.level));
+    var combo = (current.set === 'hard' && current.index === 0) || current.level.arrows.some(function (a) { return E.traitCount(a) >= 2 && a.kind !== 'twin'; });
+    return (current.set === 'calm' && current.index === 0 ? ['goal'] : []).concat(combo ? ['combo'] : [], mechanicsOf(current.level));
   }
   // Automated test browsers skip these unless asked, so they can play straight through.
   var holdTutorials = false, tutorialsOff = !!navigator.webdriver && location.hash.indexOf('tut') < 0;
@@ -2262,15 +2290,9 @@
             setStroke(color, w, alpha); chevron(res.end, res.tan, cs * 0.24 * (0.4 + 0.6 * ff + 0.35 * Math.sin(ft * Math.PI)));
           } else chevron(res.end, res.tan, cs * 0.24);
           var centre = pointAlong(pts, shift + len / 2), tail = px(a.cells[0]);
-          if (a.kind === 'twin') badge(centre, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0)));
+          drawTraits(a, pts, shift, len, color, ghostForm, 1, now);
           if (a.isKey) { drawStar(tail, cs * 0.34, now); pairTag(tail, cs * 0.34, 1); }
           if (a.key !== undefined && !sv.removed[a.key]) { drawMoon(tail, cs * 0.34, now); pairTag(tail, cs * 0.34, 1); }
-          if (a.wait && sv.launches < a.wait) badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - sv.launches), color);
-          if (a.ghostPhase !== undefined) drawGhostIcon(centre, cs * 0.3, ghostForm, now);
-          if (a.phase) drawPhaseIcon(centre, cs * 0.26, color, now);
-          if (a.uno !== undefined) drawReverseIcon(centre, cs * 0.27, color);
-          if (a.red && sv.launches < a.red) { badge(centre, cs * 0.29, colors.card, colors.ink, String(a.red - sv.launches), a.red - sv.launches <= 1 ? '#c8202f' : color); drawMiniCard({ x: centre.x + cs * 0.21, y: centre.y + cs * 0.21 }, cs * 0.17); }
-          if (a.red && sv.launches >= a.red) drawMiniCard(centre, cs * 0.34);
           if (frozen) drawIce(centre, cs * 0.3);
           ctx.restore();
         });
@@ -2464,6 +2486,18 @@
     pluck(146.8, 0, 0.12, 0.7);
     track('rewind', { launches: state.launches });
     hintArrow = -1; refresh();
+  };
+  // A testing aid: shows the next play and confirms the board is not in a dead end. It uses no hints.
+  $('bNext').onclick = function () {
+    audio();
+    var l = current.level, legal = E.legalMoves(l, state), hits = E.iceHits(l, state), sol = E.solve(l, state, l.big ? 8000 : 120000), id = -1, msg;
+    if (sol.solved && sol.sequence.length && legal.indexOf(sol.sequence[0]) >= 0) { id = sol.sequence[0]; msg = 'Next play: the highlighted arrow.'; }
+    else if (legal.length) { id = legal[0]; msg = sol.exhausted ? 'Next play: the highlighted arrow.' : 'A play exists, but this board may not clear from here.'; }
+    else if (hits.length) { id = hits[0]; msg = 'Next play: hit the ice with the highlighted arrow. It costs nothing.'; }
+    else msg = 'Dead end: no play is possible.';
+    setCaption(msg);
+    if (id >= 0) { hintArrow = id; hintStart = performance.now(); focusArrow(id); }
+    track('next_play', { found: id >= 0, solved: !!sol.solved });
   };
   $('bHint').onclick = function () {
     audio();

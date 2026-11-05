@@ -83,6 +83,8 @@ autumn[0].caption='Wind can spin arrows around their tails when there is room.';
 const mix=(set,list)=>list.forEach((m,i)=>{if(!m)return;const[g,p,r,u]=m;Object.assign(set[set.length-list.length+i],{ghosts:g,phases:p,reds:r,unos:u})});
 mix(calm,[[1,1,1,1],[1,1,1,2],[2,2,1,2]]);
 mix(hard,[[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0],[1,0,0,1],[0,2,0,1],[1,0,2,0],[2,0,1,1],[2,2,1,1],[1,2,2,2],[2,2,1,2],[2,2,2,2]]);
+// Every Hard board has arrows that carry several effects at once.
+hard.forEach((x,i)=>{x.combos=1+Math.floor(i/4)});
 mix(timed,[0,0,[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0],[1,0,0,1],[0,1,1,0],[1,2,0,1],[2,1,0,1],[1,1,2,1],[2,1,1,2]]);
 // Season levels open on the effect alone, then bring the arrows back one at a time.
 const seasonMix=[[1,0,0,0],[0,0,0,1],[0,1,0,0],[0,0,1,0]];

@@ -70,6 +70,9 @@
     goal: { title: 'Get every arrow off the board', text: 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.', w: 5, h: 4,
       arrows: [P(0, [[0, 0], [1, 0]], 1), P(1, [[0, 2], [1, 2]], 1), P(2, [[3, 3], [3, 2]], 0)],
       steps: [{ tap: 0, expect: 'ok', say: 'Tap an arrow and it leaves the way it points' }, { tap: 1, expect: 'hit', say: 'If another arrow is in the way, it bounces back' }, { tap: 2, expect: 'ok', say: 'So clear the way first' }, { tap: 1, expect: 'ok', say: 'Now it can leave too' }], end: 'All arrows gone: board cleared!' },
+    combo: { title: 'Arrows with several effects', text: 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.', w: 5, h: 4,
+      arrows: [P(0, [[1, 1], [2, 1], [3, 1]], 1, { wait: 1, uno: 0 }), P(1, [[1, 3], [2, 3]], 1), P(2, [[4, 2], [4, 1], [4, 0]], 0)],
+      steps: [{ tap: 0, expect: 'wait', say: 'Patient and reverse: it must wait 1 launch' }, { tap: 1, expect: 'ok', say: 'One launch, and its tip also swaps ends' }, { tap: 0, expect: 'ok', say: 'Both rules are met: it leaves the other way' }, { tap: 2, expect: 'ok', say: '' }] },
     twin: { title: 'Twins', text: 'Twins share a colour and a letter. They leave together, so both paths must be clear.', w: 5, h: 4,
       arrows: [P(0, [[0, 0], [1, 0]], 1, { kind: 'twin', twin: 1, pair: 0 }), P(1, [[0, 2], [1, 2]], 1, { kind: 'twin', twin: 0, pair: 0 }), P(2, [[3, 3], [3, 2]], 0)],
       steps: [{ tap: 0, expect: 'hit', say: 'One twin is blocked, so neither can go' }, { tap: 2, expect: 'ok', say: 'Clear the way first' }, { tap: 0, expect: 'ok', say: 'Now both leave together' }] },
@@ -150,6 +153,7 @@
       var key = y * level.w + x;
       var mirror = level.mirrorAt && level.mirrorAt[key];
       if (mirror) { d = TURN[mirror][d]; path.push([x, y]); continue; }
+      if (state.freed && state.freed[a.id] && !(level.mirrorAt && level.mirrorAt[y * level.w + x])) continue;
       // A phase arrow slips through one occupied tile of anything, as long as the tile after it is open.
       if (a.phase && !phased && tileBlocks(level, state, a, partner, key)) {
         var nx = x + DX[d], ny = y + DY[d];
@@ -169,13 +173,14 @@
   // A red card arrow not played in time is sent off until only sent-off arrows remain.
   function hasRedCard(state, a) { return !!a.red && state.launches >= a.red; }
   function isRedCarded(state, a) {
-    if (!hasRedCard(state, a)) return false;
+    if (!hasRedCard(state, a) || (state.redLift && state.redLift[a.id])) return false;
     var list = state.arrowsRef;
     if (!list) return true;
     return !list.every(function (x) { return state.removed[x.id] || hasRedCard(state, x); });
   }
   // Sleepers wait for their key arrow to leave. Patient arrows wait for a number of launches.
   function isReady(state, a) {
+    if (state.freed && state.freed[a.id]) return !(state.frozen && state.frozen[a.id] !== undefined);
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (a.wait && state.launches < a.wait) return false;
     if (state.frozen && state.frozen[a.id] !== undefined) return false;
@@ -201,8 +206,9 @@
     if (ice.length && ice.length === hit.length) {
       ice.forEach(function (r) { delete state.frozen[r.check.blocker]; });
       // Freed but still hemmed in by fire or more ice: clear them, so effects can never trap the player.
-      if (isStuck(level, state)) { state.frozen = {}; state.burning = {}; }
+      if (!state.safe && isStuck(level, state)) { state.frozen = {}; state.burning = {}; }
       unstickGhosts(level, state);
+      if (state.safe) ensurePlay(level, state);
       return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
     }
     if (hit.length) {
@@ -211,13 +217,15 @@
     }
     {
       state.snaps = state.snaps || [];
-      state.snaps.push({ picked: Object.assign({}, state.picked), ghostFlip: state.ghostFlip, eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
+      state.snaps.push({ freed: Object.assign({}, state.freed), redLift: Object.assign({}, state.redLift), picked: Object.assign({}, state.picked), ghostFlip: state.ghostFlip, eventDone: state.eventDone, frozen: Object.assign({}, state.frozen), burning: Object.assign({}, state.burning),
         geo: level.arrows.map(function (a) { return { cells: a.cells, dir: a.dir }; }) });
     }
     members.forEach(function (m) { state.removed[m.id] = true; });
     state.history.push(members.map(function (m) { return m.id; }));
     state.launches++;
     unstickGhosts(level, state);
+    // Season boards run this check after their effects, once the board has settled.
+    if (state.safe && !effectsOf(level).length) ensurePlay(level, state);
     return { ok: true, results: results, won: state.removed.every(Boolean) };
   }
   // Rewind restores the last launch. Lives stay as they are.
@@ -228,7 +236,7 @@
     state.launches--;
     var snap = state.snaps && state.snaps.pop();
     if (snap && level) {
-      state.frozen = snap.frozen; state.burning = snap.burning; state.eventDone = snap.eventDone; state.ghostFlip = snap.ghostFlip; state.picked = snap.picked;
+      state.frozen = snap.frozen; state.burning = snap.burning; state.eventDone = snap.eventDone; state.ghostFlip = snap.ghostFlip; state.picked = snap.picked; state.freed = snap.freed; state.redLift = snap.redLift;
       level.arrows.forEach(function (a, i) { a.cells = snap.geo[i].cells; a.dir = snap.geo[i].dir; });
       rebuildGrid(level, state);
     }
@@ -249,6 +257,7 @@
       if (!isStuck(level, state)) return true;
       state.ghostFlip--;
     }
+    if (state.safe) return false;
     // Only flowers are in the way: a bee comes early for one, so playing in a different order can't strand the board.
     var guard = 0;
     while (isStuck(level, state) && guard++ < 400) {
@@ -311,6 +320,102 @@
     }
     state.frozen = frozen;
     return found;
+  }
+  /* ---------- The safety net: after every action, the board must still be clearable ---------- */
+  // What stands between an arrow and the edge: fire and flowers can be removed, solid arrows cannot.
+  function obstaclesOf(level, state, a) {
+    var d = dirOf(a, state), h = tipOf(a, state), x = h[0], y = h[1], out = { fire: [], flowers: [], solid: 0 }, guard = 0, partner = partnerOf(a);
+    while (guard++ < 400) {
+      x += DX[d]; y += DY[d];
+      if (x < 0 || y < 0 || x >= level.w || y >= level.h) break;
+      var k = y * level.w + x;
+      if (level.mirrorAt[k]) { d = TURN[level.mirrorAt[k]][d]; continue; }
+      if (state.burning[k] > state.launches) out.fire.push(k);
+      if (flowerStands(level, state, k)) out.flowers.push(k);
+      var o = level.grid[k];
+      if (o !== -1 && o !== a.id && o !== partner && !state.removed[o] && !isGhost(state, level.arrows[o])) out.solid++;
+    }
+    return out;
+  }
+  function boardClearable(level, state) {
+    if (isWon(state)) return true;
+    if (!legalMoves(level, state).length && !iceOpensPlay(level, state)) return false;
+    var live = state.removed.filter(function (x) { return !x; }).length, sol = solve(level, state, Math.max(3000, live * 12));
+    return sol.solved || sol.exhausted;
+  }
+  // Tries a change, and keeps it only if the board can then be cleared.
+  function tryRescue(level, state, change) {
+    var keep = { burning: state.burning, frozen: state.frozen, picked: state.picked, freed: state.freed, redLift: state.redLift };
+    state.burning = Object.assign({}, keep.burning); state.frozen = Object.assign({}, keep.frozen); state.picked = Object.assign({}, keep.picked); state.freed = Object.assign({}, keep.freed); state.redLift = Object.assign({}, keep.redLift);
+    change();
+    if (boardClearable(level, state)) return true;
+    state.burning = keep.burning; state.frozen = keep.frozen; state.picked = keep.picked; state.freed = keep.freed; state.redLift = keep.redLift;
+    return false;
+  }
+  // Removes as little as possible. First the arrow that needs the fewest tiles cleared, then red cards, then,
+  // only if arrows truly block one another, one arrow is freed to fly through anything.
+  function rescueStep(level, state) {
+    state.rescued = state.rescued || { fire: [], ice: [], freed: [] };
+    var live = level.arrows.filter(function (a) { return !state.removed[a.id] && !(a.kind === 'twin' && a.twin < a.id); });
+    var withoutIce = { frozen: {}, launches: state.launches, ghostFlip: state.ghostFlip, removed: state.removed, arrowsRef: state.arrowsRef, redLift: state.redLift, freed: state.freed };
+    var soft = [];
+    live.forEach(function (a) {
+      var fire = {}, flowers = {}, solid = 0, ice = [], ready = true;
+      group(level, a).forEach(function (m) {
+        var o = obstaclesOf(level, state, m);
+        solid += o.solid; o.fire.forEach(function (k) { fire[k] = 1; }); o.flowers.forEach(function (k) { flowers[k] = 1; });
+        if (state.frozen[m.id] !== undefined) ice.push(m.id);
+        if (!isReady(withoutIce, m)) ready = false;
+      });
+      if (ready && !solid) soft.push({ a: a, fire: Object.keys(fire).map(Number), flowers: Object.keys(flowers).map(Number), ice: ice, cost: Object.keys(fire).length + Object.keys(flowers).length + ice.length });
+    });
+    soft.sort(function (p, q) { return p.cost - q.cost; });
+    for (var i = 0; i < soft.length && i < 10; i++) {
+      var c = soft[i];
+      var done = tryRescue(level, state, function () {
+        c.fire.forEach(function (k) { delete state.burning[k]; });
+        c.flowers.forEach(function (k) { state.picked[k] = true; });
+        c.ice.forEach(function (id) { delete state.frozen[id]; });
+      });
+      if (done) {
+        c.fire.forEach(function (k) { state.rescued.fire.push(k); });
+        c.ice.forEach(function (id) { state.rescued.ice.push(id); });
+        if (c.flowers.length) state.pickedNew = (state.pickedNew || []).concat(c.flowers);
+        return true;
+      }
+    }
+    var carded = live.filter(function (a) { return isRedCarded(state, a); });
+    for (i = 0; i < carded.length; i++) {
+      var red = carded[i];
+      if (tryRescue(level, state, function () { state.redLift[red.id] = true; })) { state.rescued.freed.push(red.id); return true; }
+    }
+    // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
+    var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s }; }).sort(function (p, q) { return p.s - q.s; });
+    var free = function (a) { group(level, a).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
+    for (i = 0; i < order.length && i < 10; i++) {
+      var f = order[i].a;
+      if (tryRescue(level, state, function () { free(f); })) { state.rescued.freed.push(f.id); return true; }
+    }
+    // Nothing single proved enough, so make progress and let the check run again.
+    state.burning = Object.assign({}, state.burning); state.frozen = Object.assign({}, state.frozen); state.picked = Object.assign({}, state.picked); state.freed = Object.assign({}, state.freed);
+    var step = soft.filter(function (c) { return c.cost > 0; })[0];
+    if (step) {
+      step.fire.forEach(function (k) { delete state.burning[k]; state.rescued.fire.push(k); });
+      step.flowers.forEach(function (k) { state.picked[k] = true; });
+      step.ice.forEach(function (id) { delete state.frozen[id]; state.rescued.ice.push(id); });
+      if (step.flowers.length) state.pickedNew = (state.pickedNew || []).concat(step.flowers);
+      return true;
+    }
+    var next = order.filter(function (o) { return !state.freed[o.a.id]; })[0];
+    if (!next) return false;
+    free(next.a); state.rescued.freed.push(next.a.id);
+    return true;
+  }
+  function ensurePlay(level, state) {
+    for (var guard = 0; guard < 30 && !boardClearable(level, state); guard++) {
+      if (!rescueStep(level, state)) break;
+      state.rescueCount = (state.rescueCount || 0) + 1;
+    }
   }
   function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && !iceOpensPlay(level, state); }
 
@@ -414,17 +519,18 @@
     }
     if (ev.freeze.length || ev.burn.length || ev.rotate.length || hasEffect(level, 'spring')) state.eventDone = true;
     // If nothing can move, fire dies and ice melts, so effects alone can never trap the player.
-    if (isStuck(level, state) && (Object.keys(state.frozen).length || Object.keys(state.burning).length)) {
+    if (!state.safe && isStuck(level, state) && (Object.keys(state.frozen).length || Object.keys(state.burning).length)) {
       ev.thaw = ev.thaw.concat(Object.keys(state.frozen).map(Number));
       state.frozen = {}; state.burning = {}; ev.cleared = true;
     }
     unstickGhosts(level, state);
+    if (state.safe) ensurePlay(level, state);
     return ev;
   }
 
   // Depth-first search with memoised dead ends.
   function solve(level, from, budget) {
-    var state = { picked: from.picked, removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {}, ghostFlip: from.ghostFlip || 0, arrowsRef: level.arrows };
+    var state = { picked: from.picked, freed: from.freed, redLift: from.redLift, removed: from.removed.slice(), launches: from.launches, lives: null, history: [], burning: from.burning ? Object.assign({}, from.burning) : {}, ghostFlip: from.ghostFlip || 0, arrowsRef: level.arrows };
     var hasGhosts = level.arrows.some(function (a) { return a.ghostPhase !== undefined || a.uno !== undefined; }), hasFlowers = !!(level.flowers && level.flowers.length);
     var flipping = false, dead = {}, nodes = 0, limit = budget || 200000, exhausted = false, path = [];
     function dfs() {
@@ -771,6 +877,32 @@
     chosen.forEach(function (c) { c.a.uno = c.phase; });
     return true;
   }
+  // Hard boards: some arrows carry several effects at once (up to 3, season effects not counted).
+  function traitCount(a) {
+    return (a.kind === 'twin' ? 1 : 0) + (a.key !== undefined ? 1 : 0) + (a.isKey ? 1 : 0) + (a.wait ? 1 : 0) + (a.ghostPhase !== undefined ? 1 : 0) + (a.phase ? 1 : 0) + (a.red ? 1 : 0) + (a.uno !== undefined ? 1 : 0);
+  }
+  function assignCombos(level, spec, r) {
+    var n = level.solution.length, stepOf = {};
+    level.solution.forEach(function (id, i) { stepOf[id] = i; });
+    var pool = level.arrows.filter(function (a) { return a.kind === 'plain' && a.cells.length >= 3 && stepOf[a.id] !== undefined; });
+    pool = shuffle(pool, r).sort(function (p, q) { return traitCount(q) - traitCount(p); });
+    var made = 0;
+    pool.some(function (a) {
+      if (made >= spec.combos) return true;
+      var step = stepOf[a.id], want = traitCount(a) ? 2 + (r() < 0.4 ? 1 : 0) : 2 + (r() < 0.3 ? 1 : 0);
+      var adders = shuffle([
+        function () { if (a.ghostPhase !== undefined) return false; a.ghostPhase = step % 2; return true; },
+        function () { if (a.uno !== undefined) return false; a.uno = step % 2; return true; },
+        function () { if (a.phase) return false; a.phase = true; return true; },
+        function () { if (a.wait || a.isKey || step < 2) return false; a.wait = 2 + Math.floor(r() * Math.min(step - 1, 5)); return true; },
+        function () { if (a.red || a.isKey) return false; var count = Math.max(3, step + 2 + Math.floor(n * (spec.redSlack || 0))); if (count > n - 2) return false; a.red = count; return true; }
+      ], r);
+      for (var i = 0; i < adders.length && traitCount(a) < Math.min(3, want); i++) adders[i]();
+      if (traitCount(a) >= 2) made++;
+      return false;
+    });
+    return made >= spec.combos;
+  }
   function replays(level) {
     var s = newState(level); s.lives = null;
     return level.solution.every(function (id) { return tap(level, s, id).ok; }) && isWon(s);
@@ -785,7 +917,9 @@
       prepare(lvl);
       if (spec.flowers) plantFlowers(lvl, rng32(useSeed + 5));
       if (spec.phases && !assignPhases(lvl, spec, rng32(useSeed + 9))) continue;
-      if (spec.unos && (!assignReverse(lvl, spec, rng32(useSeed + 13)) || !replays(lvl))) continue;
+      if (spec.unos && !assignReverse(lvl, spec, rng32(useSeed + 13))) continue;
+      if (spec.combos && !assignCombos(lvl, spec, rng32(useSeed + 17))) continue;
+      if ((spec.unos || spec.combos) && !replays(lvl)) continue;
       var hasCompass = (spec.compass || 0) > 0;
       var start = newState(lvl);
       var startFree = legalMoves(lvl, start).length;
@@ -799,7 +933,11 @@
           check(lvl, { removed: lvl.arrows.map(function () { return true; }), launches: 1e9 }, a).path.forEach(function (c) { seen[c.join()] = 1; });
         });
         mirrorUse = Object.keys(seen).length;
-        if (mirrorUse < lvl.mirrors.length) continue;
+        if (spec.big && mirrorUse > 0) {
+          // On big maps a mirror no arrow can reach is simply left out.
+          lvl.mirrors = lvl.mirrors.filter(function (mi) { return seen[mi.x + ',' + mi.y]; });
+          prepare(lvl);
+        } else if (mirrorUse < lvl.mirrors.length) continue;
       }
       var score = lvl.density * 4 + Math.min(depth, spec.depth || 4) - startFree * 0.15;
       if (hasCompass && !spec.big) {
@@ -828,7 +966,7 @@
       w: Math.round(Math.min(9, 6 + size + extra) * root), h: Math.round(Math.min(12, 7 + size + (size > 2 ? 1 : 0) + extra) * root), minLen: 2,
       maxLen: 5 + size + extra + Math.round(root * 1.5), depth: 5 + size + extra * 2,
       twins: more(Math.min(2, Math.floor(n / 3)) + (hard ? 1 : 0)), compass: more(Math.min(2, Math.floor((n + 1) / 4)) + (hard ? 1 : 0)),
-      sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more((n % 5 === 3 ? 2 : 0) + (hard && n % 2 ? 2 : 0)), patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
+      sleepers: more((n % 5 === 2 ? 1 : 0) + (hard ? 1 : 0)), mirrors: more(1 + (n % 3 === 0 ? 1 : 0) + (hard && n % 2 ? 2 : 0)), combos: hard ? more(1) : 0, patient: more((n % 5 === 4 ? 1 : 0) + (hard && n % 2 === 0 ? 1 : 0)),
       trap: hard ? [0.15, 0.7] : [0.05, 0.45], lives: hard ? 2 : null, hints: hard ? 0 : 1,
       ghosts: special.ghosts ? more(1 + extraOf) : 0, unos: special.unos ? more(1 + extraOf) : 0, phases: special.phases ? more(1 + extraOf) : 0,
       // Red cards can trap you, so big maps use few of them and give them more time.
@@ -841,17 +979,18 @@
     var spec = endlessSpec(n, opts);
     var tries = spec.big ? 3 : 30;
     var lvl = generate(spec, seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: Math.ceil((spec.mirrors || 0) / 2) }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0 }), seed, tries)
       || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0 }), seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries)
-      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0, ghosts: 0, phases: 0, reds: 0, unos: 0 }), seed, tries * 2);
+      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, ghosts: 0, phases: 0, reds: 0, unos: 0, combos: 0 }), seed, tries)
+      || generate(Object.assign({}, spec, { mirrors: 0, compass: 0, sleepers: 0, patient: 0, twins: 0, ghosts: 0, phases: 0, reds: 0, unos: 0, combos: 0 }), seed, tries * 2);
     lvl.hints = spec.hints; lvl.big = spec.big; lvl.effects = opts && opts.effects ? opts.effects.slice() : [];
     return lvl;
   }
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    TUTORIALS: TUTORIALS, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
