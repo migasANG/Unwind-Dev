@@ -352,7 +352,7 @@
   function openGoldTest() {
     var lvl = E.prepare({ w: 5, h: 5, lives: 3, hints: 1, caption: 'Test level: play the arrow at the top to see the golden arrow.', arrows: [
       { id: 0, kind: 'plain', cells: [[0, 0], [1, 0]], dir: 1 },
-      { id: 1, kind: 'plain', cells: [[1, 3], [1, 2]], dir: 1 }, { id: 2, kind: 'plain', cells: [[3, 2], [3, 3]], dir: 3 }] });
+      { id: 1, kind: 'plain', cells: [[1, 3], [1, 2], [2, 2]], dir: 1 }, { id: 2, kind: 'plain', cells: [[3, 1], [3, 2], [3, 3], [2, 3]], dir: 3 }] });
     begin({ id: 'test-gold', mode: 'test', level: lvl, title: 'Test level', chapter: CHAPTERS[timeChapter()], sunY: 34 });
   }
   // A temporary test level: after two launches, the only possible play is to crack the ice.
