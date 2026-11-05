@@ -125,7 +125,7 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-ra
 #caption.on{opacity:1}
 #caption.watchable{cursor:pointer;pointer-events:auto}
 #caption.watchable::before{content:'▶';font-size:.75em;margin-right:.45em;vertical-align:.08em}
-nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,84px));justify-content:center;gap:4px}
+nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,84px);justify-content:center;gap:4px}
 nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px;transition:opacity .3s ease,background .3s ease}
 nav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 nav button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
@@ -254,6 +254,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
+  <button id="bNextTheme" hidden><svg viewBox="0 0 24 24"><path d="M5 5v14l9-7ZM14 5v14l5.500-7Z"/></svg>Next Theme</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
 <div id="sheetHost"></div>
@@ -1633,7 +1634,7 @@ window.UnwindI18n = (function () {
     'Arrow guide': 'Guia das setas', 'On this board': 'Neste tabuleiro', '▶ Watch how it works': '▶ Ver como funciona', 'Music and sound': 'Música e som', 'Settings': 'Definições', 'Language': 'Idioma', 'Music': 'Música', 'Sound effects': 'Efeitos sonoros', 'Theme': 'Tema', 'Follow the level': 'Seguir o nível', 'Matches the time of day or season': 'Acompanha a hora do dia ou a estação do ano', 'Music is off': 'Música desligada',
     'Sound on for the full experience': 'Liga o som para a experiência completa', 'Tap to begin': 'Toca para começar',
     'Puzzle board. Tap an arrow to send it off the board.': 'Tabuleiro do puzzle. Toca numa seta para a enviar para fora do tabuleiro.', 'Music and sound settings': 'Definições de música e som', 'Settings ': 'Definições', 'Choose a background': 'Escolher um fundo', 'Zoom in': 'Aproximar', 'Zoom out': 'Afastar', 'Show the whole board': 'Mostrar o tabuleiro todo', 'Close': 'Fechar',
-    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'The backgrounds will change with the music: when a song ends, the next scene fades in.': 'Os fundos mudam com a música: quando uma música acaba, o cenário seguinte aparece suavemente.', 'High Sun': 'Sol a Pino', 'Noon: sunny vibraphone and soft guitar': 'Meio-dia: vibrafone solarengo e guitarra suave', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
+    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'The backgrounds will change with the music: when a song ends, the next scene fades in.': 'Os fundos mudam com a música: quando uma música acaba, o cenário seguinte aparece suavemente.', 'High Sun': 'Sol a Pino', 'Noon: sunny vibraphone and soft guitar': 'Meio-dia: vibrafone solarengo e guitarra suave', 'Next Theme': 'Tema seguinte', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
     // Demos
     'Get every arrow off the board': 'Tira todas as setas do tabuleiro', 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.': 'O objetivo do jogo é fazer sair todas as setas do tabuleiro. Uma seta sai na direção para onde aponta, por isso o caminho tem de estar livre. Acertar noutra seta custa uma vida.', 'Tap an arrow and it leaves the way it points': 'Toca numa seta e ela sai na direção para onde aponta', 'If another arrow is in the way, it bounces back': 'Se houver outra seta no caminho, ressalta', 'So clear the way first': 'Por isso, liberta primeiro o caminho', 'Now it can leave too': 'Agora também pode sair', 'All arrows gone: board cleared!': 'Saíram todas: tabuleiro limpo!',
     'Twins share a colour and a letter. They leave together, so both paths must be clear.': 'As gémeas têm a mesma cor e letra. Saem juntas, por isso os dois caminhos têm de estar livres.', 'One twin is blocked, so neither can go': 'Uma gémea está bloqueada, por isso nenhuma sai', 'Clear the way first': 'Primeiro, liberta o caminho', 'Now both leave together': 'Agora saem as duas juntas',
@@ -2049,8 +2050,6 @@ window.UnwindI18n = (function () {
     s.querySelectorAll('[data-bg]').forEach(function (b) {
       b.onclick = function () {
         setBackground(b.getAttribute('data-bg'));
-        // The default background follows the music, so the music setting goes back to Follow the level.
-        if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         s.querySelectorAll('[data-bgnote]').forEach(function (n) { n.textContent = bgNote(n.getAttribute('data-bgnote')); });
         if (onPick) onPick();
@@ -2060,7 +2059,7 @@ window.UnwindI18n = (function () {
   function backgroundSheet() {
     var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel'));
     s.querySelector('#x').onclick = closeSheet;
-    wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); });
+    wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); refresh(); });
   }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
   function endlessPlan() {
@@ -2079,7 +2078,6 @@ window.UnwindI18n = (function () {
   function startEndless(plan, lvl) {
     // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
     if (!current || current.mode !== 'endless') resetCycle();
-    if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -2268,6 +2266,7 @@ window.UnwindI18n = (function () {
     }
     shownLives = lives;
     drawBadge();
+    $('bNextTheme').hidden = !cycleOn();
     $('bRewind').disabled = !state.history.length || ended;
     $('bHint').disabled = hintsLeft <= 0 || ended;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
@@ -3963,7 +3962,11 @@ window.UnwindI18n = (function () {
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
-    s.querySelector('#mGo').onclick = function () { openEndless(); };
+    s.querySelector('#mGo').onclick = function () {
+      // Loading Open Water with the default background: the music follows the backgrounds.
+      if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
+      openEndless();
+    };
     [['#oHard', 'hard'], ['#oTimed', 'timed']].forEach(function (pair) {
       s.querySelector(pair[0]).onclick = function () {
         var o = endlessOpts(); o[pair[1]] = !o[pair[1]]; progress.endlessOpts = o; save('unwind.progress2', progress);
@@ -4276,12 +4279,13 @@ window.UnwindI18n = (function () {
     var v = Math.round((value === undefined ? 1 : value) * 100);
     return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"></label>';
   }
+  var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
   function settingsSheet() {
     var themeRow = function (id, name, mood) { return '<button class="theme" data-theme-id="' + id + '" aria-pressed="' + (audioPrefs.theme === id) + '"><b>' + name + '</b><span>' + mood + '</span></button>'; };
     var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' + volumeBar('vMusic', 'Music volume', audioPrefs.musicVol) +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
-      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
+      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
     var s = sheet(html);
     wireLanguage(s);
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
@@ -4340,6 +4344,15 @@ window.UnwindI18n = (function () {
     pluck(146.8, 0, 0.12, 0.7);
     track('rewind', { launches: state.launches });
     hintArrow = -1; refresh();
+  };
+  // Skips straight to the next background and song in Open Water's rotation.
+  $('bNextTheme').onclick = function () {
+    audio();
+    if (!cycleOn()) return;
+    bgCycle.i = (bgCycle.i + 1) % CYCLE.length;
+    bgCycle.gapUntil = performance.now() + 160;
+    applyBackgroundNow();
+    track('next_theme', { to: CYCLE[bgCycle.i] });
   };
   $('bHint').onclick = function () {
     audio();

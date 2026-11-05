@@ -123,7 +123,7 @@ button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-ra
 #caption.on{opacity:1}
 #caption.watchable{cursor:pointer;pointer-events:auto}
 #caption.watchable::before{content:'▶';font-size:.75em;margin-right:.45em;vertical-align:.08em}
-nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,minmax(0,84px));justify-content:center;gap:4px}
+nav.ui{bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,84px);justify-content:center;gap:4px}
 nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px;transition:opacity .3s ease,background .3s ease}
 nav button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 nav button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
@@ -252,6 +252,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
+  <button id="bNextTheme" hidden><svg viewBox="0 0 24 24"><path d="M5 5v14l9-7ZM14 5v14l5.500-7Z"/></svg>Next Theme</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
 <div id="sheetHost"></div>

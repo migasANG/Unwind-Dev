@@ -313,8 +313,6 @@
     s.querySelectorAll('[data-bg]').forEach(function (b) {
       b.onclick = function () {
         setBackground(b.getAttribute('data-bg'));
-        // The default background follows the music, so the music setting goes back to Follow the level.
-        if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         s.querySelectorAll('[data-bgnote]').forEach(function (n) { n.textContent = bgNote(n.getAttribute('data-bgnote')); });
         if (onPick) onPick();
@@ -324,7 +322,7 @@
   function backgroundSheet() {
     var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel'));
     s.querySelector('#x').onclick = closeSheet;
-    wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); });
+    wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); refresh(); });
   }
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
   function endlessPlan() {
@@ -343,7 +341,6 @@
   function startEndless(plan, lvl) {
     // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
     if (!current || current.mode !== 'endless') resetCycle();
-    if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -532,6 +529,7 @@
     }
     shownLives = lives;
     drawBadge();
+    $('bNextTheme').hidden = !cycleOn();
     $('bRewind').disabled = !state.history.length || ended;
     $('bHint').disabled = hintsLeft <= 0 || ended;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
@@ -2227,7 +2225,11 @@
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
-    s.querySelector('#mGo').onclick = function () { openEndless(); };
+    s.querySelector('#mGo').onclick = function () {
+      // Loading Open Water with the default background: the music follows the backgrounds.
+      if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
+      openEndless();
+    };
     [['#oHard', 'hard'], ['#oTimed', 'timed']].forEach(function (pair) {
       s.querySelector(pair[0]).onclick = function () {
         var o = endlessOpts(); o[pair[1]] = !o[pair[1]]; progress.endlessOpts = o; save('unwind.progress2', progress);
@@ -2540,12 +2542,13 @@
     var v = Math.round((value === undefined ? 1 : value) * 100);
     return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"></label>';
   }
+  var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
   function settingsSheet() {
     var themeRow = function (id, name, mood) { return '<button class="theme" data-theme-id="' + id + '" aria-pressed="' + (audioPrefs.theme === id) + '"><b>' + name + '</b><span>' + mood + '</span></button>'; };
     var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' + volumeBar('vMusic', 'Music volume', audioPrefs.musicVol) +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
-      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
+      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
     var s = sheet(html);
     wireLanguage(s);
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
@@ -2604,6 +2607,15 @@
     pluck(146.8, 0, 0.12, 0.7);
     track('rewind', { launches: state.launches });
     hintArrow = -1; refresh();
+  };
+  // Skips straight to the next background and song in Open Water's rotation.
+  $('bNextTheme').onclick = function () {
+    audio();
+    if (!cycleOn()) return;
+    bgCycle.i = (bgCycle.i + 1) % CYCLE.length;
+    bgCycle.gapUntil = performance.now() + 160;
+    applyBackgroundNow();
+    track('next_theme', { to: CYCLE[bgCycle.i] });
   };
   $('bHint').onclick = function () {
     audio();
