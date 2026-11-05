@@ -54,6 +54,21 @@ t('phase arrows slip through one tile of anything, but not two in a row, and fir
  l=mk({flowers:[[1,0],[3,0]]});assert.equal(E.check(l,E.newState(l),l.arrows[0]).clear,false);
  l=E.endlessBoard(2,{scale:10,effects:['summer']},5);E.prepare(l);let max=0;for(let i=0;i<120;i++){l.seed=i;const st=E.newState(l);E.tap(l,st,E.legalMoves(l,st)[0]);max=Math.max(max,E.seasonStep(l,st).burn.length)}assert(max>5&&max<=5*Math.round(l.w*l.h/56*.75),'10x fire '+max)});
 t('every tutorial plays exactly as scripted under the real rules and clears its board',()=>{Object.keys(E.TUTORIALS).forEach(key=>{const t=E.tutorialStart(key);t.steps.forEach((st,i)=>{if(st.spin!==undefined){E.tutorialSpin(t.level,st.spin);return}const r=E.tap(t.level,t.state,st.tap);if(st.spinWith!==undefined)E.tutorialSpin(t.level,st.spinWith);const got=r.ok?'ok':r.notReady?'wait':r.thawed?'thaw':'hit';assert.equal(got,st.expect,key+' step '+(i+1))});assert(E.isWon(t.state),key+' not cleared')})});
+t('ice that opens nothing counts as stuck, and the rescue clears it without a tap on the ice',()=>{
+ // Arrow 0 hits frozen arrow 1. Arrow 1 is blocked by fire. Thawing it opens nothing, because arrow 0 still hits arrow 1.
+ const l=E.prepare({w:6,h:4,lives:3,effects:['winter','summer'],seed:1,arrows:[{id:0,kind:'plain',cells:[[0,1],[1,1]],dir:1},{id:1,kind:'plain',cells:[[3,0],[3,1],[3,2]],dir:2},{id:2,kind:'plain',cells:[[5,3],[5,2]],dir:0}]});
+ const s=E.newState(l);s.frozen[1]=50;s.burning[3*6+3]=50;
+ const before=s.launches;assert.equal(E.isStuck(l,s),false,'arrow 2 can still launch');
+ assert.equal(E.tap(l,s,2).ok,true);assert.equal(s.launches,before+1);
+ assert.equal(E.legalMoves(l,s).length,0);assert.equal(E.iceHits(l,s).length,1);assert.equal(E.isStuck(l,s),true);
+ l.guaranteeAt=null;E.seasonStep(l,s);
+ assert.equal(Object.keys(s.frozen).length,0,'ice cleared');assert(!Object.keys(s.burning).some(k=>s.burning[k]>s.launches),'fire cleared');assert(E.legalMoves(l,s).length>0,'a play exists')});
+t('a crack that does open a play stays a free action and is not treated as stuck',()=>{
+ // Arrow 0 is blocked by frozen arrow 1, and thawed arrow 1 has a clear way out.
+ const l=E.prepare({w:6,h:3,lives:3,arrows:[{id:0,kind:'plain',cells:[[0,1],[1,1]],dir:1},{id:1,kind:'plain',cells:[[3,0],[3,1],[3,2]],dir:2}]});
+ const s=E.newState(l);s.frozen[1]=50;
+ assert.equal(E.legalMoves(l,s).length,0);assert.equal(E.isStuck(l,s),false);
+ const r=E.tap(l,s,0);assert.deepEqual(r.thawed,[1]);assert.equal(s.launches,0,'not a turn');assert.equal(s.lives,3,'no life lost');assert.equal(E.legalMoves(l,s).length>0,true)});
 t('fire scales with the map, and 25x maps work with every effect',()=>{let max=0;for(let i=0;i<300;i++){const l=E.prepare(JSON.parse(JSON.stringify(L.summer[6])));l.seed=i;l.guaranteeAt=null;const s=E.newState(l);E.tap(l,s,E.legalMoves(l,s)[0]);max=Math.max(max,E.seasonStep(l,s).burn.length)}assert(max<=5,'normal '+max);const big=E.endlessBoard(2,{scale:10,effects:['summer']},5);let bigMax=0;for(let i=0;i<120;i++){big.seed=i*7;E.resetBoard(big);const s=E.newState(big);s.lives=null;for(let g=0;g<8;g++){const m=E.legalMoves(big,s);if(!m.length)break;E.tap(big,s,m[0]);bigMax=Math.max(bigMax,E.seasonStep(big,s).burn.length)}}console.log('   biggest fire: normal',max,'10x',bigMax);assert(bigMax>5);[[],['winter','spring','summer','autumn']].forEach(effects=>{[{},{hard:true}].forEach(o=>{const t0=Date.now();const l=E.endlessBoard(7,{...o,scale:25,effects},31);const s=E.newState(l);s.lives=null;let g=0,stuck=false;while(!E.isWon(s)&&g++<3000){const m=E.legalMoves(l,s).concat(E.iceHits(l,s));if(!m.length){stuck=true;break}const r=E.tap(l,s,m[0]);if(r.ok&&!r.won)E.seasonStep(l,s)}assert(E.isWon(s)||(stuck&&l.arrows.some(a=>a.kind==='compass')),'25x did not finish');const b=E.endlessSpec(7,o);assert(Math.abs(l.w*l.h/(b.w*b.h)-25)<5);console.log('   25x',effects.length,'effects',o.hard?'hard':'plain',l.w+'x'+l.h,l.arrows.length,'arrows',Date.now()-t0,'ms')})})});
 t('reverse arrows swap tip on every launch, leave from either end, and their levels stay fair',()=>{
  const l=E.prepare({w:5,h:3,lives:3,arrows:[{id:0,kind:'plain',cells:[[1,1],[2,1]],dir:1,uno:0},{id:1,kind:'plain',cells:[[4,0]],dir:0}]});

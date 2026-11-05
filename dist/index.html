@@ -150,7 +150,7 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 #zoomctl svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 body.bigmap header.ui{background:var(--sky-a);padding-bottom:8px}
 body.bigmap nav.ui{background:var(--sky-b);padding-top:6px}
-body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:max-content;max-width:44vw;padding:4px 14px;border-radius:14px;background:var(--card);font:600 .8125rem/1.3 var(--body)}
+body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:max-content;max-width:44vw;padding:4px 14px;border-radius:14px;background:var(--card);font:600 .8125rem/1.3 var(--body)}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:16px;background:color-mix(in srgb,currentColor 9%,transparent)}
 .tabs button{height:38px;border-radius:12px;font-weight:600;font-size:.8125rem}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--card)}
@@ -543,7 +543,26 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     });
     return out;
   }
-  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && iceHits(level, state).length === 0; }
+  // Cracking ice is a free action, so it never moves the game on by itself. The board only counts as playable
+  // if a launch exists now, or if cracking the ice that can be reached would lead to one.
+  function iceOpensPlay(level, state) {
+    var frozen = state.frozen, found = false;
+    state.frozen = Object.assign({}, frozen);
+    for (var guard = 0; guard < 400 && !found; guard++) {
+      var hits = iceHits(level, state), cracked = false;
+      hits.forEach(function (id) {
+        group(level, level.arrows[id]).forEach(function (m) {
+          var c = check(level, state, m);
+          if (c.frozen && state.frozen[c.blocker] !== undefined) { delete state.frozen[c.blocker]; cracked = true; }
+        });
+      });
+      if (!cracked) break;
+      found = legalMoves(level, state).length > 0;
+    }
+    state.frozen = frozen;
+    return found;
+  }
+  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && !iceOpensPlay(level, state); }
 
   /* ---------- Seasons: what happens after each successful launch ---------- */
   // The roll depends only on the level and the launch number, so a rewound move plays out the same way.
@@ -1426,7 +1445,7 @@ window.UnwindI18n = (function () {
     'Arrow guide': 'Guia das setas', 'On this board': 'Neste tabuleiro', '▶ Watch how it works': '▶ Ver como funciona', 'Music and sound': 'Música e som', 'Settings': 'Definições', 'Language': 'Idioma', 'Music': 'Música', 'Sound effects': 'Efeitos sonoros', 'Theme': 'Tema', 'Follow the level': 'Seguir o nível', 'Matches the time of day or season': 'Acompanha a hora do dia ou a estação do ano', 'Music is off': 'Música desligada',
     'Sound on for the full experience': 'Liga o som para a experiência completa', 'Tap to begin': 'Toca para começar',
     'Puzzle board. Tap an arrow to send it off the board.': 'Tabuleiro do puzzle. Toca numa seta para a enviar para fora do tabuleiro.', 'Music and sound settings': 'Definições de música e som', 'Settings ': 'Definições', 'Choose a background': 'Escolher um fundo', 'Zoom in': 'Aproximar', 'Zoom out': 'Afastar', 'Show the whole board': 'Mostrar o tabuleiro todo', 'Close': 'Fechar',
-    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
+    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
     // Demos
     'Get every arrow off the board': 'Tira todas as setas do tabuleiro', 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.': 'O objetivo do jogo é fazer sair todas as setas do tabuleiro. Uma seta sai na direção para onde aponta, por isso o caminho tem de estar livre. Acertar noutra seta custa uma vida.', 'Tap an arrow and it leaves the way it points': 'Toca numa seta e ela sai na direção para onde aponta', 'If another arrow is in the way, it bounces back': 'Se houver outra seta no caminho, ressalta', 'So clear the way first': 'Por isso, liberta primeiro o caminho', 'Now it can leave too': 'Agora também pode sair', 'All arrows gone: board cleared!': 'Saíram todas: tabuleiro limpo!',
     'Twins share a colour and a letter. They leave together, so both paths must be clear.': 'As gémeas têm a mesma cor e letra. Saem juntas, por isso os dois caminhos têm de estar livres.', 'One twin is blocked, so neither can go': 'Uma gémea está bloqueada, por isso nenhuma sai', 'Clear the way first': 'Primeiro, liberta o caminho', 'Now both leave together': 'Agora saem as duas juntas',
@@ -1983,7 +2002,7 @@ window.UnwindI18n = (function () {
     colors = ch;
   }
 
-  var shownLives = null;
+  var shownLives = null, iceShown = false;
   function refresh() {
     var max = current.level.lives, lives = state.lives, hearts = $('hearts');
     if (lives !== null) {
@@ -2011,8 +2030,15 @@ window.UnwindI18n = (function () {
       setCaption(current.level.arrows.some(function (x) { return !state.removed[x.id] && E.isRedCarded(state, x); }) ? 'Red cards are blocking the board. Rewind and play them in time.' : 'Nothing can move. Rewind one step.');
       track('stuck', { launches: state.launches });
     }
-    if (!stuck && stuckShown) { stuckShown = false; setCaption(baseCaption()); }
-    if (!stuck && current.level.big) setCaption(baseCaption());
+    // No launch right now, but cracking ice leads to one: say so, since it looks like a dead end.
+    var iceOnly = !stuck && !ended && !E.isWon(state) && E.legalMoves(current.level, state).length === 0;
+    if (iceOnly) { setCaption('Hit a frozen arrow with another arrow to open the way. It costs nothing.'); iceShown = true; }
+    else {
+      if (!stuck && stuckShown) { stuckShown = false; setCaption(baseCaption()); }
+      if (iceShown && !stuck) setCaption(baseCaption());
+      iceShown = false;
+      if (!stuck && current.level.big) setCaption(baseCaption());
+    }
     $('mute').innerHTML = (audioPrefs.music || audioPrefs.sound)
       ? '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.500"/><circle cx="16.500" cy="16" r="2.500"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.500"/><circle cx="16.500" cy="16" r="2.500"/><path d="m3 3 18 18"/></svg>';

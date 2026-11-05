@@ -293,7 +293,26 @@
     });
     return out;
   }
-  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && iceHits(level, state).length === 0; }
+  // Cracking ice is a free action, so it never moves the game on by itself. The board only counts as playable
+  // if a launch exists now, or if cracking the ice that can be reached would lead to one.
+  function iceOpensPlay(level, state) {
+    var frozen = state.frozen, found = false;
+    state.frozen = Object.assign({}, frozen);
+    for (var guard = 0; guard < 400 && !found; guard++) {
+      var hits = iceHits(level, state), cracked = false;
+      hits.forEach(function (id) {
+        group(level, level.arrows[id]).forEach(function (m) {
+          var c = check(level, state, m);
+          if (c.frozen && state.frozen[c.blocker] !== undefined) { delete state.frozen[c.blocker]; cracked = true; }
+        });
+      });
+      if (!cracked) break;
+      found = legalMoves(level, state).length > 0;
+    }
+    state.frozen = frozen;
+    return found;
+  }
+  function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && !iceOpensPlay(level, state); }
 
   /* ---------- Seasons: what happens after each successful launch ---------- */
   // The roll depends only on the level and the launch number, so a rewound move plays out the same way.

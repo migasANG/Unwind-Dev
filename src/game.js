@@ -454,7 +454,7 @@
     colors = ch;
   }
 
-  var shownLives = null;
+  var shownLives = null, iceShown = false;
   function refresh() {
     var max = current.level.lives, lives = state.lives, hearts = $('hearts');
     if (lives !== null) {
@@ -482,8 +482,15 @@
       setCaption(current.level.arrows.some(function (x) { return !state.removed[x.id] && E.isRedCarded(state, x); }) ? 'Red cards are blocking the board. Rewind and play them in time.' : 'Nothing can move. Rewind one step.');
       track('stuck', { launches: state.launches });
     }
-    if (!stuck && stuckShown) { stuckShown = false; setCaption(baseCaption()); }
-    if (!stuck && current.level.big) setCaption(baseCaption());
+    // No launch right now, but cracking ice leads to one: say so, since it looks like a dead end.
+    var iceOnly = !stuck && !ended && !E.isWon(state) && E.legalMoves(current.level, state).length === 0;
+    if (iceOnly) { setCaption('Hit a frozen arrow with another arrow to open the way. It costs nothing.'); iceShown = true; }
+    else {
+      if (!stuck && stuckShown) { stuckShown = false; setCaption(baseCaption()); }
+      if (iceShown && !stuck) setCaption(baseCaption());
+      iceShown = false;
+      if (!stuck && current.level.big) setCaption(baseCaption());
+    }
     $('mute').innerHTML = (audioPrefs.music || audioPrefs.sound)
       ? '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.500"/><circle cx="16.500" cy="16" r="2.500"/></svg>'
       : '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.500"/><circle cx="16.500" cy="16" r="2.500"/><path d="m3 3 18 18"/></svg>';
