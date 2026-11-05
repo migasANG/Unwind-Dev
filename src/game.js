@@ -304,7 +304,7 @@
     // Big boards get extra time, since the player also has to move around them.
     if (o.timed) lvl.timeLimit = Math.round(E.timeLimitFor(lvl.solution.length) * (scale > 1 ? 1.3 : 1));
     var tags = (o.effects.length === 1 ? ' · ' + SET_INFO[o.effects[0]].label : o.effects.length ? ' · ' + o.effects.length + ' effects' : '') + (scale > 1 ? ' · ' + scale + 'x' : '') + (o.hard ? ' · Harder' : '') + (o.timed ? ' · Timed' : '');
-    begin({ id: 'open-' + plan.key + '-' + (plan.n + 1), endlessKey: plan.key, mode: 'endless', level: lvl, title: 'Open water ' + (plan.n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
+    begin({ id: 'open-' + plan.key + '-' + (plan.n + 1), endlessKey: plan.key, mode: 'endless', level: lvl, title: 'Open Water ' + (plan.n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
   }
   // A tangled, well-filled board plays better than one with many arrows free at the start.
   function boardQuality(lvl) {
@@ -1990,7 +1990,7 @@
   }
   function allLevelCount() { return Object.keys(SETS).reduce(function (n, k) { return n + SETS[k].length; }, 0); }
   function bestKey(c) { return c.mode === 'endless' ? 'open-' + c.endlessKey : c.id; }
-  function recordText(ms) { var t = Math.round(ms / 100) / 10, m = Math.floor(t / 60), sec = t - m * 60; return m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1); }
+  function recordText(ms) { var t = Math.round(ms / 100) / 10, m = Math.floor(t / 60), sec = t - m * 60; var txt = m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1); return window.UnwindI18n.lang() === 'pt' ? txt.replace('.', ',') : txt; }
   function winSheet(c, st) {
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
     // The end of a group leads to the next group. Only the very last level leads to open water.
@@ -2010,7 +2010,7 @@
       : recordText(st.elapsedMs - best + 0) + ' behind it' + kind;
     var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
-    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the open waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
@@ -2066,12 +2066,12 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open water</b><span>' + openLabel() + '</span></button>' +
+    html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
-      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play open water</button></div></div>';
+      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
     s.querySelector('#x').onclick = closeSheet;
@@ -2375,6 +2375,18 @@
     track('restart', { launches: state.launches });
     begin(current);
   }
+  // A clear language button under the music button: one press swaps between English and Portuguese.
+  function showLangButton() {
+    var b = $('langBtn'), cur = window.UnwindI18n.lang();
+    b.textContent = cur === 'pt' ? 'PT' : 'EN';
+    b.setAttribute('aria-label', cur === 'pt' ? 'Idioma: português. Mudar para inglês' : 'Language: English. Switch to Portuguese');
+    document.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-lang') === cur); });
+  }
+  $('langBtn').onclick = function () {
+    window.UnwindI18n.setLang(window.UnwindI18n.lang() === 'pt' ? 'en' : 'pt');
+    showLangButton(); layout();
+    track('language', { lang: window.UnwindI18n.lang() });
+  };
   function languageRow() {
     var cur = window.UnwindI18n.lang();
     return '<div class="setting"><span>Language</span></div><div class="sizes langs" role="group" aria-label="Language"><button class="notr" data-lang="en" aria-pressed="' + (cur === 'en') + '">English</button><button class="notr" data-lang="pt" aria-pressed="' + (cur === 'pt') + '">Português</button></div>';
@@ -2384,7 +2396,7 @@
       b.onclick = function (ev) {
         ev.stopPropagation();
         window.UnwindI18n.setLang(b.getAttribute('data-lang'));
-        s.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+        showLangButton();
         layout();
         track('language', { lang: b.getAttribute('data-lang') });
       };
@@ -2548,6 +2560,7 @@
   /*TEST-HOOK-END*/
   window.UnwindI18n.start();
   window.UnwindI18n.setLang(window.UnwindI18n.lang());
+  showLangButton();
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   holdTutorials = true;

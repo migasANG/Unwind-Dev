@@ -1,7 +1,7 @@
 // Generates src/levels.json, proves each level solvable and prints a report.
 const E = require('../src/engine.js'), fs = require('fs');
 const calm = [
- { w:3,h:4,minLen:2,maxLen:3,depth:2 },
+ { w:3,h:4,minLen:2,maxLen:3,depth:2,caption:'Tap an arrow to send it off the board. Get them all out to win.' },
  { w:4,h:5,minLen:2,maxLen:3,depth:3 },
  { w:5,h:6,minLen:2,maxLen:4,depth:4 },
  { w:6,h:7,minLen:2,maxLen:5,depth:5 },
