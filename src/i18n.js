@@ -1,0 +1,145 @@
+// Portuguese (Portugal) for everything on screen. The game is written in English, and any text that
+// reaches the page is swapped here, so a new sentence only needs a new line in this list.
+window.UnwindI18n = (function () {
+  var PT = {
+    'Unwind': 'Unwind',
+    'Calm': 'Calmo', 'Hard': 'Difícil', 'Timed': 'Cronometrado', 'Seasons': 'Estações', 'Winter': 'Inverno', 'Spring': 'Primavera', 'Summer': 'Verão', 'Autumn': 'Outono',
+    'Dawn': 'Amanhecer', 'Morning': 'Manhã', 'Noon': 'Meio-dia', 'Dusk': 'Anoitecer', 'Night': 'Noite', 'Default': 'Automático', 'Background': 'Fundo',
+    'Change it any time. Your board stays as it is.': 'Muda quando quiseres. O teu tabuleiro fica como está.',
+    'Harder': 'Mais difícil', 'Open water': 'Águas abertas', 'Growing the map': 'A criar o mapa', 'Planting arrows': 'A plantar setas', 'Choosing the best layout': 'A escolher o melhor tabuleiro', 'Painting the board': 'A pintar o tabuleiro', 'Almost ready': 'Quase pronto',
+    "Today's puzzle": 'Puzzle de hoje', 'No lives to lose out here.': 'Aqui não há vidas a perder.', 'Hard boards: two lives and no hints.': 'Tabuleiros difíceis: duas vidas e sem dicas.', 'Clear the board before the time runs out.': 'Limpa o tabuleiro antes de o tempo acabar.',
+    '1 life left': '1 vida restante', 'No lives': 'Sem vidas', 'Free play': 'Jogo livre', 'Free play, no lives to lose': 'Jogo livre, sem vidas a perder', 'Hint': 'Dica', 'Rewind': 'Voltar', 'Restart': 'Reiniciar', 'Guide': 'Guia', 'Levels': 'Níveis',
+    'Red cards are blocking the board. Rewind and play them in time.': 'Os cartões vermelhos estão a bloquear o tabuleiro. Volta atrás e joga-os a tempo.', 'Nothing can move. Rewind one step.': 'Nada se pode mexer. Volta uma jogada atrás.', 'This board cannot clear from here. Rewind a step or two.': 'Daqui já não dá para limpar o tabuleiro. Volta uma ou duas jogadas atrás.',
+    'Spectacular!': 'Espetacular!', 'Amazing!': 'Incrível!', 'Great job!': 'Muito bem!', 'Wonderful!': 'Maravilhoso!', 'Lovely!': 'Lindo!', 'Beautiful!': 'Belíssimo!', 'Brilliant!': 'Brilhante!', 'Nice one!': 'Boa!', 'Well done!': 'Bem jogado!', 'Superb!': 'Soberbo!',
+    '20% chance per launch that arrows freeze': '20% de hipótese por lançamento de as setas congelarem', '25% chance per launch that tiles burn': '25% de hipótese por lançamento de as casas arderem', '50% chance per launch of wind': '50% de hipótese de vento por lançamento',
+    'Freeze: 20%': 'Gelo: 20%', 'Fire: 25%': 'Fogo: 25%', 'Wind: 50%': 'Vento: 50%', 'Flowers remaining': 'Flores restantes',
+    'After each launch, there is a 20% chance that 1 to 5 arrows freeze. They thaw after 3 to 5 launches, or hit them with another arrow.': 'Depois de cada lançamento, há 20% de hipótese de 1 a 5 setas congelarem. Derretem ao fim de 3 a 5 lançamentos, ou acerta-lhes com outra seta.',
+    'Flowers block arrows, and hitting one costs a life. After each launch, a bee carries one away.': 'As flores bloqueiam as setas, e acertar numa custa uma vida. Depois de cada lançamento, uma abelha leva uma.',
+    'After each launch, there is a 25% chance that 1 to 5 tiles burn for 2 to 4 launches. Hitting fire costs a life.': 'Depois de cada lançamento, há 25% de hipótese de 1 a 5 casas arderem durante 2 a 4 lançamentos. Acertar no fogo custa uma vida.',
+    'After each launch, there is a 50% chance of wind. Arrows may then spin around their tails if there is room.': 'Depois de cada lançamento, há 50% de hipótese de vento. As setas podem rodar à volta da cauda, se houver espaço.',
+    'Perfect!': 'Perfeito!', 'All clear': 'Tudo limpo', 'You never lost a life.': 'Não perdeste nenhuma vida.', 'Not one collision. Lovely.': 'Nem uma colisão. Lindo.', 'Smooth as still water.': 'Suave como água parada.', 'Another calm stretch of water.': 'Mais um trecho de água calma.', 'One small bump on the way.': 'Um pequeno toque pelo caminho.',
+    'Your first clean run': 'A tua primeira jogada limpa', 'Your first clean run for this map type': 'A tua primeira jogada limpa neste tipo de mapa', 'Runs with mistakes do not count': 'Jogadas com erros não contam', 'Clear it with no mistakes to set one': 'Limpa sem erros para criares um', 'New personal best!': 'Novo recorde pessoal!', 'Personal best': 'Recorde pessoal', 'Personal bests': 'Recordes pessoais',
+    'Next level': 'Próximo nível', 'Onto the open waters': 'Rumo às águas abertas', 'Keep drifting': 'Continuar a navegar', 'Back to levels': 'Voltar aos níveis', 'Time': 'Tempo', 'Launches': 'Lançamentos', 'Hints used': 'Dicas usadas', 'Play my tune': 'Tocar a minha música', 'Play again': 'Jogar de novo',
+    "Time's up": 'Acabou o tempo', 'Out of lives': 'Sem vidas', 'The board was nearly there. Take a breath and go again.': 'Estava quase. Respira fundo e tenta outra vez.', 'Take a moment, then try this board again.': 'Faz uma pausa e tenta este tabuleiro outra vez.', 'Try again': 'Tentar de novo', 'Choose another level': 'Escolher outro nível',
+    'First steps': 'Primeiros passos', 'Twins': 'Gémeas', 'Compass': 'Bússola', 'Sleepers': 'Adormecidas', 'Mirrors': 'Espelhos', 'Patient': 'Pacientes', 'Ghost': 'Fantasma', 'Phase': 'Atravessar', 'Red card': 'Cartão vermelho', 'Reverse': 'Inversa', 'Everything together': 'Tudo junto', 'A day on the lake': 'Um dia no lago',
+    'Completed': 'Concluído', 'Perfect, no lives lost': 'Perfeito, sem perder vidas', '20% chance per launch that arrows freeze. Hit them to free them.': '20% de hipótese por lançamento de as setas congelarem. Acerta-lhes para as libertares.', 'Flowers block the way. Each launch, a bee takes one.': 'As flores bloqueiam o caminho. A cada lançamento, uma abelha leva uma.', '25% chance per launch that tiles catch fire.': '25% de hipótese por lançamento de as casas pegarem fogo.', '50% chance per launch that wind spins arrows.': '50% de hipótese por lançamento de o vento rodar setas.',
+    'Bigger boards. Two lives and no hints.': 'Tabuleiros maiores. Duas vidas e sem dicas.', 'Beat the clock on every board. Three lives.': 'Vence o relógio em cada tabuleiro. Três vidas.', 'Cleared today. Play it again any time.': 'Concluído hoje. Joga de novo quando quiseres.', 'One new board each day.': 'Um tabuleiro novo por dia.',
+    'Bigger boards, 2 lives, no hints': 'Tabuleiros maiores, 2 vidas, sem dicas', 'Clear each board before the clock runs out': 'Limpa cada tabuleiro antes de o tempo acabar', 'Season effects': 'Efeitos das estações', 'Pick any number. Random uses 1 to 4 for each board.': 'Escolhe quantos quiseres. Aleatório usa 1 a 4 em cada tabuleiro.', 'None': 'Nenhum', 'Random': 'Aleatório', 'You can also change it while playing.': 'Também podes mudar durante o jogo.', 'Map size': 'Tamanho do mapa', 'Bigger maps can be zoomed and moved around': 'Nos mapas maiores podes aproximar e mover a vista', 'Play open water': 'Jogar em águas abertas',
+    '© 2026 Miguel. All rights reserved.': '© 2026 Miguel. Todos os direitos reservados.', 'Understood': 'Entendido', 'Arrow': 'Seta',
+    'Tap it to send it off the board. If something is in its way, it bounces back and costs a life.': 'Toca para a enviar para fora do tabuleiro. Se houver algo no caminho, ressalta e custa uma vida.',
+    'Same colour and letter. They leave together, so both of their paths must be clear.': 'A mesma cor e a mesma letra. Saem juntas, por isso os dois caminhos têm de estar livres.',
+    'Turns a quarter clockwise each time an arrow leaves. The wrong order can leave you stuck, so use Rewind.': 'Roda um quarto de volta no sentido dos ponteiros do relógio sempre que sai uma seta. A ordem errada pode deixar-te preso, por isso usa Voltar.',
+    'Moon arrow': 'Seta lua', 'Star arrow': 'Seta estrela', 'Asleep and dashed. It cannot move until the star arrow with the same number leaves. Tapping it early costs nothing.': 'Adormecida e tracejada. Não se mexe até sair a seta estrela com o mesmo número. Tocar antes de tempo não custa nada.',
+    'When it leaves, it wakes the moon arrow with the same number, at the other end of its golden thread.': 'Quando sai, acorda a seta lua com o mesmo número, na outra ponta do fio dourado.', 'Mirror': 'Espelho', 'Not an arrow. It turns any arrow passing through by 90 degrees, so follow the new path.': 'Não é uma seta. Roda 90 graus qualquer seta que passe por ele, por isso segue o novo caminho.',
+    'Patient arrow': 'Seta paciente', 'Its number shows how many more launches it needs before it can leave. Tapping it early costs nothing.': 'O número mostra quantos lançamentos faltam até poder sair. Tocar antes de tempo não custa nada.', 'Ghost arrow': 'Seta fantasma',
+    'Swaps form after every launch. See-through as a ghost: it cannot be played, and other arrows pass through it. Solid: it plays and blocks like any arrow.': 'Muda de forma depois de cada lançamento. Transparente: não pode ser jogada e as outras setas passam por ela. Sólida: joga e bloqueia como qualquer seta.',
+    'Reverse arrow': 'Seta inversa', 'Orange. Its tip swaps to the other end after every launch, and the faint mark shows where it goes next. Play it when the end it points from has a clear way out.': 'Cor de laranja. A ponta troca para a outra extremidade depois de cada lançamento, e a marca ténue mostra para onde vai a seguir. Joga-a quando a ponta tiver o caminho livre.',
+    'Phase arrow': 'Seta fásica', 'Purple. Can slip through one occupied tile on its way out, whether an arrow, a flower or fire, but not two in a row.': 'Roxa. Consegue atravessar uma casa ocupada ao sair, seja uma seta, uma flor ou fogo, mas não duas seguidas.',
+    'Red card arrow': 'Seta do cartão vermelho', 'Play it before its count reaches zero. If not, it is sent off: it cannot move until only sent-off arrows remain, and it can block the rest. Rewind if that traps you.': 'Joga-a antes de a contagem chegar a zero. Senão, é expulsa: não se mexe até só restarem setas expulsas, e pode bloquear as outras. Volta atrás se ficares preso.',
+    'Frozen arrow': 'Seta congelada', 'Winter. It cannot move, and it blocks others. It thaws by itself after 3 to 5 launches, or hit it with another arrow to free it sooner, at no cost.': 'Inverno. Não se mexe e bloqueia as outras. Derrete sozinha ao fim de 3 a 5 lançamentos, ou acerta-lhe com outra seta para a libertares mais cedo, sem custos.',
+    'Burning tile': 'Casa a arder', 'Summer. Blocks arrows for 2 to 4 launches. Hitting it costs a life.': 'Verão. Bloqueia as setas durante 2 a 4 lançamentos. Acertar nela custa uma vida.', 'Flower and bee': 'Flor e abelha',
+    'Spring. Flowers block arrows, and hitting one costs a life. After each launch, the bee carries its flower away.': 'Primavera. As flores bloqueiam as setas, e acertar numa custa uma vida. Depois de cada lançamento, a abelha leva a sua flor.', 'Wind': 'Vento',
+    'Autumn. Can spin an arrow fully around its tail if there is room. Short arrows spin most often, and more can turn as the board clears.': 'Outono. Pode rodar uma seta à volta da cauda, se houver espaço. As setas curtas rodam mais vezes, e podem rodar mais à medida que o tabuleiro fica livre.',
+    'Arrow guide': 'Guia das setas', 'On this board': 'Neste tabuleiro', '▶ Watch how it works': '▶ Ver como funciona', 'Music and sound': 'Música e som', 'Settings': 'Definições', 'Language': 'Idioma', 'Music': 'Música', 'Sound effects': 'Efeitos sonoros', 'Theme': 'Tema', 'Follow the level': 'Seguir o nível', 'Matches the time of day or season': 'Acompanha a hora do dia ou a estação', 'Music is off': 'Música desligada',
+    'Sound on for the full experience': 'Liga o som para a experiência completa', 'Tap to begin': 'Toca para começar',
+    'Puzzle board. Tap an arrow to send it off the board.': 'Tabuleiro do puzzle. Toca numa seta para a enviar para fora do tabuleiro.', 'Music and sound settings': 'Definições de música e som', 'Settings ': 'Definições', 'Choose a background': 'Escolher um fundo', 'Zoom in': 'Aproximar', 'Zoom out': 'Afastar', 'Show the whole board': 'Mostrar o tabuleiro todo', 'Close': 'Fechar',
+    'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas fásicas conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
+    // Demos
+    'Get every arrow off the board': 'Tira todas as setas do tabuleiro', 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.': 'O objetivo do jogo é fazer sair todas as setas do tabuleiro. Uma seta sai na direção para onde aponta, por isso o caminho tem de estar livre. Acertar noutra seta custa uma vida.', 'Tap an arrow and it leaves the way it points': 'Toca numa seta e ela sai na direção para onde aponta', 'If another arrow is in the way, it bounces back': 'Se houver outra seta no caminho, ressalta', 'So clear the way first': 'Por isso, liberta primeiro o caminho', 'Now it can leave too': 'Agora também pode sair', 'All arrows gone: board cleared!': 'Saíram todas: tabuleiro limpo!',
+    'Twins share a colour and a letter. They leave together, so both paths must be clear.': 'As gémeas têm a mesma cor e letra. Saem juntas, por isso os dois caminhos têm de estar livres.', 'One twin is blocked, so neither can go': 'Uma gémea está bloqueada, por isso nenhuma sai', 'Clear the way first': 'Primeiro, liberta o caminho', 'Now both leave together': 'Agora saem as duas juntas',
+    'A compass arrow turns a quarter clockwise every time another arrow leaves.': 'Uma seta bússola roda um quarto de volta no sentido dos ponteiros do relógio sempre que sai outra seta.', 'It points at another arrow': 'Aponta para outra seta', 'Each launch turns it a quarter': 'Cada lançamento roda-a um quarto de volta', 'Now it has a clear way out': 'Agora tem o caminho livre',
+    'Moon and star': 'Lua e estrela', 'A moon arrow sleeps until the star arrow with the same number leaves. Tapping it early costs nothing.': 'Uma seta lua dorme até sair a seta estrela com o mesmo número. Tocar antes de tempo não custa nada.', 'The moon arrow is asleep': 'A seta lua está a dormir', 'Send its star arrow away': 'Faz sair a sua seta estrela', 'Now it wakes and can leave': 'Agora acorda e pode sair',
+    'A mirror turns any arrow passing through it by 90 degrees, so follow the new path.': 'Um espelho roda 90 graus qualquer seta que passe por ele, por isso segue o novo caminho.', 'The mirror sends it up, into an arrow': 'O espelho envia-a para cima, contra uma seta', 'Clear the new path': 'Liberta o novo caminho', 'It turns at the mirror and leaves': 'Vira no espelho e sai',
+    'Its number shows how many more launches it needs before it can leave.': 'O número mostra quantos lançamentos faltam até poder sair.', 'It needs 2 more launches': 'Faltam 2 lançamentos', 'One launch': 'Um lançamento', 'Two launches': 'Dois lançamentos', 'Now it can leave': 'Agora pode sair',
+    'It swaps form after every launch. As a ghost it cannot be played, and arrows pass through it.': 'Muda de forma depois de cada lançamento. Como fantasma não pode ser jogada, e as setas passam por ela.', 'See-through: it cannot be played': 'Transparente: não pode ser jogada', 'Other arrows pass right through it': 'As outras setas passam por ela', 'After a launch it is solid and can go': 'Depois de um lançamento fica sólida e pode sair',
+    'A phase arrow slips through one occupied tile: an arrow, a flower or fire. But not two in a row.': 'Uma seta fásica atravessa uma casa ocupada: uma seta, uma flor ou fogo. Mas não duas seguidas.', 'It slips through the arrow in its way': 'Atravessa a seta no caminho', 'A normal arrow could not do that': 'Uma seta normal não conseguia',
+    'Play it before its count runs out. If not, it is sent off until only sent-off arrows remain.': 'Joga-a antes de a contagem acabar. Senão, é expulsa até só restarem setas expulsas.', 'Each launch lowers its count': 'Cada lançamento baixa a contagem', 'At zero it gets a red card': 'A zero leva cartão vermelho', 'Sent off: it cannot move now': 'Expulsa: agora não se pode mexer', 'Clear everything else': 'Limpa tudo o resto', 'Only then can it leave': 'Só então pode sair',
+    'Its tip swaps to the other end after every launch. The faint mark shows where it goes next.': 'A ponta troca para a outra extremidade depois de cada lançamento. A marca ténue mostra para onde vai a seguir.', 'Its tip points at another arrow': 'A ponta aponta para outra seta', 'After a launch the tip swaps ends': 'Depois de um lançamento, a ponta troca de lado', 'Now it leaves the other way': 'Agora sai pelo outro lado',
+    'Winter. It cannot move, and it blocks others. It thaws by itself, or hit it with an arrow to free it at no cost.': 'Inverno. Não se mexe e bloqueia as outras. Derrete sozinha, ou acerta-lhe com uma seta para a libertares sem custos.', 'Hit it to crack the ice, for free': 'Acerta-lhe para partires o gelo, sem custos', 'Now it is free to go': 'Agora está livre para sair', 'And the way is clear': 'E o caminho fica livre',
+    'Summer. Fire blocks arrows for a few launches, and hitting it costs a life. Wait for it to burn out.': 'Verão. O fogo bloqueia as setas durante alguns lançamentos, e acertar nele custa uma vida. Espera que se apague.', 'Fire in the way costs a life': 'Fogo no caminho custa uma vida', 'Play other arrows instead': 'Joga antes outras setas', 'The fire burns out': 'O fogo apaga-se', 'Now the way is clear': 'Agora o caminho está livre',
+    'Spring. Flowers block arrows. After each launch, a bee carries one flower away.': 'Primavera. As flores bloqueiam as setas. Depois de cada lançamento, uma abelha leva uma flor.', 'A flower blocks the way': 'Uma flor bloqueia o caminho', 'After a launch, a bee takes it': 'Depois de um lançamento, uma abelha leva-a',
+    'Autumn. Wind can spin an arrow around its tail when there is room, which can change everything.': 'Outono. O vento pode rodar uma seta à volta da cauda quando há espaço, e isso pode mudar tudo.', 'This arrow is blocked': 'Esta seta está bloqueada', 'A launch can bring a gust that spins an arrow': 'Um lançamento pode trazer uma rajada que roda uma seta', 'Now it has a new way out': 'Agora tem uma nova saída',
+    // Music
+    'First Light': 'Primeira Luz', 'Still Water': 'Água Parada', 'Lantern Hour': 'Hora das Lanternas', 'Night Swim': 'Mergulho Noturno', 'Snowfall': 'Neve a Cair', 'Meadow': 'Prado', 'Sandbar': 'Banco de Areia', 'Amber Leaves': 'Folhas de Âmbar',
+    'Rolling felt piano': 'Piano suave', 'Playful wooden kalimba': 'Kalimba de madeira brincalhona', 'Music box waltz': 'Valsa de caixa de música', 'Slow, dreamy electric piano': 'Piano elétrico lento e sonhador', 'Winter: a tiptoeing celesta dance': 'Inverno: uma dança de celesta em bicos de pés', 'Spring: a cheerful ukulele and a whistled tune': 'Primavera: um ukulele alegre e uma melodia assobiada', 'Summer: lazy bossa guitar': 'Verão: guitarra de bossa preguiçosa', 'Autumn: warm cello and a slow waltz': 'Outono: violoncelo quente e uma valsa lenta'
+  };
+  var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open water': 'Águas abertas' };
+  var RULES = [
+    [/^Hint (\d+)$/, 'Dica $1'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
+    [/^(\d+) lives left$/, '$1 vidas restantes'], [/^(\d+) arrows? left$/, function (m, n) { return n + (n === '1' ? ' seta restante' : ' setas restantes'); }],
+    [/^(\d+) of (\d+) lives left$/, '$1 de $2 vidas restantes'], [/^(\d+) of (\d+)$/, '$1 de $2'], [/^(\d+) of (\d+) lanterns lit, (\d+) golden$/, '$1 de $2 lanternas acesas, $3 douradas'],
+    [/^(\d+) bumps on the way, and you got there\.$/, '$1 toques pelo caminho, mas chegaste lá.'], [/^Beat your old time of (.+)$/, 'Bateste o teu tempo anterior de $1'], [/^(\S+) behind it for this map type$/, 'A $1 do recorde neste tipo de mapa'], [/^(\S+) behind it$/, 'A $1 do recorde'],
+    [/^Now playing: (.+)$/, function (m, n) { return 'A tocar: ' + (PT[n] || n); }], [/^Animated example of (.+)$/, function (m, n) { return 'Exemplo animado: ' + (PT[n] || n); }],
+    [/^Level (\d+), perfect$/, 'Nível $1, perfeito'], [/^Level (\d+), cleared$/, 'Nível $1, concluído'], [/^On to (.+) (\d+)$/, function (m, n, k) { return 'Seguir para ' + (NAMED[n] || n) + ' ' + k; }],
+    [/^(\d+)x maps(.*)$/, function (m, n, rest) { return 'Mapas ' + n + 'x' + tail(rest); }], [/^Endless boards(.*)$/, function (m, rest) { return 'Tabuleiros sem fim' + tail(rest); }]
+  ];
+  function tail(t) { return { ', harder and timed.': ', mais difíceis e cronometrados.', ', harder.': ', mais difíceis.', ' against the clock.': ' contra o relógio.', ' with no lives to lose.': ' sem vidas a perder.' }[t] || t; }
+  function part(s) {
+    if (PT[s]) return PT[s];
+    var m = s.match(/^(Level|Hard|Timed|Winter|Spring|Summer|Autumn|Open water) (\d+)$/);
+    if (m) return NAMED[m[1]] + ' ' + m[2];
+    if ((m = s.match(/^(\d+) effects$/))) return m[1] + ' efeitos';
+    if ((m = s.match(/^Best (.+)$/))) return 'Recorde ' + m[1];
+    return null;
+  }
+  var misses = {};
+  function translate(text) {
+    var body = text.trim();
+    if (!body || !/[A-Za-z]{2}/.test(body)) return text;
+    var out = part(body);
+    if (out === null) for (var i = 0; i < RULES.length && out === null; i++) if (RULES[i][0].test(body)) out = body.replace(RULES[i][0], RULES[i][1]);
+    if (out === null && body.indexOf(' · ') > 0) {
+      var bits = body.split(' · ').map(function (b) { return part(b) || (/^\d+x$/.test(b) ? b : b); });
+      out = bits.join(' · ');
+    }
+    if (out === null) { misses[body] = 1; return text; }
+    return text.replace(body, out);
+  }
+  var lang = 'en', originals = new WeakMap(), attrs = ['aria-label', 'title'], obs = null;
+  function skip(n) { var p = n.parentNode; return !p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || (p.classList && p.classList.contains('notr')); }
+  function doText(n) {
+    if (skip(n)) return;
+    var rec = originals.get(n);
+    if (!rec || rec.shown !== n.data) rec = { en: n.data, shown: n.data };
+    var want = lang === 'pt' ? translate(rec.en) : rec.en;
+    rec.shown = want; originals.set(n, rec);
+    if (n.data !== want) n.data = want;
+  }
+  function doAttr(el, a) {
+    var key = 'data-en-' + a, v = el.getAttribute(a);
+    if (v === null) return;
+    if (el.getAttribute(key + '-shown') !== v) el.setAttribute(key, v);
+    var want = lang === 'pt' ? translate(el.getAttribute(key)) : el.getAttribute(key);
+    el.setAttribute(key + '-shown', want);
+    if (v !== want) el.setAttribute(a, want);
+  }
+  function walk(root) {
+    if (root.nodeType === 3) { doText(root); return; }
+    if (root.nodeType !== 1) return;
+    attrs.forEach(function (a) { if (root.hasAttribute(a)) doAttr(root, a); });
+    if (root.nodeName === 'SCRIPT' || root.nodeName === 'STYLE') return;
+    for (var c = root.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  function handle(list) {
+    list.forEach(function (m) {
+      if (m.type === 'characterData') doText(m.target);
+      else if (m.type === 'attributes') doAttr(m.target, m.attributeName);
+      else m.addedNodes.forEach(walk);
+    });
+  }
+  function flush() { if (obs) { handle(obs.takeRecords()); } }
+  function start() {
+    obs = new MutationObserver(handle);
+    obs.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: attrs });
+    walk(document.body);
+  }
+  function setLang(l) {
+    lang = l === 'pt' ? 'pt' : 'en';
+    document.documentElement.lang = lang === 'pt' ? 'pt-PT' : 'en';
+    try { localStorage.setItem('unwind.lang', lang); } catch (e) {}
+    if (document.body) walk(document.body);
+    if (obs) obs.takeRecords();
+  }
+  try { var kept = localStorage.getItem('unwind.lang'); if (kept === 'pt') lang = 'pt'; } catch (e) {}
+  return { start: start, setLang: setLang, flush: flush, lang: function () { return lang; }, t: function (s) { return lang === 'pt' ? translate(s) : s; }, misses: function () { return Object.keys(misses); } };
+})();

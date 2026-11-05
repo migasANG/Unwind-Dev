@@ -426,7 +426,7 @@
     ctx.restore();
   }
   function setCaption(text) {
-    var cap = $('caption'), lvl = current && current.level, watch = !!text && !!lvl && text === lvl.caption && mechanicsOf(lvl).length > 0;
+    var cap = $('caption'), lvl = current && current.level, watch = !!text && !!lvl && text === lvl.caption && levelDemos().length > 0;
     cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
   }
   function drawTimer() {
@@ -947,7 +947,7 @@
       var turn = i / 7 * Math.PI * 2 + Math.random() * 0.5;
       stars.push({ dx: Math.cos(turn), dy: Math.sin(turn), reach: 0.75 + Math.random() * 0.4, size: 4.5 + Math.random() * 3.5, delay: Math.random() * 90, spin: Math.random() * 6 });
     }
-    praises.push({ word: PRAISE[pick], cell: a.cells[a.cells.length >> 1], start: now, stars: stars });
+    praises.push({ word: window.UnwindI18n.t(PRAISE[pick]), cell: a.cells[a.cells.length >> 1], start: now, stars: stars });
     window.unwindPraiseWords = (window.unwindPraiseWords || []).concat(PRAISE[pick]).slice(-40);
   }
   // A small number shared by a moon arrow and its star arrow, so pairs are easy to match.
@@ -1144,6 +1144,7 @@
     tipChip = chip;
     tip.innerHTML = '<b>' + d[0] + '</b>' + d[1];
     tip.hidden = false;
+    window.UnwindI18n.flush();
     var r = chip.getBoundingClientRect(), w = tip.offsetWidth;
     tip.style.left = Math.max(12, Math.min(vw - w - 12, r.left)) + 'px';
     tip.style.top = (r.bottom + 6) + 'px';
@@ -2009,7 +2010,7 @@
       : recordText(st.elapsedMs - best + 0) + ' behind it' + kind;
     var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
-    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'On to open water' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the open waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
@@ -2124,12 +2125,16 @@
     E.effectsOf(l).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
     return Object.keys(E.TUTORIALS).filter(function (k) { return here[k]; });
   }
+  // The very first level also explains the point of the game.
+  function levelDemos() {
+    return (current.set === 'calm' && current.index === 0 ? ['goal'] : []).concat(mechanicsOf(current.level));
+  }
   // Automated test browsers skip these unless asked, so they can play straight through.
   var holdTutorials = false, tutorialsOff = !!navigator.webdriver && location.hash.indexOf('tut') < 0;
   function maybeTutorials() {
     if (tutorialsOff || holdTutorials || !current) return;
     progress.tutorials = progress.tutorials || {};
-    var fresh = mechanicsOf(current.level).filter(function (k) { return !progress.tutorials[k]; });
+    var fresh = levelDemos().filter(function (k) { return !progress.tutorials[k]; });
     if (fresh.length) showTutorial(fresh, 0, true);
   }
   function showTutorial(list, at, firstTime, after) {
@@ -2153,13 +2158,13 @@
     var g = canvas.getContext('2d'), alive = true, run;
     var restart = function () {
       var t = E.tutorialStart(key);
-      run = { level: t.level, state: t.state, steps: t.steps, at: -1, phaseEnd: 0, tapping: false, flights: [], bounces: {}, nudges: {}, flips: {}, bees: [], windAt: 0, ripples: [] };
+      run = { level: t.level, state: t.state, steps: t.steps, end: t.end, at: -1, phaseEnd: 0, tapping: false, flights: [], bounces: {}, nudges: {}, flips: {}, bees: [], windAt: 0, ripples: [] };
       run.csize = Math.min(W / (run.level.w + 0.6), H / (run.level.h + 0.6));
     };
     restart();
     var nextStep = function (now) {
       run.at++;
-      if (run.at >= run.steps.length) { run.finished = now + 1100; return; }
+      if (run.at >= run.steps.length) { if (run.end && sayEl) sayEl.textContent = run.end; run.finished = now + (run.end ? 1900 : 1100); return; }
       var st = run.steps[run.at];
       if (sayEl) sayEl.textContent = st.say || '\u00a0';
       run.tapping = st.tap !== undefined; run.pending = true;
@@ -2305,7 +2310,7 @@
   // Tapping a level's explanation plays its demo again.
   $('caption').addEventListener('click', function () {
     if (!$('caption').classList.contains('watchable') || ended || !current) return;
-    showTutorial(mechanicsOf(current.level), 0, false, 'play');
+    showTutorial(levelDemos(), 0, false, 'play');
   });
   function guideSheet() {
     var ink = colors.ink, twin = colors.twins[0], comp = colors.compass, mir = colors.mirror, gold = '#ffd23f', disc = '#1d2350', card = colors.card;
@@ -2347,7 +2352,7 @@
       { key: 'wind', title: 'Wind', text: 'Autumn. Can spin an arrow fully around its tail if there is room. Short arrows spin most often, and more can turn as the board clears.',
         art: '<path d="M4 16h34a7 7 0 1 0-7-7M4 26h44a7 7 0 1 1-7 7M4 36h20" stroke="' + ink + '" stroke-width="4"/>' }
     ];
-    var watchKey = { moon: 'sleeper', star: 'sleeper', twin: 'twin', compass: 'compass', mirror: 'mirror', patient: 'patient', ghost: 'ghost', phase: 'phase', red: 'red', uno: 'uno', ice: 'ice', fire: 'fire', flower: 'flower', wind: 'wind' };
+    var watchKey = { plain: 'goal', moon: 'sleeper', star: 'sleeper', twin: 'twin', compass: 'compass', mirror: 'mirror', patient: 'patient', ghost: 'ghost', phase: 'phase', red: 'red', uno: 'uno', ice: 'ice', fire: 'fire', flower: 'flower', wind: 'wind' };
     var here = {}, arrows = current.level.arrows;
     arrows.forEach(function (a) {
       if (a.kind === 'twin') here.twin = 1; else if (a.kind === 'compass') here.compass = 1; else here.plain = 1;
@@ -2370,13 +2375,29 @@
     track('restart', { launches: state.launches });
     begin(current);
   }
+  function languageRow() {
+    var cur = window.UnwindI18n.lang();
+    return '<div class="setting"><span>Language</span></div><div class="sizes langs" role="group" aria-label="Language"><button class="notr" data-lang="en" aria-pressed="' + (cur === 'en') + '">English</button><button class="notr" data-lang="pt" aria-pressed="' + (cur === 'pt') + '">Português</button></div>';
+  }
+  function wireLanguage(s) {
+    s.querySelectorAll('[data-lang]').forEach(function (b) {
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        window.UnwindI18n.setLang(b.getAttribute('data-lang'));
+        s.querySelectorAll('[data-lang]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+        layout();
+        track('language', { lang: b.getAttribute('data-lang') });
+      };
+    });
+  }
   function settingsSheet() {
     var themeRow = function (id, name, mood) { return '<button class="theme" data-theme-id="' + id + '" aria-pressed="' + (audioPrefs.theme === id) + '"><b>' + name + '</b><span>' + mood + '</span></button>'; };
-    var html = '<div class="row"><h2>Music and sound</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+    var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' +
       '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
     var s = sheet(html);
+    wireLanguage(s);
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
     showNow();
     s.querySelector('#x').onclick = closeSheet;
@@ -2525,13 +2546,16 @@
   };
 
   /*TEST-HOOK-END*/
+  window.UnwindI18n.start();
+  window.UnwindI18n.setLang(window.UnwindI18n.lang());
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
   holdTutorials = true;
   openLevel(SETS[last.set] ? last.set : 'calm', Math.min(last.index || 0, (SETS[last.set] || SETS.calm).length - 1));
   // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
   (function () {
-    var s = sheet('<h2>Unwind</h2><p>Sound on for the full experience</p><button class="primary" id="begin" style="width:100%">Tap to begin</button>', 'begin');
+    var s = sheet('<h2>Unwind</h2><p>Sound on for the full experience</p><button class="primary" id="begin" style="width:100%">Tap to begin</button>' + languageRow(), 'begin');
+    wireLanguage(s);
     s.onclick = function () { audio(); closeSheet(); holdTutorials = false; maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); };
   })();
   requestAnimationFrame(frame);

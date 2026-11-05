@@ -67,6 +67,9 @@
   // Each step: tap an arrow (expect: ok, hit, wait or thaw) or spin one (autumn wind), with a line to read.
   var P = function (id, cells, dir, more) { return Object.assign({ id: id, kind: 'plain', cells: cells, dir: dir }, more || {}); };
   var TUTORIALS = {
+    goal: { title: 'Get every arrow off the board', text: 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.', w: 5, h: 4,
+      arrows: [P(0, [[0, 0], [1, 0]], 1), P(1, [[0, 2], [1, 2]], 1), P(2, [[3, 3], [3, 2]], 0)],
+      steps: [{ tap: 0, expect: 'ok', say: 'Tap an arrow and it leaves the way it points' }, { tap: 1, expect: 'hit', say: 'If another arrow is in the way, it bounces back' }, { tap: 2, expect: 'ok', say: 'So clear the way first' }, { tap: 1, expect: 'ok', say: 'Now it can leave too' }], end: 'All arrows gone: board cleared!' },
     twin: { title: 'Twins', text: 'Twins share a colour and a letter. They leave together, so both paths must be clear.', w: 5, h: 4,
       arrows: [P(0, [[0, 0], [1, 0]], 1, { kind: 'twin', twin: 1, pair: 0 }), P(1, [[0, 2], [1, 2]], 1, { kind: 'twin', twin: 0, pair: 0 }), P(2, [[3, 3], [3, 2]], 0)],
       steps: [{ tap: 0, expect: 'hit', say: 'One twin is blocked, so neither can go' }, { tap: 2, expect: 'ok', say: 'Clear the way first' }, { tap: 0, expect: 'ok', say: 'Now both leave together' }] },
@@ -115,7 +118,7 @@
     var s = newState(lvl);
     (d.frozen || []).forEach(function (id) { s.frozen[id] = 99; });
     (d.burning || []).forEach(function (b) { s.burning[b[1] * d.w + b[0]] = b[2]; });
-    return { level: lvl, state: s, steps: d.steps };
+    return { level: lvl, state: s, steps: d.steps, end: d.end };
   }
   function tutorialSpin(level, id) {
     var a = level.arrows[id], t = a.cells[0];
