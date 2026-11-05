@@ -73,7 +73,7 @@
     compass: { title: 'Compass', text: 'A compass arrow turns a quarter clockwise every time another arrow leaves.', w: 4, h: 4,
       arrows: [P(0, [[1, 1]], 1, { kind: 'compass' }), P(1, [[3, 1], [3, 2]], 2)],
       steps: [{ tap: 0, expect: 'hit', say: 'It points at another arrow' }, { tap: 1, expect: 'ok', say: 'Each launch turns it a quarter' }, { tap: 0, expect: 'ok', say: 'Now it has a clear way out' }] },
-    sleeper: { title: 'Moon and star', text: 'A moon arrow sleeps until its star arrow leaves. Tapping it early costs nothing.', w: 5, h: 4,
+    sleeper: { title: 'Moon and star', text: 'A moon arrow sleeps until the star arrow with the same number leaves. Tapping it early costs nothing.', w: 5, h: 4,
       arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { key: 1 }), P(1, [[1, 3], [2, 3], [3, 3]], 1, { isKey: true })],
       steps: [{ tap: 0, expect: 'wait', say: 'The moon arrow is asleep' }, { tap: 1, expect: 'ok', say: 'Send its star arrow away' }, { tap: 0, expect: 'ok', say: 'Now it wakes and can leave' }] },
     mirror: { title: 'Mirror', text: 'A mirror turns any arrow passing through it by 90 degrees, so follow the new path.', w: 5, h: 4,

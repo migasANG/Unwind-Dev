@@ -369,6 +369,7 @@
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
     hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {}; praises = [];
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
+    numberPairs(c.level);
     var pairNo = 0;
     c.level.arrows.forEach(function (a) {
       delete a.vis; angles[a.id] = E.dirOf(a, state) * 90;
@@ -424,7 +425,10 @@
     draw();
     ctx.restore();
   }
-  function setCaption(text) { var cap = $('caption'); cap.textContent = text; cap.classList.toggle('on', !!text); }
+  function setCaption(text) {
+    var cap = $('caption'), lvl = current && current.level, watch = !!text && !!lvl && text === lvl.caption && mechanicsOf(lvl).length > 0;
+    cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
+  }
   function drawTimer() {
     var secs = Math.ceil(timeLeft / 1000);
     $('timer').textContent = Math.floor(secs / 60) + ':' + ('0' + (secs % 60)).slice(-2);
@@ -744,8 +748,8 @@
       var pop = Math.max(0, (intro - 0.45) / 0.55); pop = ease(pop);
       if (a.kind === 'twin') scaled(centre, pop, function () { badge(centre, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
       var tailPoint = px(a.cells[0]);
-      if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); });
-      if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); });
+      if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
+      if (a.key !== undefined && !state.removed[a.key]) scaled(tailPoint, pop, function () { drawMoon(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
       if (a.ghostPhase !== undefined) scaled(centre, pop, function () { drawGhostIcon(centre, cs * 0.3, ghostForm, now); });
       if (a.uno !== undefined) scaled(centre, pop, function () { drawReverseIcon(centre, cs * 0.27, color); });
       if (a.phase) scaled(centre, pop, function () { drawPhaseIcon(centre, cs * 0.26, color, now); });
@@ -946,6 +950,20 @@
     praises.push({ word: PRAISE[pick], cell: a.cells[a.cells.length >> 1], start: now, stars: stars });
     window.unwindPraiseWords = (window.unwindPraiseWords || []).concat(PRAISE[pick]).slice(-40);
   }
+  // A small number shared by a moon arrow and its star arrow, so pairs are easy to match.
+  function pairTag(c, r, n) {
+    var x = c.x + r * 0.72, y = c.y + r * 0.72, tr = Math.max(6.5, r * 0.56);
+    ctx.save(); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff6d6'; ctx.strokeStyle = '#a86a00'; ctx.lineWidth = Math.max(1, tr * 0.16);
+    ctx.beginPath(); ctx.arc(x, y, tr, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a2a08'; ctx.font = '700 ' + Math.round(tr * 1.35) + 'px Figtree,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(n), x, y + tr * 0.06);
+    ctx.restore();
+  }
+  function numberPairs(l) {
+    var n = 0;
+    l.arrows.forEach(function (a) { if (a.key !== undefined) { n++; a.pairNo = n; l.arrows[a.key].pairNo = n; } });
+  }
   function drawStarShape(x, y, r, turn) {
     ctx.beginPath();
     for (var i = 0; i < 8; i++) {
@@ -1119,10 +1137,11 @@
     summer: ['Fire: 25%', 'After each launch, there is a 25% chance that 1 to 5 tiles burn for 2 to 4 launches. Hitting fire costs a life.'],
     autumn: ['Wind: 50%', 'After each launch, there is a 50% chance of wind. Arrows may then spin around their tails if there is room.']
   };
-  var tipTimer = null, tipTouch = false;
+  var tipTimer = null, tipChip = null;
   function showTip(chip) {
     var d = TIPS[chip.getAttribute('data-tip')], tip = $('tip');
     if (!d) return;
+    tipChip = chip;
     tip.innerHTML = '<b>' + d[0] + '</b>' + d[1];
     tip.hidden = false;
     var r = chip.getBoundingClientRect(), w = tip.offsetWidth;
@@ -1136,13 +1155,17 @@
     if (c && ev.pointerType === 'mouse') showTip(c);
   });
   $('seasonBadge').addEventListener('pointerout', function (ev) { if (ev.pointerType === 'mouse') hideTip(); });
-  $('seasonBadge').addEventListener('pointerdown', function (ev) {
+  // On touch screens, a press shows the explanation and another press hides it.
+  $('seasonBadge').addEventListener('pointerup', function (ev) {
     var c = ev.target.closest && ev.target.closest('.chip');
     if (!c || ev.pointerType === 'mouse') return;
-    clearTimeout(tipTimer);
-    tipTimer = setTimeout(function () { showTip(c); }, 380);
+    if (!$('tip').hidden && tipChip === c) { hideTip(); return; }
+    showTip(c);
   });
-  ['pointerup', 'pointercancel'].forEach(function (n) { $('seasonBadge').addEventListener(n, function (ev) { if (ev.pointerType !== 'mouse') hideTip(); }); });
+  document.addEventListener('pointerdown', function (ev) {
+    if (ev.pointerType === 'mouse' || $('tip').hidden) return;
+    if (!(ev.target.closest && ev.target.closest('#seasonBadge .chip'))) hideTip();
+  });
   $('seasonBadge').addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
   // When an event happens, its symbol pops up.
   function popSymbol(effect) {
@@ -1306,7 +1329,11 @@
       // A small flat crab in the same simple style as the rest of the beach. Its legs scuttle and its pincers open and close.
       var crab = function (x, y, k, dur, delay, b2) {
         var c = '#e2674f', c2 = '#b84a3a', side = function (s2, cls) {
-          return '<g transform="scale(' + s2 + ' 1)"><g class="crableg' + cls + '"><path d="M13 2 25 7M12 6 23 13M9 9 18 16" fill="none" stroke="' + c2 + '" stroke-width="2.600" stroke-linecap="round"/></g>' +
+          // Three legs, each bending up at a knee and stepping down to a pointed foot, in turn.
+          var legs = [[15, -1, 24, -7, 31, 8], [14, 3, 22, -2, 27, 12], [11, 7, 18, 3, 21, 15]].map(function (g, i) {
+            return '<g class="crableg' + ((i % 2 === 0) === !cls ? ' b' : '') + '"><path d="M' + g[0] + ' ' + g[1] + 'L' + g[2] + ' ' + g[3] + 'L' + g[4] + ' ' + g[5] + '" fill="none" stroke="' + c2 + '" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"/></g>';
+          }).join('');
+          return '<g transform="scale(' + s2 + ' 1)">' + legs +
             '<path d="M13-3 22-9" stroke="' + c2 + '" stroke-width="3" stroke-linecap="round"/><g class="crabclaw' + cls + '"><path d="M22-9C18-16 22-23 30-23 28-19 28-16 29-15 26-14 24-12 22-9Z" fill="' + c + '"/></g><path d="M22-9C28-8 34-12 33-20 31-17 29-16 27-15 25-13 23-11 22-9Z" fill="' + c + '"/></g>';
         };
         return '<g class="crab" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="15" rx="22" ry="4" fill="#b8843f" opacity=".35"/>' + side(-1, b2 ? ' b' : '') + side(1, b2 ? '' : ' b') +
@@ -2105,7 +2132,7 @@
     var fresh = mechanicsOf(current.level).filter(function (k) { return !progress.tutorials[k]; });
     if (fresh.length) showTutorial(fresh, 0, true);
   }
-  function showTutorial(list, at, firstTime) {
+  function showTutorial(list, at, firstTime, after) {
     var key = list[at], d = E.TUTORIALS[key], more = list.length > 1 ? '<span class="tutcount">' + (at + 1) + ' of ' + list.length + '</span>' : '';
     var s = sheet('<div class="row"><h2>' + d.title + '</h2>' + more + '</div><div class="tutbox"><canvas id="tutCanvas" role="img" aria-label="Animated example of ' + d.title + '"></canvas></div><p class="tutsay" id="tutSay" aria-live="off">&nbsp;</p><p>' + d.text + '</p><button class="primary" id="tutOk">Understood</button>', 'tutorial');
     var stop = playDemo(s.querySelector('#tutCanvas'), key, s.querySelector('#tutSay'));
@@ -2114,10 +2141,10 @@
     s.querySelector('#tutOk').onclick = function () {
       stop();
       if (firstTime) { progress.tutorials[key] = 1; save('unwind.progress2', progress); }
-      if (at + 1 < list.length) { showTutorial(list, at + 1, firstTime); return; }
+      if (at + 1 < list.length) { showTutorial(list, at + 1, firstTime, after); return; }
       closeSheet();
       if (firstTime) { introStart = performance.now(); prepareIntro(current.level); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
-      else guideSheet();
+      else if (after !== 'play') guideSheet();
     };
   }
   function playDemo(canvas, key, sayEl) {
@@ -2135,16 +2162,16 @@
       if (run.at >= run.steps.length) { run.finished = now + 1100; return; }
       var st = run.steps[run.at];
       if (sayEl) sayEl.textContent = st.say || '\u00a0';
-      run.tapping = st.tap !== undefined;
-      run.phaseEnd = now + (run.tapping ? 950 : 500);
+      run.tapping = st.tap !== undefined; run.pending = true;
+      run.phaseEnd = now + (run.tapping ? 950 : 700);
     };
     var act = function (now) {
       var st = run.steps[run.at], l = run.level, sv = run.state;
-      run.tapping = false; run.phaseEnd = now + 1350;
+      run.tapping = false; run.pending = false; run.phaseEnd = now + 1350;
       if (st.spin !== undefined) {
         var a = l.arrows[st.spin];
         E.tutorialSpin(l, st.spin); a.rot = { start: now, turn: Math.PI / 2 }; run.windAt = now;
-        run.phaseEnd = now + 1500; run.acted = true; return;
+        run.phaseEnd = now + 1400; return;
       }
       var res = E.tap(l, sv, st.tap);
       if (res.notReady) { run.nudges[st.tap] = now + 500; run.acted = true; return; }
@@ -2171,7 +2198,7 @@
         if (!run.finished && run.at < 0) nextStep(now);
         if (run.finished && now > run.finished) { restart(); nextStep(now); state = run.state; current = { level: run.level }; }
         var l = run.level, sv = run.state, w = Math.max(3, cs * 0.17);
-        if (!run.finished && now > run.phaseEnd) { if (run.tapping) act(now); else nextStep(now); }
+        if (!run.finished && now > run.phaseEnd) { if (run.pending) act(now); else nextStep(now); }
         ctx.globalAlpha = 0.16; ctx.fillStyle = colors.ink;
         for (var y = 0; y < l.h; y++) for (var x = 0; x < l.w; x++) { var dp = px([x, y]); ctx.beginPath(); ctx.arc(dp.x, dp.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill(); }
         (l.flowers || []).forEach(function (f, i) { if (i >= sv.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
@@ -2222,8 +2249,8 @@
           } else chevron(res.end, res.tan, cs * 0.24);
           var centre = pointAlong(pts, shift + len / 2), tail = px(a.cells[0]);
           if (a.kind === 'twin') badge(centre, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0)));
-          if (a.isKey) drawStar(tail, cs * 0.34, now);
-          if (a.key !== undefined && !sv.removed[a.key]) drawMoon(tail, cs * 0.34, now);
+          if (a.isKey) { drawStar(tail, cs * 0.34, now); pairTag(tail, cs * 0.34, 1); }
+          if (a.key !== undefined && !sv.removed[a.key]) { drawMoon(tail, cs * 0.34, now); pairTag(tail, cs * 0.34, 1); }
           if (a.wait && sv.launches < a.wait) badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - sv.launches), color);
           if (a.ghostPhase !== undefined) drawGhostIcon(centre, cs * 0.3, ghostForm, now);
           if (a.phase) drawPhaseIcon(centre, cs * 0.26, color, now);
@@ -2250,7 +2277,10 @@
           drawBeeAt(bx, by, cs / 40, now, true, false);
           return true;
         });
-        if (run.windAt) { drawWind(now); run.windAt = windAt; }
+        // The bee waits on the flower it will carry away next.
+        var nextFlower = l.flowers && l.flowers[sv.launches];
+        if (nextFlower) { var nf = px(nextFlower); drawBeeAt(nf.x + Math.sin(now / 420) * cs * 0.05, nf.y - cs * 0.3 + Math.sin(now / 300) * cs * 0.04, cs / 40, now, true, false); }
+        if (run.windAt) { windAt = run.windAt; drawWind(now); run.windAt = windAt; }
         // A soft ring shows which arrow is about to be tapped.
         if (run.tapping) {
           var aim = run.steps[run.at] && l.arrows[run.steps[run.at].tap];
@@ -2270,6 +2300,11 @@
     requestAnimationFrame(loop);
     return function () { alive = false; };
   }
+  // Tapping a level's explanation plays its demo again.
+  $('caption').addEventListener('click', function () {
+    if (!$('caption').classList.contains('watchable') || ended || !current) return;
+    showTutorial(mechanicsOf(current.level), 0, false, 'play');
+  });
   function guideSheet() {
     var ink = colors.ink, twin = colors.twins[0], comp = colors.compass, mir = colors.mirror, gold = '#ffd23f', disc = '#1d2350', card = colors.card;
     var head = function (x, y, c) { return '<path d="M' + (x - 7) + ' ' + (y - 7) + ' L' + x + ' ' + y + ' L' + (x - 7) + ' ' + (y + 7) + '" stroke="' + c + '" stroke-width="4.5"/>'; };
@@ -2285,9 +2320,9 @@
         art: line('M4 12H46', twin) + head(52, 12, twin) + badge(24, 12, twin, card, 'A') + line('M4 36H46', twin) + head(52, 36, twin) + badge(24, 36, twin, card, 'A') },
       { key: 'compass', title: 'Compass', text: 'Turns a quarter clockwise each time an arrow leaves. The wrong order can leave you stuck, so use Rewind.',
         art: '<circle cx="31" cy="23" r="19" stroke="' + comp + '" stroke-width="2.500"/>' + line('M21 23H38', comp) + head(44, 23, comp) },
-      { key: 'moon', title: 'Moon arrow', text: 'Asleep and dashed. It cannot move until its star arrow leaves. Tapping it early costs nothing.',
+      { key: 'moon', title: 'Moon arrow', text: 'Asleep and dashed. It cannot move until the star arrow with the same number leaves. Tapping it early costs nothing.',
         art: line('M16 23H50', ink, true) + head(56, 23, ink) + nightDisc(14, 23) + moon },
-      { key: 'star', title: 'Star arrow', text: 'When it leaves, it wakes the moon arrow at the other end of its golden thread.',
+      { key: 'star', title: 'Star arrow', text: 'When it leaves, it wakes the moon arrow with the same number, at the other end of its golden thread.',
         art: line('M16 23H50', ink) + head(56, 23, ink) + nightDisc(14, 23) + star },
       { key: 'mirror', title: 'Mirror', text: 'Not an arrow. It turns any arrow passing through by 90 degrees, so follow the new path.',
         art: '<circle cx="31" cy="23" r="19" stroke="' + mir + '" stroke-width="1.500" opacity=".6"/>' + line('M18 36L44 10', mir) },
