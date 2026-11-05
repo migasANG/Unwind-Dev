@@ -66,38 +66,42 @@
     o.onended = function () { g.disconnect(); depth.disconnect(); };
   }
   var THEMES = [
-    { id: 'first-light', trim: 0.95, name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
+    { id: 'first-light', trim: 1.03, name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
       chords: [[48,55,64,67],[45,52,60,64],[41,48,57,64],[43,50,59,62],[48,55,64,72],[40,52,59,67],[41,48,60,69],[43,50,59,65]],
       melody: [[[0,76],[2,79]],[[1,76],[2.5,72]],[[0,72],[1.5,74],[3,76]],[[2,74]],[[0,79],[1.5,81],[3,79]],[[1,76],[2.5,74]],[[0,72],[2,76]],[[1,74],[3,71]]],
       pent: [60,62,64,67,69,72,74,76,79,81,84] },
-    { id: 'still-water', trim: 1.22, name: 'Still Water', mood: 'Playful wooden kalimba', bpm: 92, beats: 4, style: 'kalimba',
+    { id: 'still-water', trim: 1.23, name: 'Still Water', mood: 'Playful wooden kalimba', bpm: 92, beats: 4, style: 'kalimba',
       chords: [[45,64,69,72],[43,62,67,71],[40,59,64,67],[45,60,64,69],[41,60,65,69],[43,62,67,74],[45,64,72,76],[40,59,67,71]],
       melody: [[[2.5,81]],[[1.5,79],[3.5,83]],[[0.5,79]],[[2,76],[3.5,81]],[[2.5,84]],[[1.5,83],[3.5,79]],[[0.5,84],[2.5,81]],[[2,79]]],
       pent: [57,60,62,64,67,69,72,74,76,79,81] },
-    { id: 'lantern-hour', trim: 1.2, name: 'Lantern Hour', mood: 'Music box waltz', bpm: 112, beats: 3, style: 'waltz',
+    { id: 'lantern-hour', trim: 1.26, name: 'Lantern Hour', mood: 'Music box waltz', bpm: 112, beats: 3, style: 'waltz',
       chords: [[41,57,60,65],[36,55,60,64],[38,57,62,65],[34,53,58,62],[41,57,60,69],[43,55,62,67],[34,53,62,65],[36,55,58,64],[38,57,62,65],[34,53,58,65],[36,55,60,64],[41,57,60,65]],
       melody: [[[0,89],[1,93],[2,96]],[[0,94],[1.5,91],[2,88]],[[0,86],[1,89],[2,93]],[[0,91],[1.5,86],[2,82]],[[0,93],[1,96],[2,98]],[[0,94],[1.5,91],[2,86]],[[0,89],[1,86],[2,82]],[[0,84],[2,88]],[[0,86],[1,89],[2,93]],[[0,91],[1.5,89],[2,86]],[[0,88],[1,91],[2,94]],[[0,93],[2,89]]],
       pent: [53,57,60,62,65,67,69,72,74,77,79] },
-    { id: 'night-swim', trim: 0.66, name: 'Night Swim', mood: 'Slow, dreamy electric piano', bpm: 46, beats: 4, style: 'dream',
+    { id: 'night-swim', trim: 0.7, name: 'Night Swim', mood: 'Slow, dreamy electric piano', bpm: 46, beats: 4, style: 'dream',
       chords: [[38,57,60,65],[43,58,62,65],[36,55,58,64],[41,57,60,64],[34,53,57,62],[43,53,59,62],[36,52,55,62],[33,55,60,64]],
       melody: [[[1,69]],[[2,70],[3,67]],[[1.5,64]],[[0.5,65],[3,69]],[[1,62]],[[2,65],[3,62]],[[1,64]],[[0,61],[2.5,57]]],
       pent: [50,53,55,57,60,62,65,67,69,72,74] },
-    { id: 'snowfall', trim: 1.91, name: 'Snowfall', mood: 'Winter: a tiptoeing celesta dance', bpm: 76, beats: 4, style: 'snow',
+    { id: 'snowfall', trim: 2.05, name: 'Snowfall', mood: 'Winter: a tiptoeing celesta dance', bpm: 76, beats: 4, style: 'snow',
       chords: [[40,47,55,59],[40,47,55,59],[45,52,57,60],[47,54,59,63],[40,47,55,59],[36,48,55,60],[33,45,57,60],[35,47,54,59]],
       melody: [[[0,71],[0.5,71],[1,67],[1.5,71],[2,64],[3,66],[3.5,67]],[[0,69],[0.5,67],[1,66],[1.5,63],[2,64]],[[0,72],[0.5,72],[1,69],[1.5,72],[2,64],[3,67],[3.5,69]],[[0,71],[0.5,69],[1,67],[1.5,66],[2,63],[3,66]],[[0,71],[0.5,71],[1,67],[1.5,71],[2,76],[3,74],[3.5,72]],[[0,71],[0.5,72],[1,74],[1.5,72],[2,67],[3,64]],[[0,69],[0.5,72],[1,76],[1.5,72],[2,69],[3,66],[3.5,67]],[[0,66],[0.5,63],[1,59],[2,64]]],
       pent: [52,55,57,59,62,64,67,69,71,74,76] },
-    { id: 'meadow', trim: 1.26, name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
+    { id: 'meadow', trim: 1.41, name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
       chords: [[43,67,71,74],[40,67,71,76],[36,67,72,76],[38,66,69,74],[43,67,71,74],[47,66,71,74],[36,67,72,76],[38,66,72,74]],
       melody: [[[0,79],[1,83],[1.5,81],[2,79]],[[0.5,76],[1,79],[2,83]],[[0,84],[1,83],[1.5,81],[2.5,79]],[[0,78],[1,81],[2,86]],[[0,83],[0.5,86],[1,88],[2,86],[3,83]],[[0.5,79],[1,83],[2,81]],[[0,84],[0.5,83],[1,81],[1.5,79],[2,76]],[[0,78],[1,81],[2,79]]],
       pent: [55,57,59,62,64,67,69,71,74,76,79] },
-    { id: 'sandbar', trim: 1.2, name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
+    { id: 'sandbar', trim: 1.24, name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
       chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
       melody: [[[1.5,74],[3,78]],[[0.5,76],[2,73]],[[1,71],[2.5,74]],[[0,73],[1.5,69]],[[1.5,78],[3,81]],[[0.5,78],[2,74]],[[1,76],[2.5,79]],[[0,76],[2,73]]],
       pent: [50,52,54,57,59,62,64,66,69,71,74] },
-    { id: 'amber-leaves', trim: 0.72, name: 'Amber Leaves', mood: 'Autumn: warm cello and a slow waltz', bpm: 74, beats: 3, style: 'amber',
+    { id: 'amber-leaves', trim: 0.8, name: 'Amber Leaves', mood: 'Autumn: warm cello and a slow waltz', bpm: 74, beats: 3, style: 'amber',
       chords: [[33,52,57,60],[29,53,57,60],[36,52,55,60],[28,52,56,59],[33,52,60,64],[38,53,57,62],[35,50,56,59],[28,52,56,62]],
       melody: [[[0,64],[1,69],[2,72]],[[0,69],[2,65]],[[0,67],[1,72],[2,76]],[[0,71],[2,68]],[[0,69],[1,72],[2,76]],[[0,74],[2,69]],[[0,68],[1,71],[2,74]],[[0,71],[1,68],[2,64]]],
-      pent: [45,48,50,52,55,57,60,62,64,67,69] }
+      pent: [45,48,50,52,55,57,60,62,64,67,69] },
+    { id: 'high-sun', trim: 1.55, name: 'High Sun', mood: 'Noon: sunny vibraphone and soft guitar', bpm: 100, beats: 4, style: 'noon',
+      chords: [[48,64,67,72],[45,60,64,69],[41,60,65,69],[43,59,62,67],[48,64,67,72],[40,59,64,67],[41,57,60,65],[43,55,59,65],[45,60,64,72],[41,57,65,69],[38,57,62,65],[43,55,62,71]],
+      melody: [[[0,76],[1,79],[2.5,84]],[[0.5,81],[2,79]],[[0,77],[1,81],[2,84],[3,81]],[[0,79],[2,74]],[[0,76],[1.5,79],[3,84]],[[0.5,83],[2,79]],[[0,77],[1.5,76],[3,74]],[[0,74],[1,77],[2,79]],[[0,81],[1.5,84],[3,88]],[[0.5,84],[2,81]],[[0,77],[1,81],[2.5,77]],[[0,79],[1.5,74],[3,71]]],
+      pent: [60,62,64,67,69,72,74,76,79,81,84] }
   ];
 
   var bars = {
@@ -137,6 +141,15 @@
     }
   };
   Object.assign(bars, {
+    noon: function (ctx, dest, th, chord, melody, t, beat) {
+      // A relaxed midday swing: soft bass, a guitar on the off-beats and a warm vibraphone tune.
+      voice(ctx, dest, hz(chord[0]), t, 0.1, 0.8, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.07, 0.65, 0.006, PIZZ);
+      [1, 2.5, 3.5].forEach(function (b, n) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, n === 0 ? 0.04 : 0.03, 0.42, 0.004, GUITAR); });
+      });
+      if (melody) melody.forEach(function (n) { vibe(ctx, dest, hz(n[1]), t + n[0] * beat, 0.1, beat * 2.2); });
+    },
     snow: function (ctx, dest, th, chord, melody, t, beat) {
       // Plucked strings march softly underneath, with a low, staccato celesta on top.
       voice(ctx, dest, hz(chord[0]), t, 0.1, 0.5, 0.004, PIZZ);
@@ -234,6 +247,14 @@
     [79, 83, 88].forEach(function (m, i) { voice(ctx, dest, hz(m), t + 0.08 + i * 0.09, 0.085, 0.75, 0.003, BELL); });
   }
   function buzzSound(ctx, dest, t) { glide(ctx, dest, 300, 420, t, 0.22, 0.03); }
+  // The last bar of a song comes home: a low note, the first chord rolled upwards, then the opening note of the tune, left to ring.
+  function endingBar(ctx, dest, th, t, beat, len) {
+    var v = { piano: FELT, kalimba: WOOD, waltz: BOX, dream: FELT, snow: CELESTA, meadow: GUITAR, bossa: STEEL, amber: FELT, noon: FELT }[th.style] || FELT;
+    var home = th.chords[0], top = th.melody[0][0][1], ring = Math.min(2.4, len + 0.9);
+    voice(ctx, dest, hz(home[0]), t, 0.12, ring * 1.1, 0.01, th.style === 'kalimba' || th.style === 'waltz' ? PIZZ : FELT);
+    home.slice(1).forEach(function (m, i) { voice(ctx, dest, hz(m + (m < 60 ? 12 : 0)), t + (i + 1) * beat * 0.33, 0.07, ring, 0.008, v); });
+    voice(ctx, dest, hz(top), t + beat * 1.5, th.style === 'waltz' ? 0.075 : 0.1, ring, 0.006, v);
+  }
   // Schedules one bar and returns its length in seconds.
   // The melody rests every third round, so a theme fully repeats after three rounds.
   function patternBars(themeIndex) { return THEMES[themeIndex].chords.length * 3; }
@@ -241,9 +262,10 @@
   function scheduleBar(ctx, dest, themeIndex, bar, t) {
     var th = THEMES[themeIndex], beat = 60 / th.bpm, len = th.beats * beat;
     var chord = th.chords[bar % th.chords.length], cycle = Math.floor(bar / th.chords.length);
-    // The melody rests every third time round, so the theme has room to breathe.
-    var melody = cycle % 3 !== 2 ? th.melody[bar % th.melody.length] : null;
-    bars[th.style](ctx, dest, th, chord, melody, t, beat, len);
+    // The melody rests in the middle round, so the theme has room to breathe and still finishes on its tune.
+    var melody = cycle % 3 !== 1 ? th.melody[bar % th.melody.length] : null;
+    if (bar % patternBars(themeIndex) === patternBars(themeIndex) - 1) endingBar(ctx, dest, th, t, beat, len);
+    else bars[th.style](ctx, dest, th, chord, melody, t, beat, len);
     return len;
   }
   // Three quiet little victory pieces, each with its own melody and instrument. Returns the length in seconds.

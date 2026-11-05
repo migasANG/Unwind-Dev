@@ -23,7 +23,7 @@
   var CHAPTERS = [
     { name: 'Dawn', a: '#f6d9cf', b: '#c9c6e6', ink: '#3d2f5b', twin: '#b83563', compass: '#0f6a79', sun: '#ffeccf', card: '#fff6f0', hint: '#e85d04', music: 0, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#8f5200', '#5a3fc0'] },
     { name: 'Morning', a: '#c3e6e4', b: '#e5f2d8', ink: '#123f4a', twin: '#c23c3c', compass: '#6a3fb0', sun: '#fff9dc', card: '#f6fcf8', hint: '#e85d04', music: 1, mirror: '#1f6fd6', twins: ['#c23c3c', '#a8127a', '#7d5200', '#2f6f1f'] },
-    { name: 'Noon', a: '#a9d8ef', b: '#e8f6ee', ink: '#10385a', twin: '#c0392b', compass: '#7a3aa8', sun: '#fffdf0', card: '#f4fbff', hint: '#e85d04', music: 1, mirror: '#1f6fd6', twins: ['#c0392b', '#a8127a', '#7d5200', '#2f6f1f'] },
+    { name: 'Noon', a: '#a9d8ef', b: '#e8f6ee', ink: '#10385a', twin: '#c0392b', compass: '#7a3aa8', sun: '#fffdf0', card: '#f4fbff', hint: '#e85d04', music: 8, mirror: '#1f6fd6', twins: ['#c0392b', '#a8127a', '#7d5200', '#2f6f1f'] },
     { name: 'Dusk', a: '#4f4580', b: '#b4688a', ink: '#fff1e0', twin: '#ffcb77', compass: '#94ece6', sun: '#ffab76', card: '#3f3768', hint: '#ffe14d', music: 2, mirror: '#8fd0ff', twins: ['#ffcb77', '#ff9ecb', '#a8f08a', '#a9d4ff'] },
     { name: 'Night', a: '#111737', b: '#27335f', ink: '#e7ecff', twin: '#ffa6b8', compass: '#8ee8c6', sun: '#dfe6ff', card: '#1b2348', hint: '#ffe14d', music: 3, mirror: '#7cc4ff', twins: ['#ffa6b8', '#ffd479', '#a8f08a', '#a9d4ff'] }
   ];
@@ -111,10 +111,12 @@
       return;
     }
     var songDriven = ac && ac.state === 'running' && audioPrefs.music && audioPrefs.theme === 'auto' && playingTheme === wantedTheme();
-    var finished = songDriven ? musicBar >= M.patternBars(playingTheme) && ac.currentTime >= nextBarAt : now >= bgCycle.endAt;
+    // The scene gets ready just before the song's last bar is over, so the fade fills the whole gap.
+    var finished = songDriven ? musicBar >= M.patternBars(playingTheme) && ac.currentTime >= nextBarAt - 0.25 : now >= bgCycle.endAt;
     if (!finished) return;
     bgCycle.i = (bgCycle.i + 1) % CYCLE.length;
-    bgCycle.gapUntil = now + CYCLE_GAP;
+    bgCycle.gapUntil = now + CYCLE_GAP + (songDriven ? 250 : 0);
+    nextFade = CYCLE_GAP - 100;
     applyBackgroundNow();
     track('background_cycle', { to: CYCLE[bgCycle.i] });
   }
@@ -261,8 +263,10 @@
     }); }, next ? 90 : 0); }); });
   }
   // A gentle crossfade: the scene, sky, sun, board and menus all drift to the new colours together.
-  var BG_FADE = 1400;
+  var BG_FADE = 1400, nextFade = 1400;
   function commitBackground(ask, fresh, next) {
+    BG_FADE = nextFade; nextFade = 1400;
+    document.documentElement.style.setProperty('--bgfade', (BG_FADE / 1000) + 's');
     var old = $('seasonBg'), sun = $('sun'), board = $('board'), sunWasOn = !sun.hidden;
     document.body.classList.add('bgswap');
     // A copy of the board as it looks now fades out while the real one draws in the new colours.
@@ -300,6 +304,8 @@
     if (o.seasonChoice && !o.effectList) { o.effectList = SEASON_ORDER.indexOf(o.seasonChoice) >= 0 ? [o.seasonChoice] : []; o.effectRandom = o.seasonChoice === 'random'; delete o.seasonChoice; }
     return { list: o.effectList || [], random: !!o.effectRandom };
   }
+  var BG_AUTO_NOTE = 'The backgrounds will change with the music: when a song ends, the next scene fades in.';
+  function bgNote(plain) { return backgroundChoice() === 'default' ? BG_AUTO_NOTE : plain; }
   function backgroundButtons(cls) {
     return '<div class="sizes bgs ' + (cls || '') + '" role="group" aria-label="Background">' + BACKGROUNDS.map(function (x) { return '<button data-bg="' + x[0] + '" aria-pressed="' + (backgroundChoice() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
   }
@@ -310,12 +316,13 @@
         // The default background follows the music, so the music setting goes back to Follow the level.
         if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+        s.querySelectorAll('[data-bgnote]').forEach(function (n) { n.textContent = bgNote(n.getAttribute('data-bgnote')); });
         if (onPick) onPick();
       };
     });
   }
   function backgroundSheet() {
-    var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note">Change it any time. Your board stays as it is.</p>' + backgroundButtons('inlevel'));
+    var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel'));
     s.querySelector('#x').onclick = closeSheet;
     wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); });
   }
@@ -1771,8 +1778,8 @@
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
     if (a.uno !== undefined) items.push(function (c) { drawReverseIcon(c, cs * 0.27, color); });
     if (a.phase) items.push(function (c) { drawPhaseIcon(c, cs * 0.26, color, now); });
-    if (a.red && left < a.red) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.red - left), a.red - left <= 2 ? '#c8202f' : color); drawMiniCard({ x: c.x + cs * 0.21, y: c.y + cs * 0.21 }, cs * 0.17); });
-    if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.34); });
+    if (a.red && left < a.red) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.red - left), a.red - left <= 2 ? '#c8202f' : color); drawMiniCard({ x: c.x + cs * 0.26, y: c.y + cs * 0.24 }, cs * 0.27); });
+    if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.5); });
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       scaled(c, pop, function () { draw(c); });
@@ -2211,7 +2218,7 @@
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
+      '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
@@ -2480,7 +2487,7 @@
       { key: 'phase', title: 'Phase arrow', text: 'Purple. Can slip through one occupied tile on its way out, whether an arrow, a flower or fire, but not two in a row.',
         art: line('M4 23H50', '#7a3fd0') + head(56, 23, '#7a3fd0') + '<circle cx="28" cy="23" r="10" fill="' + card + '" stroke="#7a3fd0" stroke-width="1.800"/><circle cx="24.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/><circle cx="31.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/>' },
       { key: 'red', title: 'Red card arrow', text: 'Play it before its count reaches zero. If not, it is sent off: it cannot move until only sent-off arrows remain, and it can block the rest. Rewind if that traps you.',
-        art: line('M4 23H50', ink) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) + '<rect x="33" y="27" width="9" height="13" rx="1.500" fill="#d4161f" stroke="#fff"/>' },
+        art: line('M4 23H50', ink) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) + '<rect x="31" y="23" width="14" height="20" rx="2" fill="#d4161f" stroke="#fff"/>' },
       { key: 'ice', title: 'Frozen arrow', text: 'Winter. It cannot move, and it blocks others. It thaws by itself after 3 to 5 launches, or hit it with another arrow to free it sooner, at no cost.',
         art: line('M4 23H50', '#3f9fd8') + head(56, 23, '#3f9fd8') + '<circle cx="28" cy="23" r="11" fill="#e4f5ff" stroke="#2f8fd0" stroke-width="2"/><path d="M28 15v16M21 19l14 8M35 19l-14 8" stroke="#2f8fd0" stroke-width="1.800"/>' },
       { key: 'fire', title: 'Burning tile', text: 'Summer. Blocks arrows for 2 to 4 launches. Hitting it costs a life.',

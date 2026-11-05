@@ -23,11 +23,11 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg.baking *{animation:none!important}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
-.scenebg{transition:opacity 1.4s ease-in-out;will-change:opacity}
-.boardfade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity 1.4s ease-in-out}
-body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,body.bgswap .sheet,body.bgswap header.ui *,body.bgswap nav.ui *{transition:background-color 1.4s ease-in-out,color 1.4s ease-in-out,border-color 1.4s ease-in-out,fill 1.4s ease-in-out,stroke 1.4s ease-in-out}
+.scenebg{transition:opacity var(--bgfade,1.4s) ease-in-out;will-change:opacity}
+.boardfade{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity var(--bgfade,1.4s) ease-in-out}
+body.bgswap .card,body.bgswap .card *,body.bgswap header.ui,body.bgswap nav.ui,body.bgswap .sheet,body.bgswap header.ui *,body.bgswap nav.ui *{transition:background-color var(--bgfade,1.4s) ease-in-out,color var(--bgfade,1.4s) ease-in-out,border-color var(--bgfade,1.4s) ease-in-out,fill var(--bgfade,1.4s) ease-in-out,stroke var(--bgfade,1.4s) ease-in-out}
 .scenebg.leaving{opacity:0}
-body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-function:ease-in-out}
+body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transition-timing-function:ease-in-out}
 .card.tall{height:min(100%,860px)}
 .card.tall>.row{display:contents}
 .card.tall>.row .close{position:sticky;top:0;order:-1;align-self:flex-end;flex:none;margin-bottom:-52px;z-index:3;border-radius:50%;background:var(--card);box-shadow:0 1px 6px color-mix(in srgb,var(--ink) 20%,transparent)}
@@ -1339,38 +1339,42 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
     o.onended = function () { g.disconnect(); depth.disconnect(); };
   }
   var THEMES = [
-    { id: 'first-light', trim: 0.95, name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
+    { id: 'first-light', trim: 1.03, name: 'First Light', mood: 'Rolling felt piano', bpm: 66, beats: 4, style: 'piano',
       chords: [[48,55,64,67],[45,52,60,64],[41,48,57,64],[43,50,59,62],[48,55,64,72],[40,52,59,67],[41,48,60,69],[43,50,59,65]],
       melody: [[[0,76],[2,79]],[[1,76],[2.5,72]],[[0,72],[1.5,74],[3,76]],[[2,74]],[[0,79],[1.5,81],[3,79]],[[1,76],[2.5,74]],[[0,72],[2,76]],[[1,74],[3,71]]],
       pent: [60,62,64,67,69,72,74,76,79,81,84] },
-    { id: 'still-water', trim: 1.22, name: 'Still Water', mood: 'Playful wooden kalimba', bpm: 92, beats: 4, style: 'kalimba',
+    { id: 'still-water', trim: 1.23, name: 'Still Water', mood: 'Playful wooden kalimba', bpm: 92, beats: 4, style: 'kalimba',
       chords: [[45,64,69,72],[43,62,67,71],[40,59,64,67],[45,60,64,69],[41,60,65,69],[43,62,67,74],[45,64,72,76],[40,59,67,71]],
       melody: [[[2.5,81]],[[1.5,79],[3.5,83]],[[0.5,79]],[[2,76],[3.5,81]],[[2.5,84]],[[1.5,83],[3.5,79]],[[0.5,84],[2.5,81]],[[2,79]]],
       pent: [57,60,62,64,67,69,72,74,76,79,81] },
-    { id: 'lantern-hour', trim: 1.2, name: 'Lantern Hour', mood: 'Music box waltz', bpm: 112, beats: 3, style: 'waltz',
+    { id: 'lantern-hour', trim: 1.26, name: 'Lantern Hour', mood: 'Music box waltz', bpm: 112, beats: 3, style: 'waltz',
       chords: [[41,57,60,65],[36,55,60,64],[38,57,62,65],[34,53,58,62],[41,57,60,69],[43,55,62,67],[34,53,62,65],[36,55,58,64],[38,57,62,65],[34,53,58,65],[36,55,60,64],[41,57,60,65]],
       melody: [[[0,89],[1,93],[2,96]],[[0,94],[1.5,91],[2,88]],[[0,86],[1,89],[2,93]],[[0,91],[1.5,86],[2,82]],[[0,93],[1,96],[2,98]],[[0,94],[1.5,91],[2,86]],[[0,89],[1,86],[2,82]],[[0,84],[2,88]],[[0,86],[1,89],[2,93]],[[0,91],[1.5,89],[2,86]],[[0,88],[1,91],[2,94]],[[0,93],[2,89]]],
       pent: [53,57,60,62,65,67,69,72,74,77,79] },
-    { id: 'night-swim', trim: 0.66, name: 'Night Swim', mood: 'Slow, dreamy electric piano', bpm: 46, beats: 4, style: 'dream',
+    { id: 'night-swim', trim: 0.7, name: 'Night Swim', mood: 'Slow, dreamy electric piano', bpm: 46, beats: 4, style: 'dream',
       chords: [[38,57,60,65],[43,58,62,65],[36,55,58,64],[41,57,60,64],[34,53,57,62],[43,53,59,62],[36,52,55,62],[33,55,60,64]],
       melody: [[[1,69]],[[2,70],[3,67]],[[1.5,64]],[[0.5,65],[3,69]],[[1,62]],[[2,65],[3,62]],[[1,64]],[[0,61],[2.5,57]]],
       pent: [50,53,55,57,60,62,65,67,69,72,74] },
-    { id: 'snowfall', trim: 1.91, name: 'Snowfall', mood: 'Winter: a tiptoeing celesta dance', bpm: 76, beats: 4, style: 'snow',
+    { id: 'snowfall', trim: 2.05, name: 'Snowfall', mood: 'Winter: a tiptoeing celesta dance', bpm: 76, beats: 4, style: 'snow',
       chords: [[40,47,55,59],[40,47,55,59],[45,52,57,60],[47,54,59,63],[40,47,55,59],[36,48,55,60],[33,45,57,60],[35,47,54,59]],
       melody: [[[0,71],[0.5,71],[1,67],[1.5,71],[2,64],[3,66],[3.5,67]],[[0,69],[0.5,67],[1,66],[1.5,63],[2,64]],[[0,72],[0.5,72],[1,69],[1.5,72],[2,64],[3,67],[3.5,69]],[[0,71],[0.5,69],[1,67],[1.5,66],[2,63],[3,66]],[[0,71],[0.5,71],[1,67],[1.5,71],[2,76],[3,74],[3.5,72]],[[0,71],[0.5,72],[1,74],[1.5,72],[2,67],[3,64]],[[0,69],[0.5,72],[1,76],[1.5,72],[2,69],[3,66],[3.5,67]],[[0,66],[0.5,63],[1,59],[2,64]]],
       pent: [52,55,57,59,62,64,67,69,71,74,76] },
-    { id: 'meadow', trim: 1.26, name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
+    { id: 'meadow', trim: 1.41, name: 'Meadow', mood: 'Spring: a cheerful ukulele and a whistled tune', bpm: 104, beats: 4, style: 'meadow',
       chords: [[43,67,71,74],[40,67,71,76],[36,67,72,76],[38,66,69,74],[43,67,71,74],[47,66,71,74],[36,67,72,76],[38,66,72,74]],
       melody: [[[0,79],[1,83],[1.5,81],[2,79]],[[0.5,76],[1,79],[2,83]],[[0,84],[1,83],[1.5,81],[2.5,79]],[[0,78],[1,81],[2,86]],[[0,83],[0.5,86],[1,88],[2,86],[3,83]],[[0.5,79],[1,83],[2,81]],[[0,84],[0.5,83],[1,81],[1.5,79],[2,76]],[[0,78],[1,81],[2,79]]],
       pent: [55,57,59,62,64,67,69,71,74,76,79] },
-    { id: 'sandbar', trim: 1.2, name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
+    { id: 'sandbar', trim: 1.24, name: 'Sandbar', mood: 'Summer: lazy bossa guitar', bpm: 92, beats: 4, style: 'bossa',
       chords: [[38,57,62,66],[38,57,61,66],[40,59,62,67],[45,55,61,66],[38,57,62,66],[35,54,62,66],[40,55,62,67],[45,55,61,64]],
       melody: [[[1.5,74],[3,78]],[[0.5,76],[2,73]],[[1,71],[2.5,74]],[[0,73],[1.5,69]],[[1.5,78],[3,81]],[[0.5,78],[2,74]],[[1,76],[2.5,79]],[[0,76],[2,73]]],
       pent: [50,52,54,57,59,62,64,66,69,71,74] },
-    { id: 'amber-leaves', trim: 0.72, name: 'Amber Leaves', mood: 'Autumn: warm cello and a slow waltz', bpm: 74, beats: 3, style: 'amber',
+    { id: 'amber-leaves', trim: 0.8, name: 'Amber Leaves', mood: 'Autumn: warm cello and a slow waltz', bpm: 74, beats: 3, style: 'amber',
       chords: [[33,52,57,60],[29,53,57,60],[36,52,55,60],[28,52,56,59],[33,52,60,64],[38,53,57,62],[35,50,56,59],[28,52,56,62]],
       melody: [[[0,64],[1,69],[2,72]],[[0,69],[2,65]],[[0,67],[1,72],[2,76]],[[0,71],[2,68]],[[0,69],[1,72],[2,76]],[[0,74],[2,69]],[[0,68],[1,71],[2,74]],[[0,71],[1,68],[2,64]]],
-      pent: [45,48,50,52,55,57,60,62,64,67,69] }
+      pent: [45,48,50,52,55,57,60,62,64,67,69] },
+    { id: 'high-sun', trim: 1.55, name: 'High Sun', mood: 'Noon: sunny vibraphone and soft guitar', bpm: 100, beats: 4, style: 'noon',
+      chords: [[48,64,67,72],[45,60,64,69],[41,60,65,69],[43,59,62,67],[48,64,67,72],[40,59,64,67],[41,57,60,65],[43,55,59,65],[45,60,64,72],[41,57,65,69],[38,57,62,65],[43,55,62,71]],
+      melody: [[[0,76],[1,79],[2.5,84]],[[0.5,81],[2,79]],[[0,77],[1,81],[2,84],[3,81]],[[0,79],[2,74]],[[0,76],[1.5,79],[3,84]],[[0.5,83],[2,79]],[[0,77],[1.5,76],[3,74]],[[0,74],[1,77],[2,79]],[[0,81],[1.5,84],[3,88]],[[0.5,84],[2,81]],[[0,77],[1,81],[2.5,77]],[[0,79],[1.5,74],[3,71]]],
+      pent: [60,62,64,67,69,72,74,76,79,81,84] }
   ];
 
   var bars = {
@@ -1410,6 +1414,15 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
     }
   };
   Object.assign(bars, {
+    noon: function (ctx, dest, th, chord, melody, t, beat) {
+      // A relaxed midday swing: soft bass, a guitar on the off-beats and a warm vibraphone tune.
+      voice(ctx, dest, hz(chord[0]), t, 0.1, 0.8, 0.006, PIZZ);
+      voice(ctx, dest, hz(chord[0] + 7), t + 2 * beat, 0.07, 0.65, 0.006, PIZZ);
+      [1, 2.5, 3.5].forEach(function (b, n) {
+        [1, 2, 3].forEach(function (i) { voice(ctx, dest, hz(chord[i]), t + b * beat + i * 0.012, n === 0 ? 0.04 : 0.03, 0.42, 0.004, GUITAR); });
+      });
+      if (melody) melody.forEach(function (n) { vibe(ctx, dest, hz(n[1]), t + n[0] * beat, 0.1, beat * 2.2); });
+    },
     snow: function (ctx, dest, th, chord, melody, t, beat) {
       // Plucked strings march softly underneath, with a low, staccato celesta on top.
       voice(ctx, dest, hz(chord[0]), t, 0.1, 0.5, 0.004, PIZZ);
@@ -1507,6 +1520,14 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
     [79, 83, 88].forEach(function (m, i) { voice(ctx, dest, hz(m), t + 0.08 + i * 0.09, 0.085, 0.75, 0.003, BELL); });
   }
   function buzzSound(ctx, dest, t) { glide(ctx, dest, 300, 420, t, 0.22, 0.03); }
+  // The last bar of a song comes home: a low note, the first chord rolled upwards, then the opening note of the tune, left to ring.
+  function endingBar(ctx, dest, th, t, beat, len) {
+    var v = { piano: FELT, kalimba: WOOD, waltz: BOX, dream: FELT, snow: CELESTA, meadow: GUITAR, bossa: STEEL, amber: FELT, noon: FELT }[th.style] || FELT;
+    var home = th.chords[0], top = th.melody[0][0][1], ring = Math.min(2.4, len + 0.9);
+    voice(ctx, dest, hz(home[0]), t, 0.12, ring * 1.1, 0.01, th.style === 'kalimba' || th.style === 'waltz' ? PIZZ : FELT);
+    home.slice(1).forEach(function (m, i) { voice(ctx, dest, hz(m + (m < 60 ? 12 : 0)), t + (i + 1) * beat * 0.33, 0.07, ring, 0.008, v); });
+    voice(ctx, dest, hz(top), t + beat * 1.5, th.style === 'waltz' ? 0.075 : 0.1, ring, 0.006, v);
+  }
   // Schedules one bar and returns its length in seconds.
   // The melody rests every third round, so a theme fully repeats after three rounds.
   function patternBars(themeIndex) { return THEMES[themeIndex].chords.length * 3; }
@@ -1514,9 +1535,10 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   function scheduleBar(ctx, dest, themeIndex, bar, t) {
     var th = THEMES[themeIndex], beat = 60 / th.bpm, len = th.beats * beat;
     var chord = th.chords[bar % th.chords.length], cycle = Math.floor(bar / th.chords.length);
-    // The melody rests every third time round, so the theme has room to breathe.
-    var melody = cycle % 3 !== 2 ? th.melody[bar % th.melody.length] : null;
-    bars[th.style](ctx, dest, th, chord, melody, t, beat, len);
+    // The melody rests in the middle round, so the theme has room to breathe and still finishes on its tune.
+    var melody = cycle % 3 !== 1 ? th.melody[bar % th.melody.length] : null;
+    if (bar % patternBars(themeIndex) === patternBars(themeIndex) - 1) endingBar(ctx, dest, th, t, beat, len);
+    else bars[th.style](ctx, dest, th, chord, melody, t, beat, len);
     return len;
   }
   // Three quiet little victory pieces, each with its own melody and instrument. Returns the length in seconds.
@@ -1611,7 +1633,7 @@ window.UnwindI18n = (function () {
     'Arrow guide': 'Guia das setas', 'On this board': 'Neste tabuleiro', '▶ Watch how it works': '▶ Ver como funciona', 'Music and sound': 'Música e som', 'Settings': 'Definições', 'Language': 'Idioma', 'Music': 'Música', 'Sound effects': 'Efeitos sonoros', 'Theme': 'Tema', 'Follow the level': 'Seguir o nível', 'Matches the time of day or season': 'Acompanha a hora do dia ou a estação do ano', 'Music is off': 'Música desligada',
     'Sound on for the full experience': 'Liga o som para a experiência completa', 'Tap to begin': 'Toca para começar',
     'Puzzle board. Tap an arrow to send it off the board.': 'Tabuleiro do puzzle. Toca numa seta para a enviar para fora do tabuleiro.', 'Music and sound settings': 'Definições de música e som', 'Settings ': 'Definições', 'Choose a background': 'Escolher um fundo', 'Zoom in': 'Aproximar', 'Zoom out': 'Afastar', 'Show the whole board': 'Mostrar o tabuleiro todo', 'Close': 'Fechar',
-    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
+    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'The backgrounds will change with the music: when a song ends, the next scene fades in.': 'Os fundos mudam com a música: quando uma música acaba, o cenário seguinte aparece suavemente.', 'High Sun': 'Sol a Pino', 'Noon: sunny vibraphone and soft guitar': 'Meio-dia: vibrafone solarengo e guitarra suave', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
     // Demos
     'Get every arrow off the board': 'Tira todas as setas do tabuleiro', 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.': 'O objetivo do jogo é fazer sair todas as setas do tabuleiro. Uma seta sai na direção para onde aponta, por isso o caminho tem de estar livre. Acertar noutra seta custa uma vida.', 'Tap an arrow and it leaves the way it points': 'Toca numa seta e ela sai na direção para onde aponta', 'If another arrow is in the way, it bounces back': 'Se houver outra seta no caminho, ressalta', 'So clear the way first': 'Por isso, liberta primeiro o caminho', 'Now it can leave too': 'Agora também pode sair', 'All arrows gone: board cleared!': 'Saíram todas: tabuleiro limpo!',
     'Twins share a colour and a letter. They leave together, so both paths must be clear.': 'As gémeas têm a mesma cor e letra. Saem juntas, por isso os dois caminhos têm de estar livres.', 'One twin is blocked, so neither can go': 'Uma gémea está bloqueada, por isso nenhuma sai', 'Clear the way first': 'Primeiro, liberta o caminho', 'Now both leave together': 'Agora saem as duas juntas',
@@ -1737,7 +1759,7 @@ window.UnwindI18n = (function () {
   var CHAPTERS = [
     { name: 'Dawn', a: '#f6d9cf', b: '#c9c6e6', ink: '#3d2f5b', twin: '#b83563', compass: '#0f6a79', sun: '#ffeccf', card: '#fff6f0', hint: '#e85d04', music: 0, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#8f5200', '#5a3fc0'] },
     { name: 'Morning', a: '#c3e6e4', b: '#e5f2d8', ink: '#123f4a', twin: '#c23c3c', compass: '#6a3fb0', sun: '#fff9dc', card: '#f6fcf8', hint: '#e85d04', music: 1, mirror: '#1f6fd6', twins: ['#c23c3c', '#a8127a', '#7d5200', '#2f6f1f'] },
-    { name: 'Noon', a: '#a9d8ef', b: '#e8f6ee', ink: '#10385a', twin: '#c0392b', compass: '#7a3aa8', sun: '#fffdf0', card: '#f4fbff', hint: '#e85d04', music: 1, mirror: '#1f6fd6', twins: ['#c0392b', '#a8127a', '#7d5200', '#2f6f1f'] },
+    { name: 'Noon', a: '#a9d8ef', b: '#e8f6ee', ink: '#10385a', twin: '#c0392b', compass: '#7a3aa8', sun: '#fffdf0', card: '#f4fbff', hint: '#e85d04', music: 8, mirror: '#1f6fd6', twins: ['#c0392b', '#a8127a', '#7d5200', '#2f6f1f'] },
     { name: 'Dusk', a: '#4f4580', b: '#b4688a', ink: '#fff1e0', twin: '#ffcb77', compass: '#94ece6', sun: '#ffab76', card: '#3f3768', hint: '#ffe14d', music: 2, mirror: '#8fd0ff', twins: ['#ffcb77', '#ff9ecb', '#a8f08a', '#a9d4ff'] },
     { name: 'Night', a: '#111737', b: '#27335f', ink: '#e7ecff', twin: '#ffa6b8', compass: '#8ee8c6', sun: '#dfe6ff', card: '#1b2348', hint: '#ffe14d', music: 3, mirror: '#7cc4ff', twins: ['#ffa6b8', '#ffd479', '#a8f08a', '#a9d4ff'] }
   ];
@@ -1825,10 +1847,12 @@ window.UnwindI18n = (function () {
       return;
     }
     var songDriven = ac && ac.state === 'running' && audioPrefs.music && audioPrefs.theme === 'auto' && playingTheme === wantedTheme();
-    var finished = songDriven ? musicBar >= M.patternBars(playingTheme) && ac.currentTime >= nextBarAt : now >= bgCycle.endAt;
+    // The scene gets ready just before the song's last bar is over, so the fade fills the whole gap.
+    var finished = songDriven ? musicBar >= M.patternBars(playingTheme) && ac.currentTime >= nextBarAt - 0.25 : now >= bgCycle.endAt;
     if (!finished) return;
     bgCycle.i = (bgCycle.i + 1) % CYCLE.length;
-    bgCycle.gapUntil = now + CYCLE_GAP;
+    bgCycle.gapUntil = now + CYCLE_GAP + (songDriven ? 250 : 0);
+    nextFade = CYCLE_GAP - 100;
     applyBackgroundNow();
     track('background_cycle', { to: CYCLE[bgCycle.i] });
   }
@@ -1975,8 +1999,10 @@ window.UnwindI18n = (function () {
     }); }, next ? 90 : 0); }); });
   }
   // A gentle crossfade: the scene, sky, sun, board and menus all drift to the new colours together.
-  var BG_FADE = 1400;
+  var BG_FADE = 1400, nextFade = 1400;
   function commitBackground(ask, fresh, next) {
+    BG_FADE = nextFade; nextFade = 1400;
+    document.documentElement.style.setProperty('--bgfade', (BG_FADE / 1000) + 's');
     var old = $('seasonBg'), sun = $('sun'), board = $('board'), sunWasOn = !sun.hidden;
     document.body.classList.add('bgswap');
     // A copy of the board as it looks now fades out while the real one draws in the new colours.
@@ -2014,6 +2040,8 @@ window.UnwindI18n = (function () {
     if (o.seasonChoice && !o.effectList) { o.effectList = SEASON_ORDER.indexOf(o.seasonChoice) >= 0 ? [o.seasonChoice] : []; o.effectRandom = o.seasonChoice === 'random'; delete o.seasonChoice; }
     return { list: o.effectList || [], random: !!o.effectRandom };
   }
+  var BG_AUTO_NOTE = 'The backgrounds will change with the music: when a song ends, the next scene fades in.';
+  function bgNote(plain) { return backgroundChoice() === 'default' ? BG_AUTO_NOTE : plain; }
   function backgroundButtons(cls) {
     return '<div class="sizes bgs ' + (cls || '') + '" role="group" aria-label="Background">' + BACKGROUNDS.map(function (x) { return '<button data-bg="' + x[0] + '" aria-pressed="' + (backgroundChoice() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
   }
@@ -2024,12 +2052,13 @@ window.UnwindI18n = (function () {
         // The default background follows the music, so the music setting goes back to Follow the level.
         if (b.getAttribute('data-bg') === 'default') { audioPrefs.theme = 'auto'; musicTick(); }
         s.querySelectorAll('[data-bg]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+        s.querySelectorAll('[data-bgnote]').forEach(function (n) { n.textContent = bgNote(n.getAttribute('data-bgnote')); });
         if (onPick) onPick();
       };
     });
   }
   function backgroundSheet() {
-    var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note">Change it any time. Your board stays as it is.</p>' + backgroundButtons('inlevel'));
+    var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel'));
     s.querySelector('#x').onclick = closeSheet;
     wireBackgrounds(s, function () { if (backgroundChoice() === 'default') { bgCycle.gapUntil = 0; startCycleSection(); } applyBackgroundNow(); });
   }
@@ -3485,8 +3514,8 @@ window.UnwindI18n = (function () {
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
     if (a.uno !== undefined) items.push(function (c) { drawReverseIcon(c, cs * 0.27, color); });
     if (a.phase) items.push(function (c) { drawPhaseIcon(c, cs * 0.26, color, now); });
-    if (a.red && left < a.red) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.red - left), a.red - left <= 2 ? '#c8202f' : color); drawMiniCard({ x: c.x + cs * 0.21, y: c.y + cs * 0.21 }, cs * 0.17); });
-    if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.34); });
+    if (a.red && left < a.red) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.red - left), a.red - left <= 2 ? '#c8202f' : color); drawMiniCard({ x: c.x + cs * 0.26, y: c.y + cs * 0.24 }, cs * 0.27); });
+    if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.5); });
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       scaled(c, pop, function () { draw(c); });
@@ -3925,7 +3954,7 @@ window.UnwindI18n = (function () {
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="setting"><span>Background<small>You can also change it while playing.</small></span></div>' + backgroundButtons() +
+      '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
@@ -4194,7 +4223,7 @@ window.UnwindI18n = (function () {
       { key: 'phase', title: 'Phase arrow', text: 'Purple. Can slip through one occupied tile on its way out, whether an arrow, a flower or fire, but not two in a row.',
         art: line('M4 23H50', '#7a3fd0') + head(56, 23, '#7a3fd0') + '<circle cx="28" cy="23" r="10" fill="' + card + '" stroke="#7a3fd0" stroke-width="1.800"/><circle cx="24.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/><circle cx="31.500" cy="23" r="4.500" stroke="#7a3fd0" stroke-width="1.500"/>' },
       { key: 'red', title: 'Red card arrow', text: 'Play it before its count reaches zero. If not, it is sent off: it cannot move until only sent-off arrows remain, and it can block the rest. Rewind if that traps you.',
-        art: line('M4 23H50', ink) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) + '<rect x="33" y="27" width="9" height="13" rx="1.500" fill="#d4161f" stroke="#fff"/>' },
+        art: line('M4 23H50', ink) + head(56, 23, ink) + badge(28, 23, card, ink, '3', ink) + '<rect x="31" y="23" width="14" height="20" rx="2" fill="#d4161f" stroke="#fff"/>' },
       { key: 'ice', title: 'Frozen arrow', text: 'Winter. It cannot move, and it blocks others. It thaws by itself after 3 to 5 launches, or hit it with another arrow to free it sooner, at no cost.',
         art: line('M4 23H50', '#3f9fd8') + head(56, 23, '#3f9fd8') + '<circle cx="28" cy="23" r="11" fill="#e4f5ff" stroke="#2f8fd0" stroke-width="2"/><path d="M28 15v16M21 19l14 8M35 19l-14 8" stroke="#2f8fd0" stroke-width="1.800"/>' },
       { key: 'fire', title: 'Burning tile', text: 'Summer. Blocks arrows for 2 to 4 launches. Hitting it costs a life.',
