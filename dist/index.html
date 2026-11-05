@@ -35,6 +35,13 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:1.4s;transition-timing-fu
 #tip b{display:block;font-weight:600}
 #bgButton{position:fixed;right:max(10px,env(safe-area-inset-right,0px));width:38px;height:38px;border-radius:50%;background:var(--card);display:grid;place-items:center;box-shadow:0 1px 5px rgba(0,0,0,.25);z-index:2}
 #bgButton svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.700;stroke-linecap:round;stroke-linejoin:round}
+.card.tutorial{gap:10px;max-width:380px}
+.tutbox{border-radius:16px;background:color-mix(in srgb,var(--sky-a) 45%,var(--card));overflow:hidden;display:flex;justify-content:center}
+.tutbox canvas{display:block;max-width:100%}
+.tutsay{min-height:1.4em;text-align:center;font:600 1rem/1.3 var(--display)!important}
+.tutcount{font-size:.8125rem;font-weight:600;opacity:.8}
+.card.tutorial .primary{width:100%;margin-top:4px}
+.watch{margin-top:6px;padding:4px 10px;border-radius:10px;font-size:.8125rem;font-weight:600;color:inherit;background:color-mix(in srgb,var(--ink) 10%,transparent)}
 .pb{display:grid;grid-template-columns:1fr auto;gap:0 10px;align-items:baseline;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .pb span{font-size:.8125rem;font-weight:600}
 .pb b{font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
@@ -62,6 +69,10 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 @keyframes drift{from{transform:translateX(calc(-30px*var(--s,1)))}to{transform:translateX(calc(40px*var(--s,1)))}}
 @keyframes flit{0%{transform:translate(0,0)}35%{transform:translate(calc(26px*var(--s,1)),calc(-18px*var(--s,1)))}70%{transform:translate(calc(-14px*var(--s,1)),calc(-30px*var(--s,1)))}100%{transform:translate(calc(20px*var(--s,1)),calc(6px*var(--s,1)))}}
 @keyframes twinkle{from{opacity:.25}to{opacity:1}}
+.crableg{animation:crableg .45s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:0% 0%}.crableg.b{animation-delay:-.22s}
+.crabclaw{animation:crabclaw 1.5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:30% 100%}.crabclaw.b{animation-delay:-.7s}
+@keyframes crableg{from{transform:rotate(-7deg)}to{transform:rotate(8deg)}}
+@keyframes crabclaw{from{transform:rotate(-16deg)}to{transform:rotate(6deg)}}
 @keyframes crab{from{transform:translateX(calc(-26px*var(--s,1)))}to{transform:translateX(calc(30px*var(--s,1)))}}
 .wave{animation:wave 4s ease-in-out infinite alternate}.wave.b{animation-delay:1.2s}
 .sway{animation:sway 5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
@@ -202,7 +213,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
+@media (prefers-reduced-motion:reduce){.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>
@@ -296,6 +307,67 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : tipAtTail(state, a) ? tailDir(a) : a.dir; }
   // Flowers leave in queue order, one per launch. A bee can also take one early if it is all that holds the board up.
   function flowerStands(level, state, key) { return level.flowerAt[key] >= state.launches && !state.noFlowers && !(state.picked && state.picked[key]); }
+  // Short scripted demos of each mechanic, played by the real rules so they can never show something false.
+  // Each step: tap an arrow (expect: ok, hit, wait or thaw) or spin one (autumn wind), with a line to read.
+  var P = function (id, cells, dir, more) { return Object.assign({ id: id, kind: 'plain', cells: cells, dir: dir }, more || {}); };
+  var TUTORIALS = {
+    twin: { title: 'Twins', text: 'Twins share a colour and a letter. They leave together, so both paths must be clear.', w: 5, h: 4,
+      arrows: [P(0, [[0, 0], [1, 0]], 1, { kind: 'twin', twin: 1, pair: 0 }), P(1, [[0, 2], [1, 2]], 1, { kind: 'twin', twin: 0, pair: 0 }), P(2, [[3, 3], [3, 2]], 0)],
+      steps: [{ tap: 0, expect: 'hit', say: 'One twin is blocked, so neither can go' }, { tap: 2, expect: 'ok', say: 'Clear the way first' }, { tap: 0, expect: 'ok', say: 'Now both leave together' }] },
+    compass: { title: 'Compass', text: 'A compass arrow turns a quarter clockwise every time another arrow leaves.', w: 4, h: 4,
+      arrows: [P(0, [[1, 1]], 1, { kind: 'compass' }), P(1, [[3, 1], [3, 2]], 2)],
+      steps: [{ tap: 0, expect: 'hit', say: 'It points at another arrow' }, { tap: 1, expect: 'ok', say: 'Each launch turns it a quarter' }, { tap: 0, expect: 'ok', say: 'Now it has a clear way out' }] },
+    sleeper: { title: 'Moon and star', text: 'A moon arrow sleeps until its star arrow leaves. Tapping it early costs nothing.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { key: 1 }), P(1, [[1, 3], [2, 3], [3, 3]], 1, { isKey: true })],
+      steps: [{ tap: 0, expect: 'wait', say: 'The moon arrow is asleep' }, { tap: 1, expect: 'ok', say: 'Send its star arrow away' }, { tap: 0, expect: 'ok', say: 'Now it wakes and can leave' }] },
+    mirror: { title: 'Mirror', text: 'A mirror turns any arrow passing through it by 90 degrees, so follow the new path.', w: 5, h: 4,
+      mirrors: [{ x: 3, y: 2, t: '/' }],
+      arrows: [P(0, [[0, 2], [1, 2]], 1), P(1, [[3, 0], [4, 0]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'The mirror sends it up, into an arrow' }, { tap: 1, expect: 'ok', say: 'Clear the new path' }, { tap: 0, expect: 'ok', say: 'It turns at the mirror and leaves' }] },
+    patient: { title: 'Patient arrow', text: 'Its number shows how many more launches it needs before it can leave.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { wait: 2 }), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'wait', say: 'It needs 2 more launches' }, { tap: 1, expect: 'ok', say: 'One launch' }, { tap: 2, expect: 'ok', say: 'Two launches' }, { tap: 0, expect: 'ok', say: 'Now it can leave' }] },
+    ghost: { title: 'Ghost arrow', text: 'It swaps form after every launch. As a ghost it cannot be played, and arrows pass through it.', w: 5, h: 3,
+      arrows: [P(0, [[3, 0], [3, 1], [3, 2]], 2, { ghostPhase: 1 }), P(1, [[0, 1], [1, 1]], 1)],
+      steps: [{ tap: 0, expect: 'wait', say: 'See-through: it cannot be played' }, { tap: 1, expect: 'ok', say: 'Other arrows pass right through it' }, { tap: 0, expect: 'ok', say: 'After a launch it is solid and can go' }] },
+    phase: { title: 'Phase arrow', text: 'A phase arrow slips through one occupied tile: an arrow, a flower or fire. But not two in a row.', w: 5, h: 3,
+      arrows: [P(0, [[0, 1], [1, 1]], 1, { phase: true }), P(1, [[3, 0], [3, 1], [3, 2]], 2)],
+      steps: [{ tap: 0, expect: 'ok', say: 'It slips through the arrow in its way' }, { tap: 1, expect: 'ok', say: 'A normal arrow could not do that' }] },
+    red: { title: 'Red card', text: 'Play it before its count runs out. If not, it is sent off until only sent-off arrows remain.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { red: 2 }), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 2], [2, 2]], 1), P(3, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 1, expect: 'ok', say: 'Each launch lowers its count' }, { tap: 2, expect: 'ok', say: 'At zero it gets a red card' }, { tap: 0, expect: 'wait', say: 'Sent off: it cannot move now' }, { tap: 3, expect: 'ok', say: 'Clear everything else' }, { tap: 0, expect: 'ok', say: 'Only then can it leave' }] },
+    uno: { title: 'Reverse arrow', text: 'Its tip swaps to the other end after every launch. The faint mark shows where it goes next.', w: 5, h: 4,
+      arrows: [P(0, [[1, 1], [2, 1]], 1, { uno: 0 }), P(1, [[4, 2], [4, 1], [4, 0]], 0), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'Its tip points at another arrow' }, { tap: 2, expect: 'ok', say: 'After a launch the tip swaps ends' }, { tap: 0, expect: 'ok', say: 'Now it leaves the other way' }, { tap: 1, expect: 'ok', say: '' }] },
+    ice: { title: 'Frozen arrow', text: 'Winter. It cannot move, and it blocks others. It thaws by itself, or hit it with an arrow to free it at no cost.', w: 5, h: 3,
+      frozen: [0], arrows: [P(0, [[3, 0], [3, 1], [3, 2]], 2), P(1, [[0, 1], [1, 1]], 1)],
+      steps: [{ tap: 1, expect: 'thaw', say: 'Hit it to crack the ice, for free' }, { tap: 0, expect: 'ok', say: 'Now it is free to go' }, { tap: 1, expect: 'ok', say: 'And the way is clear' }] },
+    fire: { title: 'Burning tile', text: 'Summer. Fire blocks arrows for a few launches, and hitting it costs a life. Wait for it to burn out.', w: 5, h: 4,
+      burning: [[3, 1, 2]], arrows: [P(0, [[0, 1], [1, 1]], 1), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'Fire in the way costs a life' }, { tap: 1, expect: 'ok', say: 'Play other arrows instead' }, { tap: 2, expect: 'ok', say: 'The fire burns out' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
+    flower: { title: 'Flower and bee', text: 'Spring. Flowers block arrows. After each launch, a bee carries one flower away.', w: 5, h: 4,
+      flowers: [[3, 1]], arrows: [P(0, [[0, 1], [1, 1]], 1), P(1, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'A flower blocks the way' }, { tap: 1, expect: 'ok', say: 'After a launch, a bee takes it' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
+    wind: { title: 'Wind', text: 'Autumn. Wind can spin an arrow around its tail when there is room, which can change everything.', w: 5, h: 4,
+      arrows: [P(0, [[2, 3], [2, 2]], 0), P(1, [[1, 0], [2, 0], [3, 0]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { spin: 0, say: 'The wind spins it around its tail' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
+  };
+  // Starts a fresh copy of a demo, or plays one spin of the wind.
+  function tutorialStart(key) {
+    var d = JSON.parse(JSON.stringify(TUTORIALS[key]));
+    var lvl = prepare({ w: d.w, h: d.h, lives: 99, arrows: d.arrows, mirrors: d.mirrors || [], flowers: d.flowers || [] });
+    var s = newState(lvl);
+    (d.frozen || []).forEach(function (id) { s.frozen[id] = 99; });
+    (d.burning || []).forEach(function (b) { s.burning[b[1] * d.w + b[0]] = b[2]; });
+    return { level: lvl, state: s, steps: d.steps };
+  }
+  function tutorialSpin(level, id) {
+    var a = level.arrows[id], t = a.cells[0];
+    a.cells.forEach(function (c) { level.grid[c[1] * level.w + c[0]] = -1; });
+    a.cells = a.cells.map(function (c) { var dx = c[0] - t[0], dy = c[1] - t[1]; return [t[0] - dy, t[1] + dx]; });
+    a.dir = (a.dir + 1) % 4;
+    a.cells.forEach(function (c) { level.grid[c[1] * level.w + c[0]] = id; });
+  }
   function partnerOf(a) { return a.kind === 'twin' ? a.twin : -1; }
 
   // A mirror turns a travelling arrow 90 degrees. Index by direction of travel.
@@ -1001,7 +1073,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
@@ -1633,12 +1705,15 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       fonts.then(function () {
         fireSprites();
         setTimeout(function () {
+          holdTutorials = true;
           startEndless(plan, best);
+          holdTutorials = false;
           // Keep the screen up while the first frames draw, then start the map's intro from a clean slate.
           var c = current, cover = sheet('<h2>Growing the map</h2><p>Almost ready</p><div class="lantern-bar"><i style="width:100%"></i></div>');
           requestAnimationFrame(function () { requestAnimationFrame(function () {
             if (current !== c) return;
             if ($('sheetHost').firstChild === cover) closeSheet();
+            maybeTutorials();
             introStart = performance.now(); prepareIntro(c.level);
             if (c.level.flowers && c.level.flowers.length) sendBee(state.launches, performance.now() + 900);
           }); });
@@ -1687,6 +1762,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     setCaption(baseCaption());
     if (c.index === 0 && c.mode === 'levels' && c.set === 'calm') { hintArrow = E.legalMoves(c.level, state)[0]; hintStart = performance.now() + 700; }
     if (timeLeft !== null) drawTimer();
+    maybeTutorials();
     refresh(); layout();
     track('level_start', { mode: c.mode, set: c.set });
   }
@@ -2601,14 +2677,15 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       var umbrella = function (x, y, k, a, b2) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cx="4" cy="4" rx="58" ry="10" fill="#b8843f" opacity=".4"/><path d="M0 2V-108" stroke="#f7f1e3" stroke-width="5"/><path d="M-72-90C-58-142 58-142 72-90Z" fill="' + a + '"/><path d="M-44-90C-38-142 -14-136 0-122 14-136 38-142 44-90 30-100 14-100 0-90-14-100-30-100-44-90Z" fill="' + b2 + '"/><circle cy="-124" r="4" fill="#fff"/></g>'; };
       // A lounger seen from the side: seat low on the sand, backrest leaning up and away.
       var chair = function (x, y, k, c, c2, flip) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + (flip ? -k : k) + ' ' + k + ')"><ellipse cx="4" cy="4" rx="66" ry="8" fill="#b8843f" opacity=".4"/><path d="M-52-16-52 2M-8-16-8 2M30-16 30 2" stroke="#8a5a32" stroke-width="5" stroke-linecap="round"/><path d="M-62-22H36L70-74" fill="none" stroke="#8a5a32" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M-60-24H34L66-72" fill="none" stroke="' + c + '" stroke-width="12" stroke-linejoin="round"/><path d="M-40-24H-24M-8-24H8M24-24H34L37-29M49-47 57-59" fill="none" stroke="' + c2 + '" stroke-width="12"/><path d="M58-78Q72-86 78-72 74-62 62-66Z" fill="#fff5dc" stroke="#d9b98a" stroke-width="1.500"/></g>'; };
-      // A friendly crab: round shell, stalk eyes, jointed legs and proper pincers.
-      var crab = function (x, y, k, dur, delay, c, c2) {
-        var legs = '';
-        [-1, 1].forEach(function (s2) { [[-3, 10, 7], [2, 13, 9], [7, 11, 11]].forEach(function (g) { legs += '<path d="M' + (s2 * 17) + ' ' + g[0] + 'Q' + (s2 * (24 + g[1] * 0.4)) + ' ' + (g[0] - 3) + ' ' + (s2 * (24 + g[1])) + ' ' + (g[0] + g[2]) + '" fill="none" stroke="' + c2 + '" stroke-width="3" stroke-linecap="round"/>'; }); });
-        var claw = function (s2) { return '<path d="M' + (s2 * 17) + '-7Q' + (s2 * 30) + '-12 ' + (s2 * 32) + '-20" fill="none" stroke="' + c2 + '" stroke-width="4" stroke-linecap="round"/><path d="M' + (s2 * 32) + '-19C' + (s2 * 21) + '-23 ' + (s2 * 21) + '-36 ' + (s2 * 31) + '-41 ' + (s2 * 30) + '-34 ' + (s2 * 32) + '-31 ' + (s2 * 35) + '-29 ' + (s2 * 37) + '-33 ' + (s2 * 40) + '-37 ' + (s2 * 44) + '-37 ' + (s2 * 47) + '-27 ' + (s2 * 42) + '-17 ' + (s2 * 32) + '-19Z" fill="' + c + '" stroke="' + c2 + '" stroke-width="1.500" stroke-linejoin="round"/>'; };
-        return '<g class="crab" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="13" rx="26" ry="5" fill="#b8843f" opacity=".4"/>' + legs + claw(-1) + claw(1) +
-          '<path d="M-6-11V-20M6-11V-20" stroke="' + c2 + '" stroke-width="3"/><circle cx="-6" cy="-22" r="5" fill="#fff" stroke="' + c2 + '" stroke-width="1"/><circle cx="6" cy="-22" r="5" fill="#fff" stroke="' + c2 + '" stroke-width="1"/><circle cx="-5" cy="-22" r="2.400" fill="#201008"/><circle cx="7" cy="-22" r="2.400" fill="#201008"/>' +
-          '<path d="M-22 0C-22-14-10-15 0-15S22-14 22 0C22 11 10 14 0 14S-22 11-22 0Z" fill="' + c + '" stroke="' + c2 + '" stroke-width="1.500"/><ellipse cx="-3" cy="-7" rx="11" ry="4" fill="#fff" opacity=".28"/><path d="M-5 5Q0 9 5 5" fill="none" stroke="' + c2 + '" stroke-width="2" stroke-linecap="round"/><circle cx="-12" cy="2" r="2" fill="' + c2 + '" opacity=".45"/><circle cx="12" cy="2" r="2" fill="' + c2 + '" opacity=".45"/></g></g>';
+      // A small flat crab in the same simple style as the rest of the beach. Its legs scuttle and its pincers open and close.
+      var crab = function (x, y, k, dur, delay, b2) {
+        var c = '#e2674f', c2 = '#b84a3a', side = function (s2, cls) {
+          return '<g transform="scale(' + s2 + ' 1)"><g class="crableg' + cls + '"><path d="M13 2 25 7M12 6 23 13M9 9 18 16" fill="none" stroke="' + c2 + '" stroke-width="2.600" stroke-linecap="round"/></g>' +
+            '<path d="M13-3 22-9" stroke="' + c2 + '" stroke-width="3" stroke-linecap="round"/><g class="crabclaw' + cls + '"><path d="M22-9C18-16 22-23 30-23 28-19 28-16 29-15 26-14 24-12 22-9Z" fill="' + c + '"/></g><path d="M22-9C28-8 34-12 33-20 31-17 29-16 27-15 25-13 23-11 22-9Z" fill="' + c + '"/></g>';
+        };
+        return '<g class="crab" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="15" rx="22" ry="4" fill="#b8843f" opacity=".35"/>' + side(-1, b2 ? ' b' : '') + side(1, b2 ? '' : ' b') +
+          '<path d="M-5-9V-16M5-9V-16" stroke="' + c2 + '" stroke-width="2.200"/><circle cx="-5" cy="-17" r="2.800" fill="#2a1a12"/><circle cx="5" cy="-17" r="2.800" fill="#2a1a12"/>' +
+          '<ellipse rx="17" ry="12" fill="' + c + '"/><path d="M-16 3C-10 12 10 12 16 3 10 7-10 7-16 3Z" fill="' + c2 + '" opacity=".5"/></g></g>';
       };
       return svgWrap('<defs>' + gradient('uSky', [[0, '#2fa6e0'], [0.55, '#8ddcf2'], [1, '#fff3c6']]) + gradient('uSea', [[0, '#1aa6d0'], [0.45, '#1fc4d3'], [1, '#7ceee0']]) + gradient('uSand', [[0, '#fff0bd'], [1, '#eec27a']]) + gradient('uBall', [[0, '#ff6b6b'], [1, '#d9404e']]) + '</defs>' +
         '<rect width="1000" height="800" fill="url(#uSky)"/><circle cx="745" cy="96" r="52" fill="#fff4a8"/><circle cx="745" cy="96" r="82" fill="#fff4a8" opacity=".35"/><circle cx="745" cy="96" r="120" fill="#fff4a8" opacity=".16"/>' + cloud(170, 84, 1.1) + cloud(470, 60, 0.85) + cloud(620, 165, 0.6, 0.75) + cloud(885, 170, 0.7, 0.8) + gull(320, 120, 0.9, 0) + gull(390, 95, 0.65, 1.3) + gull(585, 118, 0.7, 2.1) +
@@ -2621,7 +2698,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
         palm(70, 720, 1.25, false) + palm(210, 650, 0.8, false) + palm(930, 725, 1.3, true) + palm(800, 650, 0.78, true) +
         umbrella(385, 668, 0.82, '#ff6b6b', '#fff') + chair(440, 690, 0.82, '#1fa8c9', '#d6f4fb') + umbrella(640, 650, 0.66, '#ffb020', '#fff7dc') + chair(590, 672, 0.68, '#ff8a65', '#fff0e6', true) +
         '<g transform="translate(305 718)"><circle r="17" fill="url(#uBall)"/><path d="M0-17C12-8 12 8 0 17-12 8-12-8 0-17Z" fill="#fff"/><path d="M-17 0H17" stroke="#ffd23f" stroke-width="3"/></g>' +
-        '<path transform="translate(675 722) scale(.85)" d="M0-16 5-5 17-3 8 5 11 17 0 11-11 17-8 5-17-3-5-5Z" fill="#ff8a65" stroke="#d9603f" stroke-linejoin="round" stroke-width="2"/>' + [[505, 716, 1, 9, 0], [350, 742, 0.85, 11, -3], [620, 738, 0.9, 8, -5], [430, 620, 0.62, 13, -2], [590, 610, 0.58, 10, -7], [260, 660, 0.8, 12, -4], [745, 668, 0.82, 9.500, -1], [150, 745, 1.05, 10, -6], [860, 748, 1.05, 12, -8]].map(function (q, i) { return crab(q[0], q[1], q[2], q[3], q[4], i % 3 === 1 ? '#f0683c' : '#e8483d', i % 3 === 1 ? '#b8431f' : '#ab2a22'); }).join('') + '');
+        '<path transform="translate(675 722) scale(.85)" d="M0-16 5-5 17-3 8 5 11 17 0 11-11 17-8 5-17-3-5-5Z" fill="#ff8a65" stroke="#d9603f" stroke-linejoin="round" stroke-width="2"/>' + [[440, 708, 0.8, 11, 0, 0], [610, 694, 0.72, 13, -5, 1], [205, 700, 0.85, 12, -3, 1], [815, 708, 0.85, 10, -7, 0]].map(function (q) { return crab(q[0], q[1], q[2], q[3], q[4], q[5]); }).join('') + '');
     }
     var tree = function (x, y, k, c, c2, cls) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><g class="sway' + (cls ? ' b' : '') + '"><path d="M-7 0-4-70 4-70 7 0Z" fill="#5a3418"/><path d="M-3-50-26-74M3-44 24-70" stroke="#5a3418" stroke-width="4" stroke-linecap="round"/><circle cy="-92" r="38" fill="' + c + '"/><circle cx="-28" cy="-74" r="25" fill="' + c2 + '"/><circle cx="28" cy="-76" r="26" fill="' + c + '"/><circle cx="4" cy="-118" r="23" fill="' + c2 + '"/></g></g>'; };
     var cols = [['#d65f1e', '#e8872c'], ['#c0392b', '#d65f1e'], ['#e0a12d', '#eebb47'], ['#a8501a', '#c6702a']];
@@ -3383,6 +3460,190 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     return (o.scale || 1) > 1 ? size + ' with no lives to lose.' : 'Endless boards with no lives to lose.';
   }
   // A side menu explaining every arrow, drawn in the colours they have on the board.
+  /* ---------- Tutorials: a short looping demo of each mechanic, played by the real rules ---------- */
+  function mechanicsOf(l) {
+    var here = {};
+    l.arrows.forEach(function (a) {
+      if (a.kind === 'twin') here.twin = 1; if (a.kind === 'compass') here.compass = 1; if (a.ghostPhase !== undefined) here.ghost = 1; if (a.phase) here.phase = 1;
+      if (a.uno !== undefined) here.uno = 1; if (a.red) here.red = 1; if (a.key !== undefined) here.sleeper = 1; if (a.wait) here.patient = 1;
+    });
+    if ((l.mirrors || []).length) here.mirror = 1;
+    E.effectsOf(l).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
+    return Object.keys(E.TUTORIALS).filter(function (k) { return here[k]; });
+  }
+  // Automated test browsers skip these unless asked, so they can play straight through.
+  var holdTutorials = false, tutorialsOff = !!navigator.webdriver && location.hash.indexOf('tut') < 0;
+  function maybeTutorials() {
+    if (tutorialsOff || holdTutorials || !current) return;
+    progress.tutorials = progress.tutorials || {};
+    var fresh = mechanicsOf(current.level).filter(function (k) { return !progress.tutorials[k]; });
+    if (fresh.length) showTutorial(fresh, 0, true);
+  }
+  function showTutorial(list, at, firstTime) {
+    var key = list[at], d = E.TUTORIALS[key], more = list.length > 1 ? '<span class="tutcount">' + (at + 1) + ' of ' + list.length + '</span>' : '';
+    var s = sheet('<div class="row"><h2>' + d.title + '</h2>' + more + '</div><div class="tutbox"><canvas id="tutCanvas" role="img" aria-label="Animated example of ' + d.title + '"></canvas></div><p class="tutsay" id="tutSay" aria-live="off">&nbsp;</p><p>' + d.text + '</p><button class="primary" id="tutOk">Understood</button>', 'tutorial');
+    var stop = playDemo(s.querySelector('#tutCanvas'), key, s.querySelector('#tutSay'));
+    track('tutorial_open', { mechanic: key });
+    s.querySelector('#tutOk').focus({ preventScroll: true });
+    s.querySelector('#tutOk').onclick = function () {
+      stop();
+      if (firstTime) { progress.tutorials[key] = 1; save('unwind.progress2', progress); }
+      if (at + 1 < list.length) { showTutorial(list, at + 1, firstTime); return; }
+      closeSheet();
+      if (firstTime) { introStart = performance.now(); prepareIntro(current.level); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
+      else guideSheet();
+    };
+  }
+  function playDemo(canvas, key, sayEl) {
+    var box = canvas.parentNode.getBoundingClientRect(), W = Math.max(200, box.width), H = Math.min(230, Math.max(170, W * 0.68)), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    var g = canvas.getContext('2d'), alive = true, run;
+    var restart = function () {
+      var t = E.tutorialStart(key);
+      run = { level: t.level, state: t.state, steps: t.steps, at: -1, phaseEnd: 0, tapping: false, flights: [], bounces: {}, nudges: {}, flips: {}, bees: [], windAt: 0, ripples: [] };
+      run.csize = Math.min(W / (run.level.w + 0.6), H / (run.level.h + 0.6));
+    };
+    restart();
+    var nextStep = function (now) {
+      run.at++;
+      if (run.at >= run.steps.length) { run.finished = now + 1100; return; }
+      var st = run.steps[run.at];
+      if (sayEl) sayEl.textContent = st.say || '\u00a0';
+      run.tapping = st.tap !== undefined;
+      run.phaseEnd = now + (run.tapping ? 950 : 500);
+    };
+    var act = function (now) {
+      var st = run.steps[run.at], l = run.level, sv = run.state;
+      run.tapping = false; run.phaseEnd = now + 1350;
+      if (st.spin !== undefined) {
+        var a = l.arrows[st.spin];
+        E.tutorialSpin(l, st.spin); a.rot = { start: now, turn: Math.PI / 2 }; run.windAt = now;
+        run.phaseEnd = now + 1500; run.acted = true; return;
+      }
+      var res = E.tap(l, sv, st.tap);
+      if (res.notReady) { run.nudges[st.tap] = now + 500; run.acted = true; return; }
+      if (res.ok) {
+        res.results.forEach(function (r) {
+          var m = l.arrows[r.id], pts = trackOf(m, r.check), len = lengthOf(m), body = m.kind === 'compass' ? 0 : m.cells.length - 1, travel = body + r.check.dist + screenCells() + len;
+          run.flights.push({ pts: pts, len: len, travel: travel, start: now, duration: Math.min(1400, 480 + travel * 42), color: arrowColor(m) });
+        });
+        l.arrows.forEach(function (x) { if (x.uno !== undefined) run.flips[x.id] = now; });
+        var taken = l.flowers && l.flowers[sv.launches - 1];
+        if (taken) run.bees.push({ at: taken, start: now });
+      } else res.results.forEach(function (r) {
+        var m = l.arrows[r.id];
+        run.bounces[r.id] = { start: now, reach: r.check.clear ? 0.18 : Math.max(0.14, r.check.dist - 0.62), pts: m.kind === 'compass' ? null : trackOf(m, r.check) };
+      });
+      run.acted = true;
+    };
+    var draw = function (now) {
+      var keep = [ctx, ox, oy, cs, vw, vh, state, current, windAt];
+      ctx = g; cs = run.csize; vw = W; vh = H; ox = (W - run.level.w * cs) / 2; oy = (H - run.level.h * cs) / 2;
+      state = run.state; current = { level: run.level }; windAt = run.windAt;
+      try {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+        if (!run.finished && run.at < 0) nextStep(now);
+        if (run.finished && now > run.finished) { restart(); nextStep(now); state = run.state; current = { level: run.level }; }
+        var l = run.level, sv = run.state, w = Math.max(3, cs * 0.17);
+        if (!run.finished && now > run.phaseEnd) { if (run.tapping) act(now); else nextStep(now); }
+        ctx.globalAlpha = 0.16; ctx.fillStyle = colors.ink;
+        for (var y = 0; y < l.h; y++) for (var x = 0; x < l.w; x++) { var dp = px([x, y]); ctx.beginPath(); ctx.arc(dp.x, dp.y, Math.max(1.4, cs * 0.04), 0, 7); ctx.fill(); }
+        (l.flowers || []).forEach(function (f, i) { if (i >= sv.launches) drawFlower(px(f), cs * 0.47, f[0] * 7 + f[1] * 3, now, true); });
+        (l.mirrors || []).forEach(function (m) {
+          var c = px([m.x, m.y]), r = cs * 0.36, sg = m.t === '/' ? -1 : 1;
+          setStroke(colors.mirror, Math.max(3, cs * 0.13), 1); ctx.beginPath(); ctx.moveTo(c.x - r, c.y - r * sg); ctx.lineTo(c.x + r, c.y + r * sg); ctx.stroke();
+          setStroke(colors.mirror, Math.max(1, cs * 0.035), 0.55); ctx.beginPath(); ctx.arc(c.x, c.y, cs * 0.46, 0, 7); ctx.stroke();
+        });
+        if (Object.keys(sv.burning).length) drawFires(now);
+        // Golden thread from star to moon.
+        l.arrows.forEach(function (a) {
+          if (a.key === undefined || sv.removed[a.id] || sv.removed[a.key]) return;
+          var moon = px(a.cells[0]), star = px(l.arrows[a.key].cells[0]);
+          setStroke(SKY_GOLD, Math.max(1.5, cs * 0.045), 0.75); ctx.setLineDash([cs * 0.03, cs * 0.2]); ctx.lineDashOffset = -now / 45;
+          ctx.beginPath(); ctx.moveTo(star.x, star.y); ctx.lineTo(moon.x, moon.y); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+        });
+        l.arrows.forEach(function (a) {
+          if (a.kind !== 'twin' || a.twin < a.id || sv.removed[a.id]) return;
+          var m1 = pointAlong(a.cells, lengthOf(a) / 2), m2 = pointAlong(l.arrows[a.twin].cells, lengthOf(a) / 2);
+          setStroke(arrowColor(a), Math.max(1.5, cs * 0.05), 0.55); ctx.setLineDash([cs * 0.08, cs * 0.14]); ctx.beginPath(); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); ctx.stroke(); ctx.setLineDash([]);
+        });
+        l.arrows.forEach(function (a) {
+          if (sv.removed[a.id]) return;
+          var color = arrowColor(a), isReady = E.isReady(sv, a), frozen = sv.frozen[a.id] !== undefined, ghostForm = E.isGhost(sv, a), carded = E.isRedCarded(sv, a), b = run.bounces[a.id], shift = 0;
+          if (b) { var bt = (now - b.start) / 440; if (bt >= 1) delete run.bounces[a.id]; else shift = Math.sin(bt * Math.PI) * b.reach; }
+          if (carded) color = mixColor(color, '#c8202f', 0.55);
+          var alpha = ghostForm ? 0.3 : isReady || frozen ? 1 : 0.62, nudge = run.nudges[a.id] && now < run.nudges[a.id] ? Math.sin((run.nudges[a.id] - now) / 40) * cs * 0.05 : 0;
+          ctx.save(); ctx.translate(nudge, 0);
+          if (a.rot) { var rt = (now - a.rot.start) / 800; if (rt >= 1) delete a.rot; else { var piv = px(a.cells[0]); ctx.translate(piv.x, piv.y); ctx.rotate(-a.rot.turn * (1 - ease(Math.max(0, rt)))); ctx.translate(-piv.x, -piv.y); } }
+          if (a.kind === 'compass') {
+            var c = px(a.cells[0]), r = cs * 0.37, target = (a.dir + sv.launches) * 90;
+            setStroke(color, Math.max(1.5, cs * 0.05), 0.6); ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.stroke();
+            a.vis = a.vis === undefined ? target : a.vis + (target - a.vis) * 0.11;
+            var rad = a.vis * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad), off = shift * cs, hx = c.x + ux * (r * 0.62 + off), hy = c.y + uy * (r * 0.62 + off);
+            setStroke(color, w, 1); ctx.beginPath(); ctx.moveTo(c.x - ux * r * 0.5 + ux * off, c.y - uy * r * 0.5 + uy * off); ctx.lineTo(hx, hy); ctx.stroke();
+            chevron({ x: hx, y: hy }, [ux, uy], cs * 0.2); ctx.restore(); return;
+          }
+          var len = lengthOf(a), fromTail = E.tipAtTail(sv, a), rest = fromTail ? a.cells.slice().reverse() : a.cells, tip = rest[rest.length - 1], td = E.dirOf(a, sv);
+          var pts = b && b.pts ? b.pts : rest.concat([[tip[0] + E.DX[td] * 2, tip[1] + E.DY[td] * 2]]);
+          setStroke(color, w, alpha);
+          if (!isReady && !frozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
+          var res = strokeWindow(pts, shift, shift + len);
+          ctx.setLineDash([]); setStroke(color, w, alpha);
+          if (a.uno !== undefined && !shift) {
+            var ft = run.flips[a.id] ? Math.min(1, (now - run.flips[a.id]) / 240) : 1, ff = ease(ft), far = px(rest[0]), near = px(rest[1]), gone = Math.hypot(far.x - near.x, far.y - near.y) || 1;
+            setStroke(color, Math.max(1.5, cs * 0.05), alpha * 0.55); chevron(far, [(far.x - near.x) / gone, (far.y - near.y) / gone], cs * 0.2);
+            setStroke(color, w, alpha); chevron(res.end, res.tan, cs * 0.24 * (0.4 + 0.6 * ff + 0.35 * Math.sin(ft * Math.PI)));
+          } else chevron(res.end, res.tan, cs * 0.24);
+          var centre = pointAlong(pts, shift + len / 2), tail = px(a.cells[0]);
+          if (a.kind === 'twin') badge(centre, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0)));
+          if (a.isKey) drawStar(tail, cs * 0.34, now);
+          if (a.key !== undefined && !sv.removed[a.key]) drawMoon(tail, cs * 0.34, now);
+          if (a.wait && sv.launches < a.wait) badge(centre, cs * 0.29, colors.card, colors.ink, String(a.wait - sv.launches), color);
+          if (a.ghostPhase !== undefined) drawGhostIcon(centre, cs * 0.3, ghostForm, now);
+          if (a.phase) drawPhaseIcon(centre, cs * 0.26, color, now);
+          if (a.uno !== undefined) drawReverseIcon(centre, cs * 0.27, color);
+          if (a.red && sv.launches < a.red) { badge(centre, cs * 0.29, colors.card, colors.ink, String(a.red - sv.launches), a.red - sv.launches <= 1 ? '#c8202f' : color); drawMiniCard({ x: centre.x + cs * 0.21, y: centre.y + cs * 0.21 }, cs * 0.17); }
+          if (a.red && sv.launches >= a.red) drawMiniCard(centre, cs * 0.34);
+          if (frozen) drawIce(centre, cs * 0.3);
+          ctx.restore();
+        });
+        run.flights = run.flights.filter(function (fl) {
+          var tn = (now - fl.start) / fl.duration;
+          if (tn >= 1) return false;
+          var tr = fl.travel * (0.28 * tn + 0.72 * tn * tn);
+          setStroke(fl.color, w, 1);
+          var rs = strokeWindow(fl.pts, tr, tr + fl.len);
+          chevron(rs.end, rs.tan, cs * 0.24);
+          return true;
+        });
+        run.bees = run.bees.filter(function (b2) {
+          var t2 = (now - b2.start) / 1000;
+          if (t2 >= 1) return false;
+          var from = px(b2.at), bx = from.x + (W + 40 - from.x) * t2 * t2, by = from.y - cs * 0.3 - t2 * cs;
+          drawFlower({ x: bx, y: by + cs * 0.35 }, cs * 0.3, b2.at[0] * 7 + b2.at[1] * 3, now, false);
+          drawBeeAt(bx, by, cs / 40, now, true, false);
+          return true;
+        });
+        if (run.windAt) { drawWind(now); run.windAt = windAt; }
+        // A soft ring shows which arrow is about to be tapped.
+        if (run.tapping) {
+          var aim = run.steps[run.at] && l.arrows[run.steps[run.at].tap];
+          if (aim) {
+            var left = Math.max(0, (run.phaseEnd - now) / 950), pc = pointAlong(aim.cells, lengthOf(aim) / 2);
+            ctx.globalAlpha = 0.9 * (1 - left * 0.5); ctx.strokeStyle = colors.hint; ctx.lineWidth = Math.max(2.5, cs * 0.08);
+            ctx.beginPath(); ctx.arc(pc.x, pc.y, cs * (0.42 + left * 0.5), 0, 7); ctx.stroke();
+            ctx.globalAlpha = 0.28 * (1 - left); ctx.fillStyle = colors.hint; ctx.beginPath(); ctx.arc(pc.x, pc.y, cs * 0.42, 0, 7); ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      } finally {
+        ctx = keep[0]; ox = keep[1]; oy = keep[2]; cs = keep[3]; vw = keep[4]; vh = keep[5]; state = keep[6]; current = keep[7]; windAt = keep[8];
+      }
+    };
+    var loop = function (now) { if (!alive || !canvas.isConnected) return; draw(now); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    return function () { alive = false; };
+  }
   function guideSheet() {
     var ink = colors.ink, twin = colors.twins[0], comp = colors.compass, mir = colors.mirror, gold = '#ffd23f', disc = '#1d2350', card = colors.card;
     var head = function (x, y, c) { return '<path d="M' + (x - 7) + ' ' + (y - 7) + ' L' + x + ' ' + y + ' L' + (x - 7) + ' ' + (y + 7) + '" stroke="' + c + '" stroke-width="4.5"/>'; };
@@ -3423,6 +3684,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       { key: 'wind', title: 'Wind', text: 'Autumn. Can spin an arrow fully around its tail if there is room. Short arrows spin most often, and more can turn as the board clears.',
         art: '<path d="M4 16h34a7 7 0 1 0-7-7M4 26h44a7 7 0 1 1-7 7M4 36h20" stroke="' + ink + '" stroke-width="4"/>' }
     ];
+    var watchKey = { moon: 'sleeper', star: 'sleeper', twin: 'twin', compass: 'compass', mirror: 'mirror', patient: 'patient', ghost: 'ghost', phase: 'phase', red: 'red', uno: 'uno', ice: 'ice', fire: 'fire', flower: 'flower', wind: 'wind' };
     var here = {}, arrows = current.level.arrows;
     arrows.forEach(function (a) {
       if (a.kind === 'twin') here.twin = 1; else if (a.kind === 'compass') here.compass = 1; else here.plain = 1;
@@ -3432,11 +3694,12 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     E.effectsOf(current.level).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
     var html = '<div class="row"><h2>Arrow guide</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
       items.map(function (it) {
-        return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p></div></div>';
+        return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p>' + (watchKey[it.key] ? '<button class="watch" data-watch="' + watchKey[it.key] + '">▶ Watch how it works</button>' : '') + '</div></div>';
       }).join('');
     var s = sheet(html);
     s.classList.add('side');
     s.querySelector('#x').onclick = closeSheet;
+    s.querySelectorAll('[data-watch]').forEach(function (b) { b.onclick = function () { showTutorial([b.getAttribute('data-watch')], 0, false); }; });
     s.onclick = function (ev) { if (ev.target === s) closeSheet(); };
     track('guide_open', {});
   }
@@ -3601,11 +3864,12 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
   /*TEST-HOOK-END*/
   track('session_start', {});
   var last = progress.last || { set: 'calm', index: 0 };
+  holdTutorials = true;
   openLevel(SETS[last.set] ? last.set : 'calm', Math.min(last.index || 0, (SETS[last.set] || SETS.calm).length - 1));
   // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
   (function () {
     var s = sheet('<h2>Unwind</h2><p>Sound on for the full experience</p><button class="primary" id="begin" style="width:100%">Tap to begin</button>', 'begin');
-    s.onclick = function () { audio(); closeSheet(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); };
+    s.onclick = function () { audio(); closeSheet(); holdTutorials = false; maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); };
   })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);

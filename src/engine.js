@@ -63,6 +63,67 @@
   function dirOf(a, state) { return a.kind === 'compass' ? (a.dir + state.launches) % 4 : tipAtTail(state, a) ? tailDir(a) : a.dir; }
   // Flowers leave in queue order, one per launch. A bee can also take one early if it is all that holds the board up.
   function flowerStands(level, state, key) { return level.flowerAt[key] >= state.launches && !state.noFlowers && !(state.picked && state.picked[key]); }
+  // Short scripted demos of each mechanic, played by the real rules so they can never show something false.
+  // Each step: tap an arrow (expect: ok, hit, wait or thaw) or spin one (autumn wind), with a line to read.
+  var P = function (id, cells, dir, more) { return Object.assign({ id: id, kind: 'plain', cells: cells, dir: dir }, more || {}); };
+  var TUTORIALS = {
+    twin: { title: 'Twins', text: 'Twins share a colour and a letter. They leave together, so both paths must be clear.', w: 5, h: 4,
+      arrows: [P(0, [[0, 0], [1, 0]], 1, { kind: 'twin', twin: 1, pair: 0 }), P(1, [[0, 2], [1, 2]], 1, { kind: 'twin', twin: 0, pair: 0 }), P(2, [[3, 3], [3, 2]], 0)],
+      steps: [{ tap: 0, expect: 'hit', say: 'One twin is blocked, so neither can go' }, { tap: 2, expect: 'ok', say: 'Clear the way first' }, { tap: 0, expect: 'ok', say: 'Now both leave together' }] },
+    compass: { title: 'Compass', text: 'A compass arrow turns a quarter clockwise every time another arrow leaves.', w: 4, h: 4,
+      arrows: [P(0, [[1, 1]], 1, { kind: 'compass' }), P(1, [[3, 1], [3, 2]], 2)],
+      steps: [{ tap: 0, expect: 'hit', say: 'It points at another arrow' }, { tap: 1, expect: 'ok', say: 'Each launch turns it a quarter' }, { tap: 0, expect: 'ok', say: 'Now it has a clear way out' }] },
+    sleeper: { title: 'Moon and star', text: 'A moon arrow sleeps until its star arrow leaves. Tapping it early costs nothing.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { key: 1 }), P(1, [[1, 3], [2, 3], [3, 3]], 1, { isKey: true })],
+      steps: [{ tap: 0, expect: 'wait', say: 'The moon arrow is asleep' }, { tap: 1, expect: 'ok', say: 'Send its star arrow away' }, { tap: 0, expect: 'ok', say: 'Now it wakes and can leave' }] },
+    mirror: { title: 'Mirror', text: 'A mirror turns any arrow passing through it by 90 degrees, so follow the new path.', w: 5, h: 4,
+      mirrors: [{ x: 3, y: 2, t: '/' }],
+      arrows: [P(0, [[0, 2], [1, 2]], 1), P(1, [[3, 0], [4, 0]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'The mirror sends it up, into an arrow' }, { tap: 1, expect: 'ok', say: 'Clear the new path' }, { tap: 0, expect: 'ok', say: 'It turns at the mirror and leaves' }] },
+    patient: { title: 'Patient arrow', text: 'Its number shows how many more launches it needs before it can leave.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { wait: 2 }), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'wait', say: 'It needs 2 more launches' }, { tap: 1, expect: 'ok', say: 'One launch' }, { tap: 2, expect: 'ok', say: 'Two launches' }, { tap: 0, expect: 'ok', say: 'Now it can leave' }] },
+    ghost: { title: 'Ghost arrow', text: 'It swaps form after every launch. As a ghost it cannot be played, and arrows pass through it.', w: 5, h: 3,
+      arrows: [P(0, [[3, 0], [3, 1], [3, 2]], 2, { ghostPhase: 1 }), P(1, [[0, 1], [1, 1]], 1)],
+      steps: [{ tap: 0, expect: 'wait', say: 'See-through: it cannot be played' }, { tap: 1, expect: 'ok', say: 'Other arrows pass right through it' }, { tap: 0, expect: 'ok', say: 'After a launch it is solid and can go' }] },
+    phase: { title: 'Phase arrow', text: 'A phase arrow slips through one occupied tile: an arrow, a flower or fire. But not two in a row.', w: 5, h: 3,
+      arrows: [P(0, [[0, 1], [1, 1]], 1, { phase: true }), P(1, [[3, 0], [3, 1], [3, 2]], 2)],
+      steps: [{ tap: 0, expect: 'ok', say: 'It slips through the arrow in its way' }, { tap: 1, expect: 'ok', say: 'A normal arrow could not do that' }] },
+    red: { title: 'Red card', text: 'Play it before its count runs out. If not, it is sent off until only sent-off arrows remain.', w: 5, h: 4,
+      arrows: [P(0, [[0, 1], [1, 1], [2, 1]], 1, { red: 2 }), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 2], [2, 2]], 1), P(3, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 1, expect: 'ok', say: 'Each launch lowers its count' }, { tap: 2, expect: 'ok', say: 'At zero it gets a red card' }, { tap: 0, expect: 'wait', say: 'Sent off: it cannot move now' }, { tap: 3, expect: 'ok', say: 'Clear everything else' }, { tap: 0, expect: 'ok', say: 'Only then can it leave' }] },
+    uno: { title: 'Reverse arrow', text: 'Its tip swaps to the other end after every launch. The faint mark shows where it goes next.', w: 5, h: 4,
+      arrows: [P(0, [[1, 1], [2, 1]], 1, { uno: 0 }), P(1, [[4, 2], [4, 1], [4, 0]], 0), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'Its tip points at another arrow' }, { tap: 2, expect: 'ok', say: 'After a launch the tip swaps ends' }, { tap: 0, expect: 'ok', say: 'Now it leaves the other way' }, { tap: 1, expect: 'ok', say: '' }] },
+    ice: { title: 'Frozen arrow', text: 'Winter. It cannot move, and it blocks others. It thaws by itself, or hit it with an arrow to free it at no cost.', w: 5, h: 3,
+      frozen: [0], arrows: [P(0, [[3, 0], [3, 1], [3, 2]], 2), P(1, [[0, 1], [1, 1]], 1)],
+      steps: [{ tap: 1, expect: 'thaw', say: 'Hit it to crack the ice, for free' }, { tap: 0, expect: 'ok', say: 'Now it is free to go' }, { tap: 1, expect: 'ok', say: 'And the way is clear' }] },
+    fire: { title: 'Burning tile', text: 'Summer. Fire blocks arrows for a few launches, and hitting it costs a life. Wait for it to burn out.', w: 5, h: 4,
+      burning: [[3, 1, 2]], arrows: [P(0, [[0, 1], [1, 1]], 1), P(1, [[1, 0], [2, 0]], 1), P(2, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'Fire in the way costs a life' }, { tap: 1, expect: 'ok', say: 'Play other arrows instead' }, { tap: 2, expect: 'ok', say: 'The fire burns out' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
+    flower: { title: 'Flower and bee', text: 'Spring. Flowers block arrows. After each launch, a bee carries one flower away.', w: 5, h: 4,
+      flowers: [[3, 1]], arrows: [P(0, [[0, 1], [1, 1]], 1), P(1, [[1, 3], [2, 3]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'A flower blocks the way' }, { tap: 1, expect: 'ok', say: 'After a launch, a bee takes it' }, { tap: 0, expect: 'ok', say: 'Now the way is clear' }] },
+    wind: { title: 'Wind', text: 'Autumn. Wind can spin an arrow around its tail when there is room, which can change everything.', w: 5, h: 4,
+      arrows: [P(0, [[2, 3], [2, 2]], 0), P(1, [[1, 0], [2, 0], [3, 0]], 1)],
+      steps: [{ tap: 0, expect: 'hit', say: 'This arrow is blocked' }, { spin: 0, say: 'The wind spins it around its tail' }, { tap: 0, expect: 'ok', say: 'Now it has a new way out' }, { tap: 1, expect: 'ok', say: '' }] }
+  };
+  // Starts a fresh copy of a demo, or plays one spin of the wind.
+  function tutorialStart(key) {
+    var d = JSON.parse(JSON.stringify(TUTORIALS[key]));
+    var lvl = prepare({ w: d.w, h: d.h, lives: 99, arrows: d.arrows, mirrors: d.mirrors || [], flowers: d.flowers || [] });
+    var s = newState(lvl);
+    (d.frozen || []).forEach(function (id) { s.frozen[id] = 99; });
+    (d.burning || []).forEach(function (b) { s.burning[b[1] * d.w + b[0]] = b[2]; });
+    return { level: lvl, state: s, steps: d.steps };
+  }
+  function tutorialSpin(level, id) {
+    var a = level.arrows[id], t = a.cells[0];
+    a.cells.forEach(function (c) { level.grid[c[1] * level.w + c[0]] = -1; });
+    a.cells = a.cells.map(function (c) { var dx = c[0] - t[0], dy = c[1] - t[1]; return [t[0] - dy, t[1] + dx]; });
+    a.dir = (a.dir + 1) % 4;
+    a.cells.forEach(function (c) { level.grid[c[1] * level.w + c[0]] = id; });
+  }
   function partnerOf(a) { return a.kind === 'twin' ? a.twin : -1; }
 
   // A mirror turns a travelling arrow 90 degrees. Index by direction of travel.
@@ -768,7 +829,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
