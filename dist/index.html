@@ -1658,7 +1658,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
     bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = []; cards = [];
     c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
     hintsLeft = c.level.hints === undefined ? 1 : c.level.hints; hintArrow = -1; stuckShown = false; ended = false; collisions = 0;
-    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {};
+    hintsUsed = 0; rewinds = 0; activeMs = 0; lastFrame = 0; tune = []; nudges = {}; unoFlip = {}; praises = [];
     wakes = []; flights = []; bounces = {}; ripples = []; blockerGlow = {}; angles = {};
     var pairNo = 0;
     c.level.arrows.forEach(function (a) {
@@ -2215,7 +2215,66 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
       return true;
     });
     ctx.globalAlpha = 1;
+    if (praises.length) drawPraises(now);
     if (cam && cs > fitCs * 1.04) drawMinimap(Math.min(1, (cs / fitCs - 1.04) / 0.2));
+  }
+  // A kind word and a few small stars above each arrow that is played correctly.
+  var PRAISE = ['Spectacular!', 'Amazing!', 'Great job!', 'Wonderful!', 'Lovely!', 'Beautiful!', 'Brilliant!', 'Nice one!', 'Well done!', 'Superb!'];
+  var praises = [], lastPraise = -1, PRAISE_MS = 1100;
+  function addPraise(a, now) {
+    var pick = Math.floor(Math.random() * (PRAISE.length - 1));
+    if (pick >= lastPraise) pick++;
+    lastPraise = pick;
+    // A quick run of taps moves the older word along, so words never pile up.
+    praises = praises.slice(-1);
+    praises.forEach(function (p) { p.start = Math.min(p.start, now - PRAISE_MS * 0.8); });
+    var stars = [];
+    for (var i = 0; i < 7; i++) {
+      var turn = i / 7 * Math.PI * 2 + Math.random() * 0.5;
+      stars.push({ dx: Math.cos(turn), dy: Math.sin(turn), reach: 0.75 + Math.random() * 0.4, size: 4.5 + Math.random() * 3.5, delay: Math.random() * 90, spin: Math.random() * 6 });
+    }
+    praises.push({ word: PRAISE[pick], cell: a.cells[a.cells.length >> 1], start: now, stars: stars });
+    window.unwindPraiseWords = (window.unwindPraiseWords || []).concat(PRAISE[pick]).slice(-40);
+  }
+  function drawStarShape(x, y, r, turn) {
+    ctx.beginPath();
+    for (var i = 0; i < 8; i++) {
+      var q = turn + i * Math.PI / 4, d = i % 2 ? r * 0.38 : r;
+      if (i) ctx.lineTo(x + Math.cos(q) * d, y + Math.sin(q) * d); else ctx.moveTo(x + Math.cos(q) * d, y + Math.sin(q) * d);
+    }
+    ctx.closePath(); ctx.stroke(); ctx.fill();
+  }
+  function drawPraises(now) {
+    var night = colors === CHAPTERS[3] || colors === CHAPTERS[4], ink = night ? '#ffd23f' : '#a86a00', size = Math.round(Math.max(24, Math.min(32, vw * 0.075)));
+    ctx.save();
+    ctx.font = 'italic 600 ' + size + 'px "Cormorant Garamond",Georgia,"Times New Roman",serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    praises = praises.filter(function (p) {
+      var t = (now - p.start) / PRAISE_MS;
+      if (t >= 1) return false;
+      var inT = Math.min(1, t / 0.16), pop = reduced ? 1 : 1 + 0.5 * Math.pow(1 - inT, 2) - 0.5 * Math.pow(1 - inT, 4) * 2;
+      var alpha = Math.min(1, t / 0.1) * (t > 0.65 ? (1 - t) / 0.35 : 1), rise = reduced ? 0 : ease(t) * 26;
+      var c = px(p.cell), half = ctx.measureText(p.word).width / 2 + 12;
+      var x = Math.max(half, Math.min(vw - half, c.x)), top = viewTop + size, bottom = viewBottom - size;
+      var y = Math.max(top, Math.min(bottom, c.y - cs * 0.6 - size * 0.5)) - rise;
+      // Stars burst out from the word, then fade.
+      ctx.fillStyle = '#ffc21f';
+      p.stars.forEach(function (st) {
+        var q = Math.max(0, Math.min(1, (now - p.start - st.delay) / (PRAISE_MS * 0.75)));
+        if (q <= 0 || q >= 1) return;
+        var out = reduced ? 0.8 : 1 - Math.pow(1 - q, 3);
+        ctx.globalAlpha = Math.sin(q * Math.PI) * alpha;
+        ctx.strokeStyle = colors.card; ctx.lineWidth = 1.5;
+        drawStarShape(x + st.dx * (half + 8) * st.reach * out, y + st.dy * (size * 1.05) * st.reach * out, st.size * (1 - q * 0.35), st.spin + q * 2);
+      });
+      ctx.globalAlpha = alpha;
+      ctx.translate(x, y); ctx.scale(pop, pop);
+      ctx.strokeStyle = colors.card; ctx.lineWidth = 5; ctx.strokeText(p.word, 0, 0);
+      ctx.fillStyle = ink; ctx.fillText(p.word, 0, 0);
+      ctx.setTransform(boardDpr, 0, 0, boardDpr, 0, 0);
+      return true;
+    });
+    ctx.restore();
   }
   // A small map of what is left, with a frame showing the current view. Tap it to jump.
   function miniRect() {
@@ -2973,6 +3032,7 @@ body.bigmap #caption.on{left:12px;right:auto;bottom:calc(90px + env(safe-area-in
         var sc = reduced ? 0.45 : 1;
         flights.push({ pts: pts, len: len, travel: travel, start: now, duration: sc * Math.min(1500, 480 + travel * 42), ghosty: !!m.phase, color: hintArrow === m.id || (m.kind === 'twin' && hintArrow === m.twin) ? colors.hint : arrowColor(m), edge: edge, rayCells: body + c.dist - 1 });
       });
+      addPraise(l.arrows[id], now);
       var f = noteFor(step); tune.push(f); pluck(f, 0, 0.2, 1.5);
       buzz(8);
       l.arrows.forEach(function (x) { if (x.kind === 'compass' && !state.removed[x.id]) angles[x.id] += 90; if (x.uno !== undefined) unoFlip[x.id] = now; });
