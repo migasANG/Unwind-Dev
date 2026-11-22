@@ -925,6 +925,7 @@
     });
     // Cross-board twins in groups of 2, 3 and 4.
     var sizes = shuffle([2, 3, 4], r), last = [-1, -1, -1, -1];
+    if (spec.big) sizes = sizes.concat(shuffle([2, 3, 4], r));
     sizes.forEach(function (size, gi) {
       var pick = shuffle([0, 1, 2, 3], r).slice(0, size), members = [];
       pick.sort().forEach(function (b) {
@@ -938,7 +939,7 @@
       members.forEach(function (m) { boards[m[0]].arrows[m[1]].coopGroup = groups.length; last[m[0]] = m[2]; });
       groups.push({ id: groups.length, members: members.map(function (m) { return [m[0], m[1]]; }) });
     });
-    return { seed: seed, boards: boards, groups: groups };
+    return { seed: seed, boards: boards, groups: groups, big: !!spec.big };
   }
   // Hard boards: some arrows carry several effects at once (up to 3, season effects not counted).
   function traitCount(a) {

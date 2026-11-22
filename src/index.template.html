@@ -214,6 +214,11 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .guide-item p{margin:2px 0 0;font-size:.8125rem;line-height:1.4}
 .onboard{font-size:.6875rem;font-weight:600;padding:1px 7px;border-radius:9px;background:var(--ink);color:var(--card)}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
+@keyframes fadeout{from{opacity:1}to{opacity:0}}
+.sheet.closing{animation:fadeout .42s ease both;pointer-events:none}
+.sheet.side.closing{animation:fadeout .34s ease both}
+.sheet.side.closing .card{animation:slideout .32s cubic-bezier(.7,0,.8,.2) both}
 .smoke{animation:smoke 5s ease-in infinite}
 .smoke.b{animation-delay:1.6s}.smoke.c{animation-delay:3.2s}
 .boat{animation:bob 4.6s ease-in-out infinite}

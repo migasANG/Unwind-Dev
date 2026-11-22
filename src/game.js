@@ -396,9 +396,11 @@
   var coop = null, FX_KEYS = ['flights', 'bounces', 'nudges', 'blockerGlow', 'angles', 'unoFlip', 'wakes', 'ripples', 'embers', 'praises'];
   function stashFx() { return { flights: flights, bounces: bounces, nudges: nudges, blockerGlow: blockerGlow, angles: angles, unoFlip: unoFlip, wakes: wakes, ripples: ripples, embers: embers, praises: praises }; }
   function restoreFx(f) { flights = f.flights; bounces = f.bounces; nudges = f.nudges; blockerGlow = f.blockerGlow; angles = f.angles; unoFlip = f.unoFlip; wakes = f.wakes; ripples = f.ripples; embers = f.embers; praises = f.praises; }
-  function openCoop(seed) {
+  // The big test room has three times the area per board, so each side grows by about the square root of 3.
+  var COOP_BIG = { w: 12, h: 16, minLen: 2, maxLen: 8, depth: 9, twins: 2, mirrors: 3, big: true };
+  function openCoop(seed, big) {
     seed = seed || 1 + Math.floor(Math.random() * 1e6);
-    var room = E.coopRoom(seed);
+    var room = E.coopRoom(seed, big ? COOP_BIG : undefined);
     coopZoomK = 1;
     coop = { room: room, idx: 0, lives: 12, burners: [], effects: [], boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
     coop.boards.forEach(function (B, i) {
@@ -574,9 +576,11 @@
       if (now >= f.start) {
         // A fading streak behind it.
         for (var tr = 1; tr <= 5; tr++) { setStroke('#ff8a65', w * (1 - tr * 0.15), 0.32 - tr * 0.05); strokeWindow(f.hit.pts, Math.max(0, travel - len - tr * 0.45), Math.max(0, travel - len - (tr - 1) * 0.45)); }
+        sniperGlow(f.hit.pts, Math.max(0, travel - len), travel, w, now);
         setStroke(col, w, 1);
         var res = strokeWindow(f.hit.pts, Math.max(0, travel - len), travel);
         chevron(res.end, res.tan, cs * 0.24);
+        sniperSparks(f.hit.pts, Math.max(0, travel - len), travel, res, now);
       }
       if (t >= 1 && f.hit.kind !== 'none') coopEffect('impact', coop.idx, px(f.hit.pts[f.hit.pts.length - 1]), q.dir, now);
       if (t >= 1) coopResolve(B, q, now);
@@ -1361,9 +1365,11 @@
       if (tNow < 0) tNow = 0;
       var travel = fl.travel * (0.28 * tNow + 0.72 * tNow * tNow);
       if (!fl.rippled && travel >= fl.rayCells - 0.2) { fl.rippled = true; addRipple(fl.edge, fl.color); }
+      if (fl.sniper) sniperGlow(fl.pts, travel, travel + fl.len, w, now);
       setStroke(fl.color, w, fl.ghosty ? 0.55 + 0.25 * Math.sin(now / 45) : 1);
       var res = strokeWindow(fl.pts, travel, travel + fl.len);
       chevron(res.end, res.tan, cs * 0.24);
+      if (fl.sniper) sniperSparks(fl.pts, travel, travel + fl.len, res, now);
       if (fl.gold) { ctx.save(); ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = '#a86a00'; ctx.lineWidth = 0.8; for (var gi = 0; gi < 9; gi++) { var gp = pointAlong(fl.pts, Math.max(0, travel + fl.len - gi * 0.55)); ctx.globalAlpha = 1 - gi / 9; drawStarShape(gp.x + Math.sin(gi * 2.3 + now / 90) * cs * 0.25, gp.y + Math.cos(gi * 1.7 + now / 110) * cs * 0.25, cs * 0.12, now / 120 + gi); } ctx.restore(); }
       return true;
     });
@@ -2132,21 +2138,55 @@
     });
   }
   // A cross-board twin shows who holds its partners: each player's initial, with a small arrow towards their board.
+  // A live sniper: a pulsing red glow under it, crackling sparks along it and a spinning sight at its head.
+  function sniperGlow(pts, from, to, w, now) {
+    var pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 80);
+    setStroke('#ff2338', w * (2.6 + pulse * 1.8), 0.16 + pulse * 0.16); strokeWindow(pts, from, to);
+    setStroke('#ffc2c8', w * 1.7, 0.4); strokeWindow(pts, from, to);
+  }
+  function sniperSparks(pts, from, to, res, now) {
+    if (!res || !res.end) return;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // Crackle: a jagged white line that flickers along the body.
+    var tick = reduced ? 0 : Math.floor(now / 55);
+    for (var k = 0; k < 2; k++) {
+      ctx.strokeStyle = k ? '#ff6b78' : '#fff'; ctx.lineWidth = Math.max(1, cs * (k ? 0.05 : 0.03)); ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      for (var d = from, i = 0; d <= to + 0.001; d += 0.3, i++) {
+        var p = pointAlong(pts, d), off = Math.sin((tick + i * 7 + k * 13) * 12.9898) * cs * 0.16;
+        var q = pointAlong(pts, Math.min(to, d + 0.05)), dx = q.x - p.x, dy = q.y - p.y, n = Math.hypot(dx, dy) || 1;
+        var x = p.x - dy / n * off, y = p.y + dx / n * off;
+        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // Sparks falling off the tail.
+    for (var j = 0; j < 7; j++) {
+      var age = ((now / 400) + j / 7) % 1, sp = pointAlong(pts, Math.max(0, from - age * 1.6));
+      ctx.globalAlpha = (1 - age) * 0.9; ctx.fillStyle = age < 0.4 ? '#fff0b0' : '#ff4a4a';
+      ctx.beginPath(); ctx.arc(sp.x + Math.sin(j * 2.1 + now / 70) * cs * 0.22 * age, sp.y + Math.cos(j * 1.3 + now / 90) * cs * 0.22 * age, Math.max(1, cs * 0.06 * (1 - age * 0.6)), 0, 7); ctx.fill();
+    }
+    // A spinning sight around the head.
+    var rot = reduced ? 0 : now / 160, r = cs * 0.4;
+    ctx.globalAlpha = 0.95; ctx.strokeStyle = '#ff2338'; ctx.lineWidth = Math.max(1.4, cs * 0.05);
+    for (var a4 = 0; a4 < 4; a4++) { ctx.beginPath(); ctx.arc(res.end.x, res.end.y, r, rot + a4 * Math.PI / 2 + 0.25, rot + a4 * Math.PI / 2 + 1.3); ctx.stroke(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
   function drawCoopTag(c, a, color) {
     if (!coop) return;
     var here = coop.idx, others = coop.room.groups[a.coopGroup].members.filter(function (m) { return m[0] !== here; });
-    var h = cs * 0.62, cw = cs * 0.34, w = Math.max(h, others.length * cw + cs * 0.14);
+    var h = cs * 0.42, cw = cs * 0.22, w = Math.max(h, others.length * cw + cs * 0.08);
     ctx.save(); ctx.globalAlpha = 1;
-    ctx.fillStyle = color; ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.04);
+    ctx.fillStyle = color; ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.03);
     ctx.beginPath(); ctx.roundRect(c.x - w / 2, c.y - h / 2, w, h, h * 0.32); ctx.fill(); ctx.stroke();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     others.forEach(function (m, i) {
       var x = c.x - (others.length - 1) * cw / 2 + i * cw, gone = coop.boards[m[0]].state && coop.boards[m[0]].state.removed[m[1]];
       ctx.globalAlpha = gone ? 0.45 : 1;
-      ctx.fillStyle = colors.card; ctx.font = '700 ' + Math.round(cs * 0.27) + 'px Figtree,system-ui,sans-serif';
-      ctx.fillText(COOP_NAMES[m[0]][0], x, c.y - h * 0.15);
-      var dx = (m[0] & 1) - (here & 1), dy = (m[0] >> 1) - (here >> 1), ang = Math.atan2(dy, dx), s2 = cs * 0.07, ay = c.y + h * 0.26;
-      ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.035);
+      ctx.fillStyle = colors.card; ctx.font = '700 ' + Math.max(7, Math.round(cs * 0.19)) + 'px Figtree,system-ui,sans-serif';
+      ctx.fillText(COOP_NAMES[m[0]][0], x, c.y - h * 0.17);
+      var dx = (m[0] & 1) - (here & 1), dy = (m[0] >> 1) - (here >> 1), ang = Math.atan2(dy, dx), s2 = cs * 0.048, ay = c.y + h * 0.27;
+      ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(0.8, cs * 0.026);
       ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * s2 * 1.2, ay - Math.sin(ang) * s2 * 1.2); ctx.lineTo(x + Math.cos(ang) * s2 * 1.2, ay + Math.sin(ang) * s2 * 1.2);
       ctx.moveTo(x + Math.cos(ang) * s2 * 1.2 - Math.cos(ang - 0.7) * s2, ay + Math.sin(ang) * s2 * 1.2 - Math.sin(ang - 0.7) * s2); ctx.lineTo(x + Math.cos(ang) * s2 * 1.2, ay + Math.sin(ang) * s2 * 1.2);
       ctx.lineTo(x + Math.cos(ang) * s2 * 1.2 - Math.cos(ang + 0.7) * s2, ay + Math.sin(ang) * s2 * 1.2 - Math.sin(ang + 0.7) * s2); ctx.stroke();
@@ -2332,7 +2372,7 @@
         var body = m.kind === 'compass' ? 0 : m.cells.length - 1;
         var travel = body + c.dist + screenCells() + len;
         var sc = reduced ? 0.45 : 1;
-        flights.push({ pts: pts, len: len, travel: travel, start: now, duration: sc * Math.min(1500, 480 + travel * 42), ghosty: !!m.phase, color: hintArrow === m.id || (m.kind === 'twin' && hintArrow === m.twin) ? colors.hint : arrowColor(m), edge: edge, rayCells: body + c.dist - 1 });
+        flights.push({ pts: pts, len: len, travel: travel, start: now, duration: sc * Math.min(1500, 480 + travel * 42), ghosty: !!m.phase, sniper: !!m.sniper, color: hintArrow === m.id || (m.kind === 'twin' && hintArrow === m.twin) ? colors.hint : arrowColor(m), edge: edge, rayCells: body + c.dist - 1 });
       });
       addPraise(l.arrows[id], now);
       var f = noteFor(step); tune.push(f); pluck(f, 0, 0.2, 1.5);
@@ -2482,7 +2522,16 @@
   }
 
   /* ---------- Sheets ---------- */
-  function closeSheet() { $('sheetHost').innerHTML = ''; }
+  // Closing plays the opening in reverse: side menus slide back out, the others fade away.
+  function closeSheet() {
+    var host = $('sheetHost'), el = host.firstChild;
+    if (!el) return;
+    host.innerHTML = '';
+    if (reduced || !el.classList || !el.classList.contains('sheet')) return;
+    el.classList.add('closing');
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, el.classList.contains('side') ? 340 : 440);
+  }
   // Changes inside an open menu swap its contents only, so the menu itself never fades out or moves.
   function sheetInPlace(html) {
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card');
@@ -2560,7 +2609,7 @@
       else levelsSheet('calm');
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
-    s.querySelector('#again').onclick = function () { if (c.coop && coop) openCoop(coop.room.seed); else begin(c); };
+    s.querySelector('#again').onclick = function () { if (c.coop && coop) openCoop(coop.room.seed, coop.room.big); else begin(c); };
     s.querySelector('#winLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
@@ -2601,7 +2650,7 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button></div>';
+    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -2614,6 +2663,7 @@
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mCoop').onclick = function () { openCoop(); };
+    s.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () {
@@ -2913,7 +2963,7 @@
     track('guide_open', {});
   }
   function restart() {
-    if (current && current.coop && coop) { openCoop(coop.room.seed); return; }
+    if (current && current.coop && coop) { openCoop(coop.room.seed, coop.room.big); return; }
     track('restart', { launches: state.launches });
     begin(current);
   }
@@ -3093,7 +3143,7 @@
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed) { openCoop(seed); },
+    openCoop: function (seed, big) { openCoop(seed, big); },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
