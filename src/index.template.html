@@ -213,6 +213,46 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .guide-item h3{margin:0;font-size:.9375rem;font-weight:600;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .guide-item p{margin:2px 0 0;font-size:.8125rem;line-height:1.4}
 .onboard{font-size:.6875rem;font-weight:600;padding:1px 7px;border-radius:9px;background:var(--ink);color:var(--card)}
+.card.lobby{gap:14px}
+.card.lobby>*{flex:none}
+.card.lobby .setting small{display:block;font-weight:400;font-size:.75rem;opacity:.75;margin-top:1px}
+.lview{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8125rem;font-weight:600}
+.lview .sizes,.lseg{grid-template-columns:repeat(2,1fr)}
+.lview .sizes{min-width:170px}
+.lseg button[disabled]{opacity:.55;cursor:default}
+.lseg button[aria-pressed="true"][disabled]{opacity:.8}
+.switch[disabled]{opacity:.55}
+.lcode{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,currentColor 8%,transparent)}
+.lcode small{grid-column:1/-1;font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
+.lcode b{font-size:1.9rem;letter-spacing:.12em;font-variant-numeric:tabular-nums;user-select:all;-webkit-user-select:all}
+.lcode button{height:36px;padding:0 16px;border-radius:18px;background:var(--ink);color:var(--card);font-weight:600}
+.lcode p{grid-column:1/-1;font-size:.8125rem;opacity:.85;margin:4px 0 0}
+.lname{display:flex;gap:8px}
+.lname input{flex:1;min-width:0;height:42px;border-radius:12px;border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-weight:600;padding:0 12px}
+.lname button{width:42px;height:42px;border-radius:12px;border:1.5px solid currentColor;font-size:1.1rem}
+.lplayers{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.lplayers li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:color-mix(in srgb,currentColor 7%,transparent);min-height:46px}
+.lplayers li.empty{background:transparent;border:1.5px dashed color-mix(in srgb,currentColor 35%,transparent);opacity:.75}
+.lplayers .dot{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;background:color-mix(in srgb,currentColor 25%,transparent);animation:pop .35s cubic-bezier(.3,1.6,.5,1) both}
+.lplayers li.empty .dot{animation:breathe 1.6s ease-in-out infinite}
+.lplayers .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.lplayers .nm em{font-style:normal;font-weight:500;opacity:.7}
+.lplayers .crown{font-style:normal;font-size:.75rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#ffc21f;color:#3a2a00;margin-left:4px;white-space:nowrap}
+.lplayers .st{font-size:.75rem;font-weight:700;padding:4px 9px;border-radius:10px;border:1.5px solid currentColor;opacity:.7;white-space:nowrap}
+.lplayers .st.on{background:#3fae6a;border-color:#3fae6a;color:#fff;opacity:1}
+.lplayers .kick{width:28px;height:28px;border-radius:50%;flex:none;font-size:1.1rem;line-height:1;opacity:.7}
+.lboards{display:grid;gap:6px}
+.lboards.n2{grid-template-columns:1fr 1fr}
+.lboards.n4{grid-template-columns:1fr 1fr}
+.lboards div{aspect-ratio:7/5;max-width:100%;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);display:grid;place-items:center;align-content:center;gap:2px;font-size:.8125rem;text-align:center;padding:4px}
+.lboards b{font-size:1.1rem}
+.lsum{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8125rem;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,currentColor 7%,transparent)}
+.lsum b{margin-left:4px}
+.lready{height:48px;border-radius:24px;border:2px solid currentColor;font-weight:700}
+.lready.on{background:#3fae6a;border-color:#3fae6a;color:#fff}
+#lStart[disabled]{opacity:.5}
+.lwait{text-align:center;font-weight:600;margin:0}
+.lleave{height:40px;border-radius:20px;font-weight:600;opacity:.8}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes fadeout{from{opacity:1}to{opacity:0}}
