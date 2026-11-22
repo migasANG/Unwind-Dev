@@ -218,6 +218,15 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .card.lobby .setting small{display:block;font-weight:400;font-size:.75rem;opacity:.75;margin-top:1px}
 .lview{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8125rem;font-weight:600}
 .lview .sizes,.lseg{grid-template-columns:repeat(2,1fr)}
+.lseg:has(button:nth-child(4)){grid-template-columns:repeat(4,1fr)}
+.card.pausecard{gap:12px}
+.card.pausecard>*{flex:none}
+.mpx{border-top:1.5px solid color-mix(in srgb,currentColor 18%,transparent);padding-top:12px}
+.mpx summary{cursor:pointer;font-weight:700;font-size:.9375rem;list-style:none;display:flex;align-items:center;gap:8px}
+.mpx summary::-webkit-details-marker{display:none}
+.mpx summary::before{content:'';width:0;height:0;border-left:7px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent;transition:transform .2s}
+.mpx[open] summary::before{transform:rotate(90deg)}
+.mpx[open]{display:grid;gap:14px}
 .lview .sizes{min-width:170px}
 .lseg button[disabled]{opacity:.55;cursor:default}
 .lseg button[aria-pressed="true"][disabled]{opacity:.8}
@@ -235,7 +244,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .lplayers li.empty{background:transparent;border:1.5px dashed color-mix(in srgb,currentColor 35%,transparent);opacity:.75}
 .lplayers .dot{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;background:color-mix(in srgb,currentColor 25%,transparent);animation:pop .35s cubic-bezier(.3,1.6,.5,1) both}
 .lplayers li.empty .dot{animation:breathe 1.6s ease-in-out infinite}
-.lplayers .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.lplayers .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lplayers .nm em{font-style:normal;font-weight:500;opacity:.7}
 .lplayers .crown{font-style:normal;font-size:.75rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#ffc21f;color:#3a2a00;margin-left:4px;white-space:nowrap}
 .lplayers .st{font-size:.75rem;font-weight:700;padding:4px 9px;border-radius:10px;border:1.5px solid currentColor;opacity:.7;white-space:nowrap}
@@ -244,10 +253,14 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .lboards{display:grid;gap:6px}
 .lboards.n2{grid-template-columns:1fr 1fr}
 .lboards.n4{grid-template-columns:1fr 1fr}
-.lboards div{aspect-ratio:7/5;max-width:100%;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);display:grid;place-items:center;align-content:center;gap:2px;font-size:.8125rem;text-align:center;padding:4px}
+.lboards button{color:inherit;font:inherit;aspect-ratio:7/5;max-width:100%;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);display:grid;place-items:center;align-content:center;gap:2px;font-size:.8125rem;text-align:center;padding:4px}
 .lboards b{font-size:1.1rem}
-.lsum{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8125rem;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,currentColor 7%,transparent)}
-.lsum b{margin-left:4px}
+.lboards button.pick{border-color:var(--ink);border-width:2.5px;background:color-mix(in srgb,currentColor 10%,transparent);transform:scale(.97)}
+.lboards button[disabled]{opacity:1;cursor:default}
+.lplayers .bd{font-size:.6875rem;font-weight:600;opacity:.65;white-space:nowrap}
+.lsum{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;font-size:.75rem;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,currentColor 7%,transparent)}
+.lsum span{display:flex;flex-direction:column;gap:2px;opacity:.85;min-width:0}
+.lsum b{font-size:.875rem;opacity:1}
 .lready{height:48px;border-radius:24px;border:2px solid currentColor;font-weight:700}
 .lready.on{background:#3fae6a;border-color:#3fae6a;color:#fff}
 #lStart[disabled]{opacity:.5}
