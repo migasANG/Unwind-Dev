@@ -891,6 +891,55 @@
     chosen.forEach(function (c) { c.a.uno = c.phase; });
     return true;
   }
+  /* ---------- Co-op rooms: 4 boards in a 2 x 2 grid ---------- */
+  // Board b sits at row b >> 1, column b & 1. A shot leaving in direction d goes to this neighbour, or nowhere.
+  function coopNeighbour(b, d) {
+    var r = b >> 1, c = b & 1;
+    if (d === 1 && c === 0) return b + 1;
+    if (d === 3 && c === 1) return b - 1;
+    if (d === 2 && r === 0) return b + 2;
+    if (d === 0 && r === 1) return b - 2;
+    return -1;
+  }
+  // Every board is a normal winnable board. Snipers are a bonus. Cross-board twins are chosen in the same order on every
+  // board's own solution, so playing each board's solution in turn always lets every group leave together.
+  function coopRoom(seed, spec) {
+    var r = rng32(seed || 1), boards = [], groups = [];
+    spec = spec || { w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, mirrors: 2 };
+    for (var b = 0; b < 4; b++) {
+      var lvl = generate(spec, (seed || 1) + b * 977, 200) || generate(Object.assign({}, spec, { mirrors: 0 }), (seed || 1) + b * 977, 200);
+      lvl.lives = 12; lvl.hints = 0;
+      boards.push(lvl);
+    }
+    var empty = function (lvl) { return { removed: lvl.arrows.map(function () { return true; }), launches: 0, frozen: {}, burning: {} }; };
+    var plain = function (a) { return a.kind === 'plain' && a.key === undefined && !a.isKey && !a.wait && !a.sniper && a.coopGroup === undefined; };
+    // Snipers: between 1 in 25 and 1 in 10 of each board's arrows, aimed so they reach a neighbouring board.
+    boards.forEach(function (lvl, b) {
+      var n = lvl.arrows.length, want = Math.max(1, Math.min(Math.floor(n / 10), Math.max(Math.ceil(n / 25), Math.round(n / 13))));
+      shuffle(lvl.arrows.slice(), r).forEach(function (a) {
+        if (want <= 0 || !plain(a)) return;
+        var c = check(lvl, empty(lvl), a);
+        if (coopNeighbour(b, c.endDir) < 0) return;
+        a.sniper = true; want--;
+      });
+    });
+    // Cross-board twins in groups of 2, 3 and 4.
+    var sizes = shuffle([2, 3, 4], r), last = [-1, -1, -1, -1];
+    sizes.forEach(function (size, gi) {
+      var pick = shuffle([0, 1, 2, 3], r).slice(0, size), members = [];
+      pick.sort().forEach(function (b) {
+        var lvl = boards[b], sol = lvl.solution, options = [];
+        for (var i = last[b] + 1; i < sol.length && options.length < 3; i++) if (plain(lvl.arrows[sol[i]])) options.push(i);
+        if (!options.length) return;
+        var at = options[Math.floor(r() * options.length)];
+        members.push([b, sol[at], at]);
+      });
+      if (members.length < 2) return;
+      members.forEach(function (m) { boards[m[0]].arrows[m[1]].coopGroup = groups.length; last[m[0]] = m[2]; });
+      groups.push({ id: groups.length, members: members.map(function (m) { return [m[0], m[1]]; }) });
+    });
+    return { seed: seed, boards: boards, groups: groups };
+  }
   // Hard boards: some arrows carry several effects at once (up to 3, season effects not counted).
   function traitCount(a) {
     return (a.kind === 'twin' ? 1 : 0) + (a.key !== undefined ? 1 : 0) + (a.isKey ? 1 : 0) + (a.wait ? 1 : 0) + (a.ghostPhase !== undefined ? 1 : 0) + (a.phase ? 1 : 0) + (a.red ? 1 : 0) + (a.uno !== undefined ? 1 : 0);
@@ -1004,7 +1053,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    TUTORIALS: TUTORIALS, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };

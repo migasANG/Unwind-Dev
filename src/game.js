@@ -391,6 +391,242 @@
     };
     setTimeout(step, 60);
   }
+  /* ---------- Co-op test: four boards, cross-board twins and snipers, all on one device ---------- */
+  var coop = null, FX_KEYS = ['flights', 'bounces', 'nudges', 'blockerGlow', 'angles', 'unoFlip', 'wakes', 'ripples', 'embers', 'praises'];
+  function stashFx() { return { flights: flights, bounces: bounces, nudges: nudges, blockerGlow: blockerGlow, angles: angles, unoFlip: unoFlip, wakes: wakes, ripples: ripples, embers: embers, praises: praises }; }
+  function restoreFx(f) { flights = f.flights; bounces = f.bounces; nudges = f.nudges; blockerGlow = f.blockerGlow; angles = f.angles; unoFlip = f.unoFlip; wakes = f.wakes; ripples = f.ripples; embers = f.embers; praises = f.praises; }
+  function openCoop(seed) {
+    seed = seed || 1 + Math.floor(Math.random() * 1e6);
+    var room = E.coopRoom(seed);
+    coop = { room: room, idx: 0, lives: 12, burners: [], boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
+    coop.boards.forEach(function (B, i) {
+      if (i === 0) return;
+      E.resetBoard(B.level);
+      B.state = E.newState(B.level); B.state.safe = true;
+    });
+    begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: 'Co-op test · Board 1 of 4', chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    coop.boards[0].state = state;
+    coopSyncLives();
+    setCaption('Co-op test: clear all four boards. Use the arrows at the edges to switch boards.');
+    layout(); refresh();
+    track('coop_open', { seed: seed });
+  }
+  function coopSyncLives() {
+    if (!coop) return;
+    coop.lives = state.lives;
+    coop.boards.forEach(function (B) { if (B.state) B.state.lives = coop.lives; });
+  }
+  function coopAllWon() { return !!coop && coop.boards.every(function (B) { return B.state && E.isWon(B.state); }); }
+  function coopMember(b, id) { var B = coop.boards[b]; return { b: b, B: B, a: B.level.arrows[id], st: B.state, l: B.level }; }
+  // Before a tap: a sniper on its way may hold the board, and a cross-board twin needs its partners ready and clear.
+  function coopAllow(id) {
+    var now = performance.now(), B = coop.boards[coop.idx], q = B.queue[0], l = current.level, a = l.arrows[id];
+    if (q && !q.pass) {
+      if (q.extra > 0 && id !== q.targetId) q.extra--;
+      else { nudges[id] = now + 360; pluck(220, 0, 0.07, 0.3); setCaption('Wait: a sniper is coming in.'); return false; }
+    }
+    if (a.coopGroup === undefined || !E.isReady(state, a)) return true;
+    var others = coop.room.groups[a.coopGroup].members.filter(function (m) { return m[0] !== coop.idx; }).map(function (m) { return coopMember(m[0], m[1]); }).filter(function (m) { return !m.st.removed[m.a.id]; });
+    var sleepy = others.filter(function (m) { return !E.isReady(m.st, m.a); })[0];
+    if (sleepy) { nudges[id] = now + 360; pluck(220, 0, 0.07, 0.3); setCaption('Its twin on board ' + (sleepy.b + 1) + ' is not ready yet.'); return false; }
+    var blocked = others.filter(function (m) { return !E.check(m.l, m.st, m.a).clear; })[0];
+    if (blocked && E.check(l, state, a).clear) {
+      // Its twin on another board is blocked: it bounces back and costs a shared life.
+      if (state.lives !== null) state.lives--;
+      coopSyncLives(); collisions++;
+      bounces[id] = { start: now, reach: 0.18, pts: trackOf(a, E.check(l, state, a)) };
+      thud(); buzz(26);
+      setCaption('Its twin on board ' + (blocked.b + 1) + ' is blocked.');
+      refresh();
+      if (state.lives === 0) finish(false, 'lives');
+      return false;
+    }
+    return true;
+  }
+  // After a launch: twins on the other boards leave too, and a sniper heads for the next board once it has left this one.
+  function coopAfterLaunch(id, res, now) {
+    var l = current.level, a = l.arrows[id], from = coop.idx;
+    if (a.coopGroup !== undefined) {
+      coop.room.groups[a.coopGroup].members.forEach(function (m) {
+        if (m[0] === from) return;
+        var o = coopMember(m[0], m[1]);
+        if (o.st.removed[o.a.id]) return;
+        o.st.lives = coop.lives;
+        E.tap(o.l, o.st, o.a.id);
+      });
+    }
+    res.results.forEach(function (r, k) {
+      var m = l.arrows[r.id];
+      if (!m.sniper) return;
+      var c = r.check, corner = c.path && c.path.length ? c.path[c.path.length - 1] : E.headOf(m), to = E.coopNeighbour(from, c.endDir);
+      var fl = flights[flights.length - res.results.length + k];
+      var q = Math.min(1, (fl.rayCells + fl.len + 0.4) / fl.travel), t = (-0.28 + Math.sqrt(0.0784 + 2.88 * q)) / 1.44;
+      setTimeout(function () { coopShotLeft(from, to, c.endDir, corner); }, Math.max(0, t * fl.duration));
+    });
+    coopNav();
+  }
+  // What a sniper meets first on a board, entering from outside along its row or column.
+  function coopWalk(L, S, entry, dir) {
+    var x = entry[0], y = entry[1], d = dir, pts = [[x, y]], guard = 0;
+    while (guard++ < 400) {
+      x += E.DX[d]; y += E.DY[d];
+      if (x < 0 || y < 0 || x >= L.w || y >= L.h) { pts.push([x + E.DX[d] * 2, y + E.DY[d] * 2]); return { kind: 'none', pts: pts }; }
+      var k = y * L.w + x;
+      if (L.mirrorAt[k]) { d = E.TURN[L.mirrorAt[k]][d]; pts.push([x, y]); continue; }
+      if (S.burning[k] > S.launches) { pts.push([x, y]); return { kind: 'fire', k: k, pts: pts }; }
+      if (L.flowerAt && L.flowerAt[k] >= S.launches && !(S.picked && S.picked[k])) { pts.push([x, y]); return { kind: 'flower', k: k, pts: pts }; }
+      var o = L.grid[k];
+      if (o !== -1 && !S.removed[o] && !E.isGhost(S, L.arrows[o])) { pts.push([x, y]); return { kind: 'arrow', id: o, pts: pts }; }
+    }
+    return { kind: 'none', pts: pts };
+  }
+  function coopEntry(L, dir, corner) {
+    return dir === 1 ? [-1, corner[1]] : dir === 3 ? [L.w, corner[1]] : dir === 2 ? [corner[0], -1] : [corner[0], L.h];
+  }
+  // The sniper has left the shooter's board: the target is worked out now, and the warning goes up.
+  function coopShotLeft(from, to, dir, corner) {
+    if (!coop || ended || to < 0) return;
+    var B = coop.boards[to], entry = coopEntry(B.level, dir, corner), hit = coopWalk(B.level, B.state, entry, dir);
+    if (hit.kind === 'none' && to !== coop.idx) return;
+    var item = { from: from, dir: dir, entry: entry, extra: 1, targetId: hit.kind === 'arrow' ? hit.id : -1, pass: hit.kind === 'none', flying: null, waiting: false };
+    B.queue.push(item);
+    if (!item.pass) { pluck(659.3, 0, 0.12, 0.5); pluck(523.3, 0.14, 0.12, 0.6); buzz(18); }
+    if (to === coop.idx) coopMaybeStart(to);
+    else {
+      setCaption('Something is happening on board ' + (to + 1) + '.');
+      $('caption').setAttribute('data-goto', to); $('caption').classList.add('goto');
+    }
+    coopNav();
+  }
+  function coopMaybeStart(b) {
+    var B = coop.boards[b], q = B.queue[0];
+    if (!q || q.flying || q.waiting || b !== coop.idx) return;
+    q.waiting = true;
+    setTimeout(function () {
+      q.waiting = false;
+      if (!coop || ended || coop.idx !== b || B.queue[0] !== q) return;
+      var hit = coopWalk(B.level, B.state, q.entry, q.dir), dist = 0;
+      for (var i = 1; i < hit.pts.length; i++) dist += Math.abs(hit.pts[i][0] - hit.pts[i - 1][0]) + Math.abs(hit.pts[i][1] - hit.pts[i - 1][1]);
+      if (hit.kind !== 'none') dist -= 0.55;
+      q.flying = { start: performance.now(), hit: hit, dist: dist, duration: Math.min(1100, 260 + dist * 70) };
+    }, q.pass ? 60 : 650);
+  }
+  function coopResolve(B, q, now) {
+    var L = B.level, S = B.state, hit = q.flying.hit, b = coop.boards.indexOf(B);
+    B.queue.shift();
+    if (hit.kind === 'arrow' && S.removed[hit.id]) hit = coopWalk(L, S, q.entry, q.dir);
+    if (hit.kind === 'arrow') {
+      var a = L.arrows[hit.id], ids = [a.id];
+      if (a.kind === 'twin') ids.push(a.twin);
+      ids.forEach(function (id) {
+        var m = L.arrows[id];
+        S.removed[id] = true; delete S.frozen[id];
+        addRipple(px(m.cells[m.cells.length >> 1]), '#b3122e', 2.6);
+      });
+      pluck(196, 0, 0.16, 0.5); pluck(392, 0.04, 0.1, 0.6); buzz(22);
+    } else if (hit.kind === 'flower') {
+      S.picked = Object.assign({}, S.picked); S.picked[hit.k] = true;
+      addRipple(px([hit.k % L.w, Math.floor(hit.k / L.w)]), '#f06ca8', 2.2); pluck(784, 0, 0.1, 0.6);
+    } else if (hit.kind === 'fire') {
+      // It flies into the flames and burns, like any arrow that hits fire.
+      var pts = hit.pts, end = pts[pts.length - 1], prev = pts[pts.length - 2], dx = Math.sign(end[0] - prev[0]), dy = Math.sign(end[1] - prev[1]);
+      var fake = { id: -100 - now, cells: [[end[0] - dx * 1.5, end[1] - dy * 1.5], [end[0] - dx * 0.55, end[1] - dy * 0.55]] };
+      igniteArrow(fake, now, px(end));
+      coop.burners.push({ b: b, a: fake });
+      seasonSound('fireSound');
+    }
+    // A hit is not a move: only the golden arrow check runs, in case the board can no longer be cleared.
+    if (E.isStuck(L, S)) E.ensurePlay(L, S);
+    refresh();
+    if (coopAllWon()) { finish(true); return; }
+    if (!B.queue.length) setCaption('Board ' + (b + 1) + ' of 4');
+    coopMaybeStart(b); coopNav();
+  }
+  function drawCoop(now, w) {
+    var B = coop.boards[coop.idx], q = B.queue[0];
+    // Danger symbols where snipers will come in.
+    B.queue.forEach(function (item, i) {
+      if (item.pass || (item.flying && i === 0)) return;
+      var p = px(item.entry), pulse = reduced ? 1 : 0.85 + 0.15 * Math.sin(now / 120), r = cs * 0.42 * pulse;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#d4161f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.72); ctx.lineTo(-r * 0.95, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('!', 0, r * 0.18);
+      ctx.restore();
+    });
+    // A sniper flying in.
+    if (q && q.flying) {
+      var f = q.flying, t = Math.min(1, (now - f.start) / f.duration), travel = f.dist * t, len = 1.2;
+      var col = arrowColor({ sniper: true });
+      setStroke(col, w, 1);
+      var res = strokeWindow(f.hit.pts, Math.max(0, travel - len), travel);
+      chevron(res.end, res.tan, cs * 0.24);
+      if (t >= 1) coopResolve(B, q, now);
+    }
+    // Snipers burning in fire.
+    coop.burners = coop.burners.filter(function (x) {
+      var bu = x.a.burn;
+      if (!bu || now > bu.until + 400) return false;
+      if (x.b !== coop.idx) return true;
+      var bt = (now - bu.start) / bu.dur;
+      setStroke(bt < 0.72 ? '#e8321a' : mixColor('#e8321a', '#3a2a28', (bt - 0.72) / 0.28), w, Math.max(0, 1 - Math.max(0, bt - 0.8) * 5));
+      var res2 = strokeWindow(x.a.cells, 0, 0.95);
+      chevron(res2.end, res2.tan, cs * 0.24);
+      drawArrowFlames(x.a, now);
+      return true;
+    });
+    ctx.globalAlpha = 1;
+  }
+  // Moves the view to another board, with a short slide.
+  function coopSwitch(i) {
+    if (!coop || i === coop.idx || i < 0 || i > 3) return;
+    var from = coop.idx, dx = (i & 1) - (from & 1), dy = (i >> 1) - (from >> 1);
+    if (!reduced) {
+      var copy = document.createElement('canvas');
+      copy.className = 'boardfade'; copy.width = canvas.width; copy.height = canvas.height;
+      copy.getContext('2d').drawImage(canvas, 0, 0);
+      copy.style.transition = 'transform .32s ease, opacity .32s ease';
+      canvas.parentNode.insertBefore(copy, canvas.nextSibling);
+      requestAnimationFrame(function () { copy.style.transform = 'translate(' + (-dx * 35) + '%,' + (-dy * 35) + '%)'; copy.style.opacity = '0'; });
+      setTimeout(function () { copy.remove(); }, 380);
+      canvas.style.transition = 'none'; canvas.style.transform = 'translate(' + (dx * 35) + '%,' + (dy * 35) + '%)'; canvas.style.opacity = '0';
+      requestAnimationFrame(function () { requestAnimationFrame(function () { canvas.style.transition = 'transform .32s ease, opacity .32s ease'; canvas.style.transform = ''; canvas.style.opacity = ''; }); });
+    }
+    coop.boards[from].fx = stashFx(); coop.boards[from].state = state;
+    coop.idx = i;
+    var B = coop.boards[i];
+    current.level = B.level; current.id = 'coop-' + i; state = B.state;
+    if (B.fx) restoreFx(B.fx);
+    else {
+      flights = []; bounces = {}; nudges = {}; blockerGlow = {}; wakes = []; ripples = []; embers = []; praises = []; unoFlip = {}; angles = {};
+      B.level.arrows.forEach(function (a) { angles[a.id] = E.dirOf(a, state) * 90; });
+    }
+    hintArrow = -1; boardLayer = null; cam = null; introStart = performance.now() - 10000;
+    prepareIntro(B.level);
+    layout(); refresh();
+    $('where').textContent = 'Co-op test · Board ' + (i + 1) + ' of 4';
+    capMode = '';
+    setCaption(B.queue.length ? 'A sniper is coming in!' : E.isWon(state) ? 'Board ' + (i + 1) + ' is cleared.' : 'Board ' + (i + 1) + ' of 4');
+    coopMaybeStart(i);
+    pluck(523.3, 0, 0.06, 0.4);
+  }
+  // Buttons at the edges and corners of the board, each pointing to a neighbouring board.
+  function coopNav() {
+    var el = $('coopNav');
+    if (!current || !current.coop || !coop || ended) { el.hidden = true; return; }
+    el.hidden = false;
+    var b = coop.idx, W = cs * current.level.w, H = cs * current.level.h, html = '';
+    var GLYPH = { '1,0': '→', '-1,0': '←', '0,1': '↓', '0,-1': '↑', '1,1': '↘', '-1,1': '↙', '1,-1': '↗', '-1,-1': '↖' };
+    [b ^ 1, b ^ 2, b ^ 3].forEach(function (t) {
+      var dx = (t & 1) - (b & 1), dy = (t >> 1) - (b >> 1);
+      var x = dx > 0 ? ox + W + 24 : dx < 0 ? ox - 24 : ox + W / 2, y = dy > 0 ? oy + H + 24 : dy < 0 ? oy - 24 : oy + H / 2;
+      var alert = coop.boards[t].queue.some(function (q) { return !q.pass; }), done = !!coop.boards[t].state && E.isWon(coop.boards[t].state);
+      html += '<button class="cnav' + (alert ? ' alert' : '') + (done ? ' done' : '') + '" data-board="' + t + '" style="left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px" aria-label="Go to board ' + (t + 1) + '"><b>' + GLYPH[dx + ',' + dy] + '</b><span>' + (t + 1) + '</span></button>';
+    });
+    el.innerHTML = html;
+    el.querySelectorAll('[data-board]').forEach(function (btn) { btn.onclick = function () { audio(); coopSwitch(+btn.getAttribute('data-board')); }; });
+  }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
     var k = todayKey();
@@ -399,6 +635,7 @@
     begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: CHAPTERS[timeChapter()], sunY: 34 });
   }
   function begin(c) {
+    if (!c.coop) coop = null;
     current = c; cam = null; boardLayer = null;
     duck(false); stopJingle();
     tuneBase = c.mode === 'levels' ? c.index : 3;
@@ -473,6 +710,7 @@
   }
   function setCaption(text, style) {
     var cap = $('caption'), lvl = current && current.level, watch = !style && !!text && !!lvl && (text === lvl.caption || text === HARD_FIRST) && levelDemos().length > 0;
+    cap.removeAttribute('data-goto'); cap.classList.remove('goto');
     cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
     cap.classList.toggle('icewarn', style === 'ice'); cap.classList.toggle('goldwarn', style === 'gold');
     if (style) for (var i = 0; i < 10; i++) {
@@ -514,7 +752,12 @@
   }
   function refresh() {
     var max = current.level.lives, lives = state.lives, hearts = $('hearts');
-    if (lives !== null) {
+    if (lives !== null && max > 5) {
+      // Large shared pools show one heart and a count, so the header stays tidy.
+      hearts.innerHTML = heartSvg(lives ? '' : 'gone') + '<b class="lifecount">' + lives + '</b>';
+      $('livesLabel').textContent = lives === 1 ? '1 life left' : lives + ' lives left';
+      $('lives').setAttribute('aria-label', lives + ' of ' + max + ' lives left');
+    } else if (lives !== null) {
       var html = '';
       for (var i = 0; i < max; i++) {
         var cls = i >= lives ? (shownLives !== null && i === lives && shownLives > lives ? 'gone lost' : 'gone') : '';
@@ -530,7 +773,7 @@
     shownLives = lives;
     drawBadge();
     $('bNextTheme').hidden = !cycleOn();
-    $('bRewind').disabled = !state.history.length || ended;
+    $('bRewind').disabled = !state.history.length || ended || !!current.coop;
     $('bHint').disabled = hintsLeft <= 0 || ended;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
     var stuck = E.isStuck(current.level, state);
@@ -577,8 +820,8 @@
     $('bgButton').hidden = !(current && current.mode === 'endless');
     if (l0season()) { $('seasonBadge').style.top = viewTop + 'px'; $('bgButton').style.top = viewTop + 'px'; viewTop += E.effectsOf(current.level).length > 3 && vw < 340 ? 76 : 44; }
     viewBottom = document.querySelector('nav.ui').getBoundingClientRect().top - 54;
-    var l = current.level, sideW = vw - 32;
-    fitCs = Math.min(sideW / l.w, (viewBottom - viewTop) / l.h, 68);
+    var l = current.level, sideW = vw - 32 - (current.coop ? 92 : 0), padY = current.coop ? 84 : 0;
+    fitCs = Math.min(sideW / l.w, (viewBottom - viewTop - padY) / l.h, 68);
     // Boards too big to tap at full view open zoomed in, and can be moved around.
     if (!cam && l.big && fitCs < MIN_TAP) {
       // Start on the whole map, then glide in to a size that is easy to tap.
@@ -592,6 +835,7 @@
       cs = fitCs;
       ox = (vw - cs * l.w) / 2; oy = viewTop + (viewBottom - viewTop - cs * l.h) / 2;
     }
+    coopNav();
   }
   function applyCam() {
     var l = current.level;
@@ -687,6 +931,8 @@
   // An arrow with several effects shows the most important one: frozen, then phase, twins, reverse.
   function arrowColor(a) {
     var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4];
+    if (a.sniper && !(state && state.frozen && state.frozen[a.id] !== undefined)) return dark ? '#ff6b6b' : '#b3122e';
+    if (a.coopGroup !== undefined) return colors.twins[(a.coopGroup + 1) % colors.twins.length];
     if (state && state.frozen && state.frozen[a.id] !== undefined) return dark ? '#8fd3ff' : '#2f8fd0';
     if (a.phase) return dark ? '#d7b4ff' : '#7a3fd0';
     if (a.kind === 'twin') return colors.twins[(a.pair || 0) % colors.twins.length];
@@ -1035,6 +1281,7 @@
       return true;
     });
     ctx.globalAlpha = 1;
+    if (current.coop) drawCoop(now, w);
     if (praises.length) drawPraises(now);
     if (cam && cs > fitCs * 1.04) drawMinimap(Math.min(1, (cs / fitCs - 1.04) / 0.2));
   }
@@ -1772,6 +2019,8 @@
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
     if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+    if (a.coopGroup !== undefined) items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(87 + a.coopGroup)); });
+    if (a.sniper) items.push(function (c) { drawCrosshair(c, cs * 0.27, color); });
     if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
     if (a.uno !== undefined) items.push(function (c) { drawReverseIcon(c, cs * 0.27, color); });
@@ -1782,6 +2031,15 @@
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       scaled(c, pop, function () { draw(c); });
     });
+  }
+  function drawCrosshair(c, r, color) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.globalAlpha = 1;
+    ctx.fillStyle = colors.card; ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, r * 0.15); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.45, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.95); ctx.lineTo(0, -r * 0.6); ctx.moveTo(0, r * 0.6); ctx.lineTo(0, r * 0.95); ctx.moveTo(-r * 0.95, 0); ctx.lineTo(-r * 0.6, 0); ctx.moveTo(r * 0.6, 0); ctx.lineTo(r * 0.95, 0); ctx.stroke();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, r * 0.13, 0, 7); ctx.fill();
+    ctx.restore();
   }
   function drawReverseIcon(c, r, color) {
     ctx.save(); ctx.translate(c.x, c.y); ctx.globalAlpha = 1;
@@ -1918,6 +2176,7 @@
   }
   function onTap(id) {
     if (ended || id < 0) return;
+    if (current.coop && !coopAllow(id)) return;
     var l = current.level, res = E.tap(l, state, id), now = performance.now();
     takeEarlyFlowers(now);
     if (res.notReady) {
@@ -1977,8 +2236,10 @@
           track('red_card', { arrow: x.id });
         }
       });
+      if (current.coop) coopAfterLaunch(id, res, now);
       hintStillGood();
-      if (res.won) { bee = null; finish(true); }
+      if (res.won && current.coop && !coopAllWon()) setCaption('Board ' + (coop.idx + 1) + ' cleared! Help clear the others.');
+      else if (res.won || (current.coop && coopAllWon())) { bee = null; finish(true); }
     } else {
       collisions++;
       res.results.forEach(function (r) {
@@ -1993,6 +2254,7 @@
       thud(); buzz(26);
       if (res.failed) finish(false, 'lives');
     }
+    if (current.coop) coopSyncLives();
     refresh();
   }
   // Normal boards react on touch. Big boards wait for release, so a drag moves the view instead of playing an arrow.
@@ -2146,7 +2408,7 @@
       : c.level.lives === null ? ['Another calm stretch of water.'] : st.hits === 1 ? ['One small bump on the way.'] : [st.hits + ' bumps on the way, and you got there.'];
     var line = lines[Math.floor(Math.random() * lines.length)];
     var hearts = '';
-    if (st.livesLeft !== null) {
+    if (st.livesLeft !== null && c.level.lives <= 5) {
       for (var i = 0; i < c.level.lives; i++) hearts += heartSvg(i >= st.livesLeft ? 'gone' : '').replace('<svg ', '<svg style="animation-delay:' + (i * 0.12 + 0.2) + 's" ');
       hearts = '<div class="winhearts" role="img" aria-label="' + st.livesLeft + ' of ' + c.level.lives + ' lives left">' + hearts + '</div>';
     }
@@ -2212,6 +2474,7 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
+    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>Bigger boards, 2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -2223,6 +2486,7 @@
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
+    s.querySelector('#mCoop').onclick = function () { openCoop(); };
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () {
@@ -2454,6 +2718,8 @@
   }
   // Tapping a level's explanation plays its demo again.
   $('caption').addEventListener('click', function () {
+    var go = $('caption').getAttribute('data-goto');
+    if (go !== null && current && current.coop) { coopSwitch(+go); return; }
     if (!$('caption').classList.contains('watchable') || ended || !current) return;
     showTutorial(current.set === 'hard' && current.index === 0 ? ['combo'] : levelDemos(), 0, false, 'play');
   });
@@ -2520,6 +2786,7 @@
     track('guide_open', {});
   }
   function restart() {
+    if (current && current.coop && coop) { openCoop(coop.room.seed); return; }
     track('restart', { launches: state.launches });
     begin(current);
   }
@@ -2697,6 +2964,9 @@
     levelInfo: function () { var l = current.level; return { effects: E.effectsOf(l), scene: activeScene, season: l.season, seed: l.seed, big: !!l.big, w: l.w, h: l.h, lives: state.lives, limit: l.timeLimit || null, guarantee: l.guaranteeAt, flowers: (l.flowers || []).length }; },
     openEndless: function () { openEndless(true); },
     pops: function () { return popCount; },
+    coop: function () { return coop; },
+    coopSwitch: function (i) { coopSwitch(i); },
+    openCoop: function (seed) { openCoop(seed); },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
