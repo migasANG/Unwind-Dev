@@ -392,19 +392,21 @@
     setTimeout(step, 60);
   }
   /* ---------- Co-op test: four boards, cross-board twins and snipers, all on one device ---------- */
+  var COOP_NAMES = ['Ana', 'Bruno', 'Carla', 'Duarte'];
   var coop = null, FX_KEYS = ['flights', 'bounces', 'nudges', 'blockerGlow', 'angles', 'unoFlip', 'wakes', 'ripples', 'embers', 'praises'];
   function stashFx() { return { flights: flights, bounces: bounces, nudges: nudges, blockerGlow: blockerGlow, angles: angles, unoFlip: unoFlip, wakes: wakes, ripples: ripples, embers: embers, praises: praises }; }
   function restoreFx(f) { flights = f.flights; bounces = f.bounces; nudges = f.nudges; blockerGlow = f.blockerGlow; angles = f.angles; unoFlip = f.unoFlip; wakes = f.wakes; ripples = f.ripples; embers = f.embers; praises = f.praises; }
   function openCoop(seed) {
     seed = seed || 1 + Math.floor(Math.random() * 1e6);
     var room = E.coopRoom(seed);
-    coop = { room: room, idx: 0, lives: 12, burners: [], boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
+    coopZoomK = 1;
+    coop = { room: room, idx: 0, lives: 12, burners: [], effects: [], boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
     coop.boards.forEach(function (B, i) {
       if (i === 0) return;
       E.resetBoard(B.level);
       B.state = E.newState(B.level); B.state.safe = true;
     });
-    begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: 'Co-op test · Board 1 of 4', chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: 'Co-op test · Board 1 of 4 · ' + COOP_NAMES[0], chapter: CHAPTERS[timeChapter()], sunY: 34 });
     coop.boards[0].state = state;
     coopSyncLives();
     setCaption('Co-op test: clear all four boards. Use the arrows at the edges to switch boards.');
@@ -461,13 +463,18 @@
       var c = r.check, corner = c.path && c.path.length ? c.path[c.path.length - 1] : E.headOf(m), to = E.coopNeighbour(from, c.endDir);
       var fl = flights[flights.length - res.results.length + k];
       var q = Math.min(1, (fl.rayCells + fl.len + 0.4) / fl.travel), t = (-0.28 + Math.sqrt(0.0784 + 2.88 * q)) / 1.44;
-      setTimeout(function () { coopShotLeft(from, to, c.endDir, corner); }, Math.max(0, t * fl.duration));
+      setTimeout(function () {
+        if (!coop) return;
+        coopEffect('exit', from, fl.edge, c.endDir, performance.now());
+        pluck(987.8, 0, 0.1, 0.35); pluck(740, 0.05, 0.09, 0.35); pluck(493.9, 0.1, 0.08, 0.4);
+        coopShotLeft(from, to, c.endDir, corner);
+      }, Math.max(0, t * fl.duration));
     });
     coopNav();
   }
   // What a sniper meets first on a board, entering from outside along its row or column.
   function coopWalk(L, S, entry, dir) {
-    var x = entry[0], y = entry[1], d = dir, pts = [[x, y]], guard = 0;
+    var x = entry[0], y = entry[1], d = dir, pts = [[x - E.DX[d] * 2.5, y - E.DY[d] * 2.5]], guard = 0;
     while (guard++ < 400) {
       x += E.DX[d]; y += E.DY[d];
       if (x < 0 || y < 0 || x >= L.w || y >= L.h) { pts.push([x + E.DX[d] * 2, y + E.DY[d] * 2]); return { kind: 'none', pts: pts }; }
@@ -508,8 +515,12 @@
       var hit = coopWalk(B.level, B.state, q.entry, q.dir), dist = 0;
       for (var i = 1; i < hit.pts.length; i++) dist += Math.abs(hit.pts[i][0] - hit.pts[i - 1][0]) + Math.abs(hit.pts[i][1] - hit.pts[i - 1][1]);
       if (hit.kind !== 'none') dist -= 0.55;
-      q.flying = { start: performance.now(), hit: hit, dist: dist, duration: Math.min(1100, 260 + dist * 70) };
-    }, q.pass ? 60 : 650);
+      var nowF = performance.now();
+      q.flying = { start: nowF + 380, hit: hit, dist: dist, duration: Math.min(1200, 260 + dist * 65) };
+      coopEffect('enter', b, px(q.entry), q.dir, nowF);
+      pluck(329.6, 0, 0.09, 0.4); pluck(493.9, 0.08, 0.09, 0.4); pluck(659.3, 0.16, 0.1, 0.5);
+    }, q.pass ? 60 : 2000);
+    q.waitStart = performance.now();
   }
   function coopResolve(B, q, now) {
     var L = B.level, S = B.state, hit = q.flying.hit, b = coop.boards.indexOf(B);
@@ -553,17 +564,24 @@
       ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.72); ctx.lineTo(-r * 0.95, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('!', 0, r * 0.18);
+      if (i === 0 && item.waiting && item.waitStart) { var cd = Math.min(1, (now - item.waitStart) / 2000); ctx.strokeStyle = '#d4161f'; ctx.lineWidth = Math.max(2, cs * 0.06); ctx.beginPath(); ctx.arc(0, r * 0.1, r * 1.45, -Math.PI / 2, -Math.PI / 2 + cd * Math.PI * 2); ctx.stroke(); }
       ctx.restore();
     });
     // A sniper flying in.
     if (q && q.flying) {
-      var f = q.flying, t = Math.min(1, (now - f.start) / f.duration), travel = f.dist * t, len = 1.2;
+      var f = q.flying, t = Math.max(0, Math.min(1, (now - f.start) / f.duration)), travel = f.dist * t, len = 1.2;
       var col = arrowColor({ sniper: true });
-      setStroke(col, w, 1);
-      var res = strokeWindow(f.hit.pts, Math.max(0, travel - len), travel);
-      chevron(res.end, res.tan, cs * 0.24);
+      if (now >= f.start) {
+        // A fading streak behind it.
+        for (var tr = 1; tr <= 5; tr++) { setStroke('#ff8a65', w * (1 - tr * 0.15), 0.32 - tr * 0.05); strokeWindow(f.hit.pts, Math.max(0, travel - len - tr * 0.45), Math.max(0, travel - len - (tr - 1) * 0.45)); }
+        setStroke(col, w, 1);
+        var res = strokeWindow(f.hit.pts, Math.max(0, travel - len), travel);
+        chevron(res.end, res.tan, cs * 0.24);
+      }
+      if (t >= 1 && f.hit.kind !== 'none') coopEffect('impact', coop.idx, px(f.hit.pts[f.hit.pts.length - 1]), q.dir, now);
       if (t >= 1) coopResolve(B, q, now);
     }
+    drawCoopEffects(now);
     // Snipers burning in fire.
     coop.burners = coop.burners.filter(function (x) {
       var bu = x.a.burn;
@@ -578,8 +596,86 @@
     });
     ctx.globalAlpha = 1;
   }
+  // Holding a cross-board twin shows its partners' boards one after another, and letting go comes back.
+  var coopHold = null;
+  function coopHoldStart(id, pid) {
+    coopHoldEnd(false);
+    var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from; });
+    coopHold = { id: id, from: from, partners: partners, peeking: false, step: 0 };
+    coopHold.timer = setTimeout(function peek() {
+      if (!coopHold || !partners.length) return;
+      var m = partners[coopHold.step % partners.length];
+      coopHold.peeking = true; coopHold.step++;
+      coopSwitch(m[0], m[1]);
+      if (partners.length > 1) coopHold.timer = setTimeout(peek, 1300);
+    }, 420);
+  }
+  function coopHoldEnd(released) {
+    if (!coopHold) return;
+    var h = coopHold; coopHold = null;
+    clearTimeout(h.timer);
+    if (h.peeking) { if (coop) coopSwitch(h.from); }
+    else if (released) onTap(h.id);
+  }
+  function coopEffect(kind, b, p, dir, now) { coop.effects.push({ kind: kind, b: b, p: p, dir: dir, start: now }); }
+  function drawCoopEffects(now) {
+    coop.effects = coop.effects.filter(function (f) {
+      var dur = f.kind === 'impact' ? 600 : 650, t = (now - f.start) / dur;
+      if (t >= 1) return false;
+      if (f.b !== coop.idx || t < 0) return true;
+      var ang = Math.atan2(E.DY[f.dir], E.DX[f.dir]), e2 = 1 - Math.pow(1 - t, 3);
+      ctx.save(); ctx.lineCap = 'round';
+      if (f.kind === 'exit') {
+        // Leaving: a flash and a burst of streaks thrown forward.
+        ctx.globalAlpha = (1 - t) * 0.9; ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (0.25 + e2 * 0.5), 0, 7); ctx.fill();
+        ctx.strokeStyle = '#d4161f'; ctx.lineWidth = Math.max(2, cs * 0.08);
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (0.3 + e2 * 1.5), 0, 7); ctx.stroke();
+        for (var i = 0; i < 11; i++) {
+          var a2 = ang + (i - 5) * 0.18, r0 = cs * (0.3 + e2 * 0.8), r1 = r0 + cs * (0.5 + (i % 3) * 0.25) * (1 - t);
+          ctx.strokeStyle = i % 2 ? '#ff8a65' : '#d4161f'; ctx.lineWidth = Math.max(1.5, cs * 0.05);
+          ctx.beginPath(); ctx.moveTo(f.p.x + Math.cos(a2) * r0, f.p.y + Math.sin(a2) * r0); ctx.lineTo(f.p.x + Math.cos(a2) * r1, f.p.y + Math.sin(a2) * r1); ctx.stroke();
+        }
+      } else if (f.kind === 'enter') {
+        // Arriving: a ring closing in on the point it comes through, with sparks pulled inwards.
+        ctx.globalAlpha = Math.sin(t * Math.PI); ctx.strokeStyle = '#d4161f'; ctx.lineWidth = Math.max(2, cs * 0.09);
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (1.5 - e2 * 1.2), 0, 7); ctx.stroke();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, cs * 0.04);
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (1.1 - e2 * 0.9), now / 120, now / 120 + 4); ctx.stroke();
+        for (var j = 0; j < 8; j++) {
+          var a3 = j * Math.PI / 4 + now / 300, rr = cs * (1.4 - e2 * 1.2);
+          ctx.fillStyle = j % 2 ? '#ffd23f' : '#ff8a65';
+          ctx.beginPath(); ctx.arc(f.p.x + Math.cos(a3) * rr, f.p.y + Math.sin(a3) * rr, cs * 0.06, 0, 7); ctx.fill();
+        }
+      } else {
+        // Impact: a flash and shards.
+        ctx.globalAlpha = 1 - t; ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (0.2 + e2 * 0.7), 0, 7); ctx.fill();
+        for (var k = 0; k < 10; k++) {
+          var a4 = k * 0.63 + 0.3, d4 = cs * (0.2 + e2 * 1.3);
+          ctx.fillStyle = k % 2 ? '#d4161f' : colors.ink;
+          ctx.save(); ctx.translate(f.p.x + Math.cos(a4) * d4, f.p.y + Math.sin(a4) * d4); ctx.rotate(a4 + t * 6);
+          ctx.fillRect(-cs * 0.06, -cs * 0.03, cs * 0.12, cs * 0.06); ctx.restore();
+        }
+      }
+      ctx.restore();
+      return true;
+    });
+    ctx.globalAlpha = 1;
+  }
+  // The board steps back a little while a sniper is on its way, so there is room for it to come in.
+  var coopZoomK = 1;
+  function coopZoomTick() {
+    if (!coop || cam) return;
+    var q = coop.boards[coop.idx].queue[0], want = q && !q.pass && (q.waiting || q.flying) ? 0.82 : 1;
+    if (Math.abs(coopZoomK - want) < 0.002) { if (coopZoomK !== want) { coopZoomK = want; coopNav(); } return; }
+    coopZoomK += (want - coopZoomK) * (reduced ? 1 : 0.12);
+    var l = current.level;
+    cs = fitCs * coopZoomK; ox = (vw - cs * l.w) / 2; oy = viewTop + (viewBottom - viewTop - cs * l.h) / 2;
+    if (Math.abs(coopZoomK - want) < 0.002) coopNav();
+  }
   // Moves the view to another board, with a short slide.
-  function coopSwitch(i) {
+  function coopSwitch(i, focusId) {
     if (!coop || i === coop.idx || i < 0 || i > 3) return;
     var from = coop.idx, dx = (i & 1) - (from & 1), dy = (i >> 1) - (from >> 1);
     if (!reduced) {
@@ -602,12 +698,13 @@
       flights = []; bounces = {}; nudges = {}; blockerGlow = {}; wakes = []; ripples = []; embers = []; praises = []; unoFlip = {}; angles = {};
       B.level.arrows.forEach(function (a) { angles[a.id] = E.dirOf(a, state) * 90; });
     }
-    hintArrow = -1; boardLayer = null; cam = null; introStart = performance.now() - 10000;
+    hintArrow = -1; boardLayer = null; cam = null; introStart = performance.now() - 10000; coopZoomK = 1;
     prepareIntro(B.level);
     layout(); refresh();
-    $('where').textContent = 'Co-op test · Board ' + (i + 1) + ' of 4';
+    $('where').textContent = 'Co-op test · Board ' + (i + 1) + ' of 4 · ' + COOP_NAMES[i];
     capMode = '';
     setCaption(B.queue.length ? 'A sniper is coming in!' : E.isWon(state) ? 'Board ' + (i + 1) + ' is cleared.' : 'Board ' + (i + 1) + ' of 4');
+    if (focusId !== undefined) { hintArrow = focusId; hintStart = performance.now() - HINT_IN; setCaption('Holding: this is its twin on ' + COOP_NAMES[i] + "'s board."); }
     coopMaybeStart(i);
     pluck(523.3, 0, 0.06, 0.4);
   }
@@ -833,6 +930,7 @@
     if (cam) applyCam();
     else {
       cs = fitCs;
+      if (current.coop) cs = fitCs * coopZoomK;
       ox = (vw - cs * l.w) / 2; oy = viewTop + (viewBottom - viewTop - cs * l.h) / 2;
     }
     coopNav();
@@ -1004,6 +1102,7 @@
     // Behind an open menu the board is covered and blurred, so it can draw less often.
     if ($('sheetHost').firstChild && now - lastDrawn < 66) return;
     lastDrawn = now;
+    if (current.coop) coopZoomTick();
     ctx.clearRect(0, 0, vw, vh);
     var l = current.level, w = Math.max(3, cs * 0.17);
     if (activeScene) {
@@ -2019,7 +2118,7 @@
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
     if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
-    if (a.coopGroup !== undefined) items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(87 + a.coopGroup)); });
+    if (a.coopGroup !== undefined) items.push(function (c) { drawCoopTag(c, a, color); });
     if (a.sniper) items.push(function (c) { drawCrosshair(c, cs * 0.27, color); });
     if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
@@ -2031,6 +2130,28 @@
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       scaled(c, pop, function () { draw(c); });
     });
+  }
+  // A cross-board twin shows who holds its partners: each player's initial, with a small arrow towards their board.
+  function drawCoopTag(c, a, color) {
+    if (!coop) return;
+    var here = coop.idx, others = coop.room.groups[a.coopGroup].members.filter(function (m) { return m[0] !== here; });
+    var h = cs * 0.62, cw = cs * 0.34, w = Math.max(h, others.length * cw + cs * 0.14);
+    ctx.save(); ctx.globalAlpha = 1;
+    ctx.fillStyle = color; ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.04);
+    ctx.beginPath(); ctx.roundRect(c.x - w / 2, c.y - h / 2, w, h, h * 0.32); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    others.forEach(function (m, i) {
+      var x = c.x - (others.length - 1) * cw / 2 + i * cw, gone = coop.boards[m[0]].state && coop.boards[m[0]].state.removed[m[1]];
+      ctx.globalAlpha = gone ? 0.45 : 1;
+      ctx.fillStyle = colors.card; ctx.font = '700 ' + Math.round(cs * 0.27) + 'px Figtree,system-ui,sans-serif';
+      ctx.fillText(COOP_NAMES[m[0]][0], x, c.y - h * 0.15);
+      var dx = (m[0] & 1) - (here & 1), dy = (m[0] >> 1) - (here >> 1), ang = Math.atan2(dy, dx), s2 = cs * 0.07, ay = c.y + h * 0.26;
+      ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.035);
+      ctx.beginPath(); ctx.moveTo(x - Math.cos(ang) * s2 * 1.2, ay - Math.sin(ang) * s2 * 1.2); ctx.lineTo(x + Math.cos(ang) * s2 * 1.2, ay + Math.sin(ang) * s2 * 1.2);
+      ctx.moveTo(x + Math.cos(ang) * s2 * 1.2 - Math.cos(ang - 0.7) * s2, ay + Math.sin(ang) * s2 * 1.2 - Math.sin(ang - 0.7) * s2); ctx.lineTo(x + Math.cos(ang) * s2 * 1.2, ay + Math.sin(ang) * s2 * 1.2);
+      ctx.lineTo(x + Math.cos(ang) * s2 * 1.2 - Math.cos(ang + 0.7) * s2, ay + Math.sin(ang) * s2 * 1.2 - Math.sin(ang + 0.7) * s2); ctx.stroke();
+    });
+    ctx.restore();
   }
   function drawCrosshair(c, r, color) {
     ctx.save(); ctx.translate(c.x, c.y); ctx.globalAlpha = 1;
@@ -2270,7 +2391,12 @@
   canvas.addEventListener('pointerdown', function (ev) {
     if (!current || $('sheetHost').firstChild) return;
     audio();
-    if (!cam) { onTap(arrowAt(ev.clientX, ev.clientY)); return; }
+    if (!cam) {
+      var hitId = arrowAt(ev.clientX, ev.clientY);
+      // A cross-board twin waits a moment: a quick tap plays it, holding it looks at its partners.
+      if (current.coop && coop && hitId >= 0 && current.level.arrows[hitId].coopGroup !== undefined && !ended) { coopHoldStart(hitId, ev.pointerId); return; }
+      onTap(hitId); return;
+    }
     if (jumpFromMinimap(ev.clientX, ev.clientY)) return;
     try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
     ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
@@ -2313,6 +2439,7 @@
     }
   }
   canvas.addEventListener('pointerup', endPointer);
+  ['pointerup', 'pointercancel'].forEach(function (n) { window.addEventListener(n, function () { coopHoldEnd(n === 'pointerup'); }); });
   canvas.addEventListener('pointercancel', endPointer);
   canvas.addEventListener('wheel', function (ev) {
     if (!cam) return;
@@ -2433,7 +2560,7 @@
       else levelsSheet('calm');
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
-    s.querySelector('#again').onclick = function () { begin(c); };
+    s.querySelector('#again').onclick = function () { if (c.coop && coop) openCoop(coop.room.seed); else begin(c); };
     s.querySelector('#winLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
