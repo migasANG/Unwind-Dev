@@ -4423,8 +4423,8 @@ window.UnwindI18n = (function () {
     if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.5); });
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
-      // On a short arrow a lone twin-shared ball is pulled back towards the tail, clear of the arrow's tip.
-      if (items.length === 1 && a.coopGroup !== undefined && len <= 1.6) c = pointAlong(pts, shift + Math.max(0.12, len / 2 - 0.22));
+      // A lone twin ball sits in the middle of the body, from the tail to where the arrowhead begins, not counting the tip.
+      if (items.length === 1 && (a.coopGroup !== undefined || a.kind === 'twin')) c = pointAlong(pts, shift + Math.max(0, (len - 0.24) / 2));
       scaled(c, pop, function () { draw(c); });
     });
   }
