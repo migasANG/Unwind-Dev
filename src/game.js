@@ -889,13 +889,15 @@
         '<div class="chapter">Join a room</div>' +
         '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
+        '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
+        '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>' +
         '<p class="note" style="text-align:center">Preview: other players and rooms are simulated.</p>' +
         '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><input id="oCodeIn" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" aria-label="Room code"><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
     }
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
     if (card) card.innerHTML = html; else { sheet(html, 'tall online'); card = $('sheetHost').querySelector('.card'); }
     card.scrollTop = 0;
-    card.querySelector('#x').onclick = closeSheet;
+    $('sheetHost').querySelector('#x').onclick = closeSheet;
     var saveName = function () { var n = card.querySelector('#oName'); if (n && n.value.trim()) save('unwind.onlineName', n.value.trim()); };
     if (screen === 'public') {
       card.querySelector('#oBack').onclick = function () { onlineSheet('home'); };
@@ -909,6 +911,10 @@
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
     card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; lobbySheet(); };
     card.querySelector('#oPublic').onclick = function () { saveName(); onlineSheet('public'); };
+    card.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
+    card.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
+    card.querySelector('#mCoop').onclick = function () { openCoop(); };
+    card.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
     var box = card.querySelector('#oBox'), codeIn = card.querySelector('#oCodeIn'), join = card.querySelector('#oJoin'), err = card.querySelector('#oErr');
     var clean = function () { return codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
     card.querySelector('#oCode').onclick = function () { saveName(); box.hidden = false; codeIn.value = ''; err.textContent = ''; join.disabled = true; setTimeout(function () { codeIn.focus(); }, 30); };
@@ -968,7 +974,7 @@
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
-    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player, no hints, and arrows with several effects at once' : '3 lives for each player, extra time and no hints') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and arrows with several effects at once' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Timer<small>Shared timer between all players</small></span></div>' + seg('timed', [[false, 'No timer'], [true, 'Timed']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
@@ -981,7 +987,7 @@
     html += '<button class="lleave" id="lLeave">Leave room</button><p class="note" style="text-align:center">Preview only: the other players are simulated.</p>';
     var top = card.scrollTop;
     card.innerHTML = '<div id="lobbyCard"></div>' + html; card.scrollTop = top;
-    card.querySelector('#x').onclick = lobbyLeave; card.querySelector('#lLeave').onclick = lobbyLeave;
+    $('sheetHost').querySelector('#x').onclick = lobbyLeave; card.querySelector('#lLeave').onclick = lobbyLeave;
     card.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { L.view = b.getAttribute('data-view'); lobbySheet(true); }; });
     if (card.querySelector('#lCopy')) card.querySelector('#lCopy').onclick = function () {
       var btn = this;
@@ -2878,9 +2884,21 @@
     return host;
   }
   function sheet(html, cardClass) {
-    $('sheetHost').innerHTML = '<div class="sheet"><div class="card ' + (cardClass || '') + '">' + html + '</div></div>';
+    var cc = cardClass || '';
+    $('sheetHost').innerHTML = '<div class="sheet"><div class="cardbox' + (/\btall\b/.test(cc) ? ' tallbox' : '') + (/\b(tutorial|start)\b/.test(cc) ? ' narrowbox' : '') + '"><div class="card ' + cc + '">' + html + '</div></div></div>';
+    liftClose();
     return $('sheetHost').firstChild;
   }
+  // The close button lives outside the scrolling card, on its corner, so it never scrolls away. Re-rendered cards are caught too.
+  function liftClose() {
+    $('sheetHost').querySelectorAll('.cardbox').forEach(function (box) {
+      var btn = box.querySelector('.card .close');
+      if (!btn) return;
+      box.querySelectorAll(':scope > .close').forEach(function (old) { old.remove(); });
+      box.appendChild(btn);
+    });
+  }
+  new MutationObserver(liftClose).observe($('sheetHost'), { childList: true, subtree: true });
   // A small lakeside scene in the colours of the current time of day. Perfect clears release a sky of lanterns.
   function sceneSvg(perfect) {
     var ch = colors, night = ch === CHAPTERS[3] || ch === CHAPTERS[4], lanterns = '', flies = '', i;
@@ -3020,9 +3038,6 @@
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
-      html += '<div class="chapter">Online</div><div class="modes"><button id="mLobby"><b>Play online (preview)</b><span>Host a room, browse public rooms or join with a code. Other players are simulated.</span></button></div>';
-      html += '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
-      html += '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>';
     }
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
