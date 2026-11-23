@@ -974,7 +974,7 @@
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
-    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and arrows with several effects at once' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and combo arrows that mix up to 3 effects' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Timer<small>Shared timer between all players</small></span></div>' + seg('timed', [[false, 'No timer'], [true, 'Timed']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
@@ -1101,7 +1101,7 @@
     refresh(); layout();
     track('level_start', { mode: c.mode, set: c.set });
   }
-  var HARD_FIRST = 'Hard boards: two lives, no hints, and arrows with several effects at once.';
+  var HARD_FIRST = 'Hard boards: two lives, no hints, and combo arrows that mix up to 3 effects.';
   function baseCaption() {
     if (current.level.caption) return current.level.caption;
     if (current.level.big) { var left = state.removed.filter(function (x) { return !x; }).length; return left + (left === 1 ? ' arrow left' : ' arrows left'); }
@@ -3022,7 +3022,7 @@
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
     } else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Two lives, no hints, and arrows with several effects at once.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
+      html += '<p class="note">' + (tab === 'hard' ? 'Two lives, no hints, and combo arrows that mix up to 3 effects.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
     }
     var bestList = function (set) {
       var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
@@ -3030,9 +3030,9 @@
     };
     if (tab !== 'extra') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'extra') {
-      html += '<div class="chapter">Daily and endless</div>';
+      html += '<div class="chapter strong">Daily and endless</div>';
       html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
-      '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and arrows with several effects at once' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
+      '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and combo arrows that mix up to 3 effects' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
       '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + !endlessOpts().timed + '">No timer</button><button data-otimed="1" aria-pressed="' + !!endlessOpts().timed + '">Timed</button></div>' +
       '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off) + '</small></span><b>›</b></button>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
