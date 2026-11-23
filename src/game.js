@@ -1063,7 +1063,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-i';
+  var BUILD = '2026.11.23-j';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3433,11 +3433,11 @@
       } else if (c.mode === 'endless' || owc) openEndless();
       else if (c.mode === 'challenge') { if (c.index < CHALLENGES.length - 1) openChallenge(c.index + 1); else levelsSheet('extra'); }
       else if (bu >= 0) { if (bu < BOARDING.length - 1) openBoarding(bu + 1); else levelsSheet('boarding'); }
-      else levelsSheet('calm');
+      else levelsSheet();
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
     s.querySelector('#again').onclick = function () { if (c.coop && coop && coop.online) { netSend({ t: 'lobby' }); closeSheet(); return; } if (c.coop && coop) coopRestart(); else begin(c); };
-    s.querySelector('#winLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
+    s.querySelector('#winLevels').onclick = function () { levelsSheet(); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
   // Online games end for everyone at once. Try again needs every player; the room and the main menu are always open.
@@ -3457,19 +3457,19 @@
     if (why === 'expired') {
       var es = sheet('<h2>A red card expired</h2><p>A red card arrow ran out of launches before it left. Send off the red cards first.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
       es.querySelector('#again').onclick = function () { openChallenge(c.index); };
-      es.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+      es.querySelector('#toLevels').onclick = function () { levelsSheet(); };
       return;
     }
     if (why === 'goal') {
       var gs = sheet('<h2>Not quite</h2><p>The board is clear, but the challenge was not met. Try another order.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
       gs.querySelector('#again').onclick = function () { openChallenge(c.index); };
-      gs.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+      gs.querySelector('#toLevels').onclick = function () { levelsSheet(); };
       return;
     }
     var timeUp = why === 'time';
     var s = sheet('<h2>' + (timeUp ? "Time's up" : 'Out of lives') + '</h2><p>' + (timeUp ? 'The board was nearly there. Take a breath and go again.' : 'Take a moment, then try this board again.') + '</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Choose another level</button>');
     s.querySelector('#again').onclick = function () { restart(); };
-    s.querySelector('#toLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
+    s.querySelector('#toLevels').onclick = function () { levelsSheet(); };
   }
   var STAR_PATH = '<path d="M12 2.500l2.900 6.100 6.600.900-4.800 4.600 1.200 6.600-5.900-3.200-5.900 3.200 1.200-6.600L2.500 9.500l6.600-.900Z"/>';
   var MOON_PATH = '<path d="M11.500 3.200a9 9 0 1 0 9.300 12.600A7.800 7.800 0 0 1 11.500 3.200Z"/><path d="M18 3l.9 2 2.100.300-1.500 1.500.4 2.100-1.900-1-1.900 1 .4-2.100L15 5.300l2.100-.300Z"/>';
