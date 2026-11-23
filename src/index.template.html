@@ -69,6 +69,7 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .cnav{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 25%,transparent);display:grid;place-items:center;line-height:1}
 .cnav b{font-size:1.15rem;font-weight:700}
 .cnav svg{display:block}
+@media (max-width:759px){.cnav{width:34px;height:34px}.cnav span{min-width:15px;height:15px;font-size:.625rem;right:-5px;bottom:-5px}}
 .cnav span{position:absolute;right:-4px;bottom:-4px;min-width:17px;height:17px;border-radius:9px;background:var(--ink);color:var(--card);font-size:.6875rem;font-weight:700;display:grid;place-items:center}
 .cnav.done{opacity:.6}
 .cnav.alert{background:#d4161f;color:#fff;animation:cnavpulse .8s ease-in-out infinite alternate}

@@ -459,7 +459,8 @@
   }
   // The ways an arrow can pivot fully around its tail: quarter turns that fit in free space.
   function pivotOptions(level, state, a) {
-    if (a.kind === 'compass') return [];
+    // Compasses, snipers and twin-shared arrows keep their one effect: ice and wind leave them alone.
+    if (a.kind === 'compass' || a.sniper || a.coopGroup !== undefined) return [];
     var t = a.cells[0], out = [];
     [1, 2, 3].forEach(function (q) {
       var cells = [], ok = true;
@@ -493,7 +494,7 @@
     var rollWinter = r(), rollSummer = r(), rollAutumn = r();
     if (hasEffect(level, 'winter') && (rollWinter < 0.2 || forced)) {
       ev.triggered = true;
-      var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && state.frozen[a.id] === undefined; }), r);
+      var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && !a.sniper && a.coopGroup === undefined && state.frozen[a.id] === undefined; }), r);
       pool.some(function (a) {
         if (ev.freeze.length >= want) return true;
         if (a.kind === 'twin') return false;

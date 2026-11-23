@@ -482,16 +482,16 @@
   /* ---------- Challenges: a goal other than clearing the board ---------- */
   var CHALLENGES = window.UNWIND_CHALLENGES || [];
   var CHALLENGE_GROUPS = [
-    { goal: 'golden', name: 'Golden ticket', note: 'Get the board truly stuck, with no arrow able to leave, so the safety net hands you a golden arrow. 3x boards, Hard rules.', caption: 'Challenge: make a golden arrow appear. Get the board stuck on purpose.' },
-    { goal: 'thaw', name: 'Thaw', note: 'Free every frozen arrow. Hit a frozen arrow with another arrow to thaw it. The ice never melts by itself here. 3x boards, Hard rules.', caption: 'Challenge: thaw every frozen arrow. Hit them with other arrows.' },
-    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off at the same time, without losing both lives. 3x boards, Hard rules.', caption: 'Challenge: get every red card arrow sent off at once.' }
+    { goal: 'golden', name: 'Golden ticket', note: 'Get the board truly stuck, with no arrow able to leave, so the safety net hands you a golden arrow. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: make a golden arrow appear. Get the board stuck on purpose.' },
+    { goal: 'thaw', name: 'Thaw', note: 'Free every frozen arrow. Hit a frozen arrow with another arrow to thaw it. The ice never melts by itself here. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: thaw every frozen arrow. Hit them with other arrows.' },
+    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off at the same time, without losing both lives. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: get every red card arrow sent off at once.' }
   ];
   function challengeGroup(c) { return CHALLENGE_GROUPS.filter(function (g) { return g.goal === c.goal; })[0]; }
   function openChallenge(i) {
     var c = CHALLENGES[i];
     if (!c) { levelsSheet('extra'); return; }
     var g = challengeGroup(c), n = CHALLENGES.slice(0, i + 1).filter(function (x) { return x.goal === c.goal; }).length;
-    // Challenges are 3x boards with Hard rules: 2 lives, no hints, combo arrows.
+    // Challenges use Hard lives: 2 lives, no hints. Levels 1 and 2 are 1x, level 3 is 2x.
     var lvl = E.prepare(JSON.parse(JSON.stringify({ w: c.w, h: c.h, big: !!c.big, mirrors: c.mirrors || [], flowers: null, arrows: c.arrows, lives: 2, hints: 0, timeLimit: null, season: null, caption: g.caption })));
     begin({ id: 'ch-' + (i + 1), mode: 'challenge', index: i, goal: c.goal, level: lvl, title: g.name + ' ' + n, chapter: CHAPTERS[timeChapter()], sunY: 40 });
     state.safe = c.goal === 'golden'; state.keepIce = c.goal === 'thaw';
@@ -546,15 +546,24 @@
   function openCoopTutorial(key) { openCoopRoom(COOP_TUTORIALS[key], ['Ana', 'Bruno']); }
   function coopRestart() { var make = coop.make, names = coop.room.names, you = coop.you; withLoading(function () { openCoopRoom(make, names); if (you) { coop.you = you; coopSwitch(you); } }); }
   // Building boards can take a moment, so a loading card shows first. Its spinner runs on the compositor, so it keeps turning.
-  var loadingSync = false;
+  var loadingSync = false, loadingHold = false;
   function withLoading(fn, text) {
     if (loadingSync) { fn(); return; }
     var el = $('loading');
     el.querySelector('p').textContent = text || 'Loading boards…';
     el.hidden = false; el.classList.remove('out');
     requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () {
-      try { fn(); } finally { el.classList.add('out'); setTimeout(function () { if (el.classList.contains('out')) el.hidden = true; }, 320); }
+      try { fn(); } finally {
+        // An online game keeps the loader up until every phone has its boards ready.
+        if (loadingHold) el.querySelector('p').textContent = 'Waiting for every player to load…';
+        else hideLoading();
+      }
     }, 30); }); });
+  }
+  function hideLoading() {
+    var el = $('loading');
+    loadingHold = false;
+    el.classList.add('out'); setTimeout(function () { if (el.classList.contains('out')) el.hidden = true; }, 320);
   }
   function coopSyncLives() {
     if (!coop) return;
@@ -867,13 +876,15 @@
     var el = $('coopNav');
     if (!current || !current.coop || !coop || ended) { el.hidden = true; return; }
     el.hidden = false;
-    var b = coop.idx, W = cs * current.level.w, H = cs * current.level.h, html = '';
+    var b = coop.idx, W = cs * current.level.w, H = cs * current.level.h, html = '', wide = vw >= 760, ic = vw < 760 ? 18 : 22;
     var GLYPH = { '1,0': '→', '-1,0': '←', '0,1': '↓', '0,-1': '↑', '1,1': '↘', '-1,1': '↙', '1,-1': '↗', '-1,-1': '↖' };
     [b ^ 1, b ^ 2, b ^ 3].filter(function (t) { return t < coop.n && !(coop.left && coop.left[t]); }).forEach(function (t) {
       var dx = (t & 1) - (b & 1), dy = (t >> 1) - (b >> 1);
       var x = dx > 0 ? ox + W + 24 : dx < 0 ? ox - 24 : ox + W / 2, y = dy > 0 ? oy + H + 24 : dy < 0 ? oy - 24 : oy + H / 2;
+      // Wide screens: the buttons sit at the edges and corners of the play area, out of the way of the board.
+      if (wide) { x = dx > 0 ? vw - 44 : dx < 0 ? 44 : vw / 2; y = dy > 0 ? viewBottom - 18 : dy < 0 ? viewTop + 18 : (viewTop + viewBottom) / 2; }
       var alert = coop.boards[t].queue.some(function (q) { return !q.pass; }), done = !!coop.boards[t].state && E.isWon(coop.boards[t].state);
-      html += '<button class="cnav' + (alert ? ' alert' : '') + (done ? ' done' : '') + '" data-board="' + t + '" style="left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px" aria-label="Go to board ' + (t + 1) + '"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="transform:rotate(' + Math.round(Math.atan2(dy, dx) * 180 / Math.PI) + 'deg)"><path d="M5 12h13M13 6.5L18.5 12L13 17.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + (t + 1) + '</span></button>';
+      html += '<button class="cnav' + (alert ? ' alert' : '') + (done ? ' done' : '') + '" data-board="' + t + '" style="left:' + Math.round(x) + 'px;top:' + Math.round(y) + 'px" aria-label="Go to board ' + (t + 1) + '"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="width:' + ic + 'px;height:' + ic + 'px;transform:rotate(' + Math.round(Math.atan2(dy, dx) * 180 / Math.PI) + 'deg)"><path d="M5 12h13M13 6.5L18.5 12L13 17.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' + (t + 1) + '</span></button>';
     });
     el.innerHTML = html;
     el.querySelectorAll('[data-board]').forEach(function (btn) { btn.onclick = function () { audio(); coopSwitch(+btn.getAttribute('data-board')); }; });
@@ -1049,7 +1060,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-f';
+  var BUILD = '2026.11.23-g';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -1082,6 +1093,8 @@
     ws.onopen = function () { net.retries = 0; net.ping = setInterval(function () { netSend({ t: 'ping' }); }, 15000); if (lobby && lobby.online) { lobby.status = ''; if ($('lobbyCard')) lobbySheet(true); } };
     ws.onmessage = function (ev) {
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      // Every keep-alive answer carries the shared clock, so a phone that slept catches up.
+      if (m.t === 'pong') { if (m.left !== undefined && m.left !== null && timeLeft !== null && coop && coop.online && coopGo) { timeLeft = m.left; drawTimer(); } return; }
       if (m.t === 'room') onServerRoom(m.room);
       else if (m.t === 'start') onServerStart(m);
       else if (GAME_EVENTS[m.t]) netGame(m);
@@ -1127,6 +1140,11 @@
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
     if (lobby) lobby.timers.forEach(clearTimeout);
     lobby = null;
+    loadingHold = true; timeLeft = null;
+    clearTimeout(net.goWait);
+    // If the server never says go (an old server), stop waiting after a while.
+    net.goWait = setTimeout(function () { if (loadingHold) { hideLoading(); coopGo = true; } }, 30000);
+    coopGo = false;
     spec.after = function () {
       coop.you = you; coop.online = { code: net.code, seed: m.seed, applied: 0 }; save('unwind.lastRoom', net.code); coop.room.title = 'Online room ' + net.code;
       if (you > 0) coopSwitch(you);
@@ -1135,6 +1153,7 @@
       setCaption('Playing a game with ' + others.join(', '));
       refresh();
       net.ready = true;
+      netSend({ t: 'loaded' });
       var queued = net.pending; net.pending = [];
       queued.forEach(netGame);
     };
@@ -1143,7 +1162,23 @@
     openCoop(m.seed, false, spec);
   }
   /* ---------- Online game: every phone applies the server's events in the same order ---------- */
-  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1 };
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1, go: 1, clock: 1 };
+  var coopGo = true;
+  // Every phone is ready: the loader lifts on all of them together, and a timed room starts its shared clock.
+  function onlineGo(m) {
+    clearTimeout(net.goWait);
+    coopGo = true;
+    var fresh = loadingHold;
+    if (loadingHold || !$('loading').hidden) hideLoading();
+    if (m.limit) {
+      coop.boards.forEach(function (B) { B.level.timeLimit = m.limit / 1000; });
+      timeLeft = m.left; lastSecond = -1;
+      $('timer').hidden = false; $('timebar').hidden = false;
+      drawTimer();
+    }
+    if (fresh) { introStart = performance.now(); prepareIntro(current.level); }
+    refresh();
+  }
   var netApplying = false;
   function netGame(m) {
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
@@ -1155,6 +1190,8 @@
       return;
     }
     if (m.t === 'paused') { onlinePaused(m); return; }
+    if (m.t === 'go') { onlineGo(m); return; }
+    if (m.t === 'clock') { if (timeLeft !== null) { timeLeft = m.left; drawTimer(); } return; }
     if (m.t === 'offline') {
       if (m.b === coop.you) return;
       coop.away = coop.away || {};
@@ -1257,7 +1294,8 @@
       boardLayer = null;
     } else if (ev.t === 'end') {
       save('unwind.lastRoom', '');
-      if (!ended) finish(ev.result === 'win', ev.result === 'win' ? undefined : 'lives');
+      if (ev.result === 'time') { timeLeft = 0; drawTimer(); if (!ended) timeUpSound(); }
+      if (!ended) finish(ev.result === 'win', ev.result === 'win' ? undefined : ev.result === 'time' ? 'time' : 'lives');
     }
     if (!quiet) { coopNav(); refresh(); }
   }
@@ -1800,12 +1838,15 @@
     if (!current) return;
     var dt = lastFrame ? Math.min(100, now - lastFrame) : 0; lastFrame = now;
     var paused = ended || document.hidden || !!$('sheetHost').firstChild;
-    if (!paused) {
-      activeMs += dt;
+    // Online, the clock is shared: it only stops when the whole room is paused, never for one player's menu.
+    var online = current.coop && coop && coop.online;
+    var clockStopped = online ? ended || !coopGo || (coopPaused && coopPaused.frozen) : paused;
+    if (!paused) activeMs += dt;
+    if (!clockStopped) {
       // On big boards the clock starts once the map has finished growing and settling.
-      if (timeLeft !== null && !(cam && (now < introEnd || cam.zoom))) {
+      if (timeLeft !== null && !(cam && !online && (now < introEnd || cam.zoom))) {
         timeLeft -= dt;
-        if (timeLeft <= 0) { timeLeft = 0; drawTimer(); timeUpSound(); finish(false, 'time'); } else drawTimer();
+        if (timeLeft <= 0) { timeLeft = 0; drawTimer(); if (!online) { timeUpSound(); finish(false, 'time'); } } else drawTimer();
       }
     }
     if (cam && cam.zoom && now > introEnd + 200) {
@@ -3397,10 +3438,10 @@
     s.querySelector('#next').focus({ preventScroll: true });
   }
   // Online games end for everyone at once. Try again needs every player; the room and the main menu are always open.
-  function onlineEndSheet(c, won) {
+  function onlineEndSheet(c, won, why) {
     var v = coop.votes || { count: 0, total: coop.n - Object.keys(coop.left || {}).length };
     var gone = Object.keys(coop.left || {}).length > 0;
-    var s = sheet('<h2>' + (won ? 'All clear, together!' : 'Out of lives') + '</h2><p>' + (won ? 'Every board is clear.' : 'The room ran out of shared lives.') + '</p>' +
+    var s = sheet('<h2>' + (won ? 'All clear, together!' : why === 'time' ? 'Out of time' : 'Out of lives') + '</h2><p>' + (won ? 'Every board is clear.' : why === 'time' ? 'The shared clock ran out.' : 'The room ran out of shared lives.') + '</p>' +
       (gone ? '<p class="note">Someone left, so this game cannot be played again. Go back to the room to start a new one.</p>' : '<button class="primary" id="again">Try again (' + v.count + '/' + v.total + ')</button>') +
       '<button class="secondary" id="toRoom">Go back to the room</button><button class="secondary" id="toMenu">Go to Main Menu</button>');
     var ag = s.querySelector('#again');
@@ -3409,7 +3450,7 @@
     s.querySelector('#toMenu').onclick = function () { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); startMenu(); };
   }
   function failSheet(c, st, why) {
-    if (c.coop && coop && coop.online) { onlineEndSheet(c, false); return; }
+    if (c.coop && coop && coop.online) { onlineEndSheet(c, false, why); return; }
     if (why === 'goal') {
       var gs = sheet('<h2>Not quite</h2><p>The board is clear, but the challenge was not met. Try another order.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
       gs.querySelector('#again').onclick = function () { openChallenge(c.index); };
