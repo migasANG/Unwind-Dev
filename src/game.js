@@ -907,7 +907,7 @@
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
         '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
         '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mSimRoom"><b>Room preview (simulated)</b><span>The room screen with pretend players, no server needed.</span></button></div>' +
-        '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><input id="oCodeIn" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" aria-label="Room code"><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
+        '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><div class="otp" id="oOtp" role="group" aria-label="Room code">' + [0, 1, 2, 3, 4, 5].map(function (i) { return (i === 3 ? '<span class="otpdash" aria-hidden="true">-</span>' : '') + '<input class="otpc" data-i="' + i + '" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Character ' + (i + 1) + '">'; }).join('') + '</div><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
     }
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
     if (card) card.innerHTML = html; else { sheet(html, 'tall online'); card = $('sheetHost').querySelector('.card'); }
@@ -931,13 +931,28 @@
     card.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
     card.querySelector('#mCoop').onclick = function () { openCoop(); };
     card.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
-    var box = card.querySelector('#oBox'), codeIn = card.querySelector('#oCodeIn'), join = card.querySelector('#oJoin'), err = card.querySelector('#oErr');
-    var clean = function () { return codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
-    card.querySelector('#oCode').onclick = function () { saveName(); box.hidden = false; codeIn.value = ''; err.textContent = ''; join.disabled = true; setTimeout(function () { codeIn.focus(); }, 30); };
+    var box = card.querySelector('#oBox'), cells = [].slice.call(card.querySelectorAll('.otpc')), join = card.querySelector('#oJoin'), err = card.querySelector('#oErr');
+    var clean = function () { return cells.map(function (c) { return c.value; }).join('').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
+    var sync = function () { join.disabled = clean().length !== 6; err.textContent = ''; };
+    // Each box takes one character; typing moves on, Backspace moves back, and a pasted code fills them all.
+    cells.forEach(function (c, i) {
+      c.oninput = function () {
+        var v = c.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (v.length > 1) { for (var k = 0; k < v.length && i + k < 6; k++) cells[i + k].value = v.charAt(k); var nx = Math.min(5, i + v.length); cells[nx].focus(); }
+        else { c.value = v; if (v && i < 5) cells[i + 1].focus(); }
+        sync();
+      };
+      c.onkeydown = function (ev) {
+        if (ev.key === 'Backspace' && !c.value && i > 0) { cells[i - 1].value = ''; cells[i - 1].focus(); ev.preventDefault(); sync(); }
+        else if (ev.key === 'ArrowLeft' && i > 0) cells[i - 1].focus();
+        else if (ev.key === 'ArrowRight' && i < 5) cells[i + 1].focus();
+        else if (ev.key === 'Enter' && !join.disabled) join.onclick();
+      };
+      c.onfocus = function () { c.select(); };
+    });
+    card.querySelector('#oCode').onclick = function () { saveName(); box.hidden = false; cells.forEach(function (c) { c.value = ''; }); err.textContent = ''; join.disabled = true; setTimeout(function () { cells[0].focus(); }, 30); };
     card.querySelector('#oCancel').onclick = function () { box.hidden = true; };
     box.onclick = function (ev) { if (ev.target === box) box.hidden = true; };
-    codeIn.oninput = function () { var c = clean(); codeIn.value = c.length > 3 ? c.slice(0, 3) + '-' + c.slice(3) : c; join.disabled = c.length !== 6; err.textContent = ''; };
-    codeIn.onkeydown = function (ev) { if (ev.key === 'Enter' && !join.disabled) join.onclick(); };
     if (openCode) card.querySelector('#oCode').onclick();
     join.onclick = function () {
       var c = clean();
@@ -960,12 +975,15 @@
     return fetch(netBase() + path, opts).then(function (r) { return r.json(); });
   }
   function netSend(msg) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(msg)); }
+  // Closing or leaving the page: the server gives a short grace time instead of the usual 90 seconds.
+  window.addEventListener('pagehide', function () { if (coop && coop.online && !ended) netSend({ t: 'away' }); });
   function netClose() {
     net.leaving = true; clearTimeout(net.timer); clearInterval(net.ping);
     if (net.ws) { try { net.ws.close(1000, 'bye'); } catch (e) {} }
     net.ws = null; net.code = '';
   }
   function netConnect(code) {
+    if (net.code && net.code !== code && coop && coop.online) netSend({ t: 'leave' });
     clearTimeout(net.timer); clearInterval(net.ping);
     if (net.ws) { try { net.ws.onclose = null; net.ws.close(); } catch (e) {} }
     net.code = code; net.leaving = false;
@@ -1167,7 +1185,7 @@
   function coopSyncLivesTo(n) { coop.lives = n; coop.boards.forEach(function (B) { if (B.state) B.state.lives = n; }); }
   function hostOnline(btn) {
     if (btn) { btn.disabled = true; btn.querySelector('b').textContent = 'Creating room…'; }
-    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 4 } }) })
+    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 2 } }) })
       .then(function (r) { if (!r.code) throw new Error('no code'); netConnect(r.code); })
       .catch(function () { onlineError('Could not reach the online server. Check your connection and try again.'); });
   }
@@ -1183,7 +1201,7 @@
     var mine = load('unwind.onlineName', '') || '';
     var me = { name: mine || lobbyName(), you: true, host: !join, ready: false };
     lobby = { code: join ? join.code || '' : lobbyCode(), view: join ? 'guest' : 'host', joined: !!join, timers: [], askName: !mine, pick: -1, seats: [], players: [me],
-      settings: join ? { players: join.players, hard: join.hard, size: join.size, off: { sniper: !join.snipers, twinshared: !join.twins }, timed: join.timed, public: !!join.public } : { players: 4, hard: false, size: 1, off: {}, timed: false, public: false } };
+      settings: join ? { players: join.players, hard: join.hard, size: join.size, off: { sniper: !join.snipers, twinshared: !join.twins }, timed: join.timed, public: !!join.public } : { players: 2, hard: false, size: 1, off: {}, timed: false, public: false } };
     if (join) {
       lobby.players.push({ name: join.host, host: true, ready: true });
       for (var i = 2; i < join.count + 1 && i < join.players; i++) lobby.players.push({ name: lobbyName(), ready: Math.random() < 0.6 });
@@ -1212,7 +1230,7 @@
       var p = L.players[i];
       if (!p) { html += '<li class="empty"><span class="dot"></span><span class="nm">Waiting for a player…</span></li>'; continue; }
       var isHost = host || L.joined ? p.host : i === 1, you = host || L.joined ? p.you : i === 0;
-      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm">' + p.name + (you ? ' <em>(you)</em>' : '') + (isHost ? ' <i class="crown" title="Host">♛ Host</i>' : '') + '</span><span class="bd">Board ' + (lobby.seats.indexOf(p) + 1) + '</span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
+      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm"><b>' + p.name + '</b>' + (you ? ' <em>(you)</em>' : '') + '<small>Board ' + (lobby.seats.indexOf(p) + 1) + (isHost ? ' · <i class="crown" title="Host">♛ Host</i>' : '') + '</small></span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
@@ -3242,6 +3260,7 @@
     var where = started && $('where').textContent ? $('where').textContent : (info.label || 'Calm') + ' · Level ' + ((last.index || 0) + 1 + (info.offset || 0));
     var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
+      (current && current.coop && coop && coop.online && !ended ? '<button class="lleave smleave" data-go="leave">Leave online game</button>' : '') +
       '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
       languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
     var s = sheet(html, 'start');
@@ -3255,6 +3274,7 @@
       else if (what === 'open') levelsSheet('extra');
       else if (what === 'online') onlineSheet('home');
       else if (what === 'settings') settingsSheet();
+      else if (what === 'leave') { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); }
     };
     s.querySelector('#begin').onclick = function () { go('play'); };
     s.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });

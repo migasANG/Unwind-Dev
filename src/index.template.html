@@ -281,7 +281,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .lboards b{font-size:1.1rem}
 .lboards button.pick{border-color:var(--ink);border-width:2.5px;background:color-mix(in srgb,currentColor 10%,transparent);transform:scale(.97)}
 .lboards button[disabled]{opacity:1;cursor:default}
-.lplayers .bd{font-size:.6875rem;font-weight:600;opacity:.65;white-space:nowrap}
+
 .lsum{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;font-size:.75rem;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,currentColor 7%,transparent)}
 .lsum span{display:flex;flex-direction:column;gap:2px;opacity:.85;min-width:0}
 .lsum b{font-size:.875rem;opacity:1}
@@ -360,6 +360,19 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 .toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;max-width:calc(100% - 32px);padding:12px 18px;border-radius:16px;background:var(--ink);color:var(--card);font-weight:600;font-size:.9375rem;text-align:center;box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 35%,transparent);animation:pop .3s cubic-bezier(.3,1.4,.5,1) both;transition:opacity .4s ease}
 .toast.out{opacity:0}
 .tabs button[data-tab="extra"],.tabs button[data-tab="online"]{grid-column:span 2}
+.otp{display:flex;align-items:center;justify-content:center;gap:5px}
+.otp .otpc{width:0;flex:1 1 0;max-width:42px;min-width:0;height:52px;padding:0;border-radius:12px;border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-size:1.4rem;font-weight:700;text-align:center;text-transform:uppercase}
+.otp .otpc:focus{outline:none;border-width:2.5px;background:color-mix(in srgb,currentColor 8%,transparent)}
+.otpdash{font-size:1.6rem;font-weight:800;padding:0 2px;flex:none}
+.lplayers .nm{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:4px;row-gap:1px}
+.lplayers .nm b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.lplayers .nm small{flex-basis:100%;font-size:.6875rem;font-weight:600;opacity:.7;display:flex;align-items:center;gap:4px}
+.lplayers .nm .crown{margin-left:0}
+.lplayers li{gap:8px;padding:8px}
+.lcode b{white-space:nowrap;font-size:clamp(1.3rem,7.5vw,1.9rem);letter-spacing:.08em}
+.lboards button{aspect-ratio:auto;min-height:64px}
+.smleave{border:1.5px solid #c8202f;color:#c8202f;height:44px;border-radius:22px;opacity:1}
+@media (max-width:380px){.card{padding:22px 16px}.lplayers .st{padding:3px 6px;font-size:.6875rem}.lsum{grid-template-columns:1fr 1fr;}.lsum span:last-child{grid-column:1/-1}}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes fadeout{from{opacity:1}to{opacity:0}}
