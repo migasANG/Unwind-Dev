@@ -4,6 +4,7 @@ let t=fs.readFileSync(p('src/index.template.html'),'utf8');
 const safe=s=>s.replace(/<\/script/g,'<\\/script');
 t=t.replace('/*__ENGINE__*/',()=>safe(fs.readFileSync(p('src/engine.js'),'utf8')))
  .replace('/*__LEVELS__*/',()=>fs.readFileSync(p('src/levels.json'),'utf8'))
+ .replace('/*__CHALLENGES__*/',()=>fs.readFileSync(p('src/challenges.json'),'utf8'))
  .replace('/*__MUSIC__*/',()=>safe(fs.readFileSync(p('src/music.js'),'utf8')))
  .replace('/*__GAME__*/',()=>safe(fs.readFileSync(p('src/i18n.js'),'utf8')+'\n'+fs.readFileSync(p('src/game.js'),'utf8')));
 fs.writeFileSync(p('dist/artifact.html'),t);

@@ -303,7 +303,9 @@
   function effectChoice() {
     var o = endlessOpts();
     if (o.seasonChoice && !o.effectList) { o.effectList = SEASON_ORDER.indexOf(o.seasonChoice) >= 0 ? [o.seasonChoice] : []; o.effectRandom = o.seasonChoice === 'random'; delete o.seasonChoice; }
-    return { list: o.effectList || [], random: !!o.effectRandom };
+    // An old 'random' choice now means all four effects.
+    if (o.effectRandom) return { list: SEASON_ORDER.slice(), random: false };
+    return { list: o.effectList || [], random: false };
   }
   var BG_AUTO_NOTE = 'The backgrounds will change with the music: when a song ends, the next scene fades in.';
   function bgNote(plain) { return backgroundChoice() === 'default' ? BG_AUTO_NOTE : plain; }
@@ -328,13 +330,14 @@
   function endlessOpts() { return progress.endlessOpts || { hard: false, timed: false }; }
   function endlessPlan() {
     var o = Object.assign({}, endlessOpts()), scale = o.scale || 1, picked = effectChoice();
+    if ((o.boards || 1) > 1) { scale = Math.min(5, scale); o.scale = scale; o.timed = false; picked = { list: [] }; }
     // Random uses a random number of effects (1 to 4) for each board.
     if (picked.random) {
       var pool = SEASON_ORDER.slice().sort(function () { return Math.random() - 0.5; });
       o.effects = pool.slice(0, 1 + Math.floor(Math.random() * 4));
     } else o.effects = picked.list.slice();
     o.effects = SEASON_ORDER.filter(function (k) { return o.effects.indexOf(k) >= 0; });
-    var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + (scale > 1 ? scale + 'x' : '') + (o.effects.length ? '-' + o.effects.join('') : '');
+    var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + ((o.boards || 1) > 1 ? 'b' + o.boards : '') + (scale > 1 ? scale + 'x' : '') + (o.effects.length ? '-' + o.effects.join('') : '');
     progress.endlessBy = progress.endlessBy || {};
     var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009 + o.effects.join('').length * 977;
     return { o: o, scale: scale, key: key, n: n, seed: seed };
@@ -355,8 +358,16 @@
     return lvl.density * 100 - 30 * E.legalMoves(lvl, E.newState(lvl)).length / Math.max(1, lvl.arrows.length);
   }
   // Big maps build on a loading screen: try several boards, keep the best, and only reveal it once it is ready to draw.
+  // Open Waters on 2 or 4 linked boards, played alone. Lives follow Open Waters: none on Normal, 2 shared on Hard.
+  function openEndlessBoards(plan) {
+    var spec = Object.assign(E.endlessSpec(plan.n, Object.assign({}, plan.o, { effects: [] })), { n: plan.o.boards, lives: plan.o.hard ? 2 : null, off: plan.o.off || {} });
+    withLoading(function () {
+      openCoopRoom(function () { var room = E.coopRoom(plan.seed, spec); room.title = 'Open Waters ' + (plan.n + 1); room.endless = plan.key; room.caption = 'Open Waters on ' + spec.n + ' boards. You play every one of them.'; return room; }, BOARD_NAMES);
+    });
+  }
   function openEndless(ready) {
     var plan = endlessPlan();
+    if ((plan.o.boards || 1) > 1) { openEndlessBoards(plan); return; }
     if (ready === true || plan.scale < 5) { if (plan.scale >= 3 && ready !== true) withLoading(function () { startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); }, 'Loading board…'); else startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); return; }
     var tries = plan.scale >= 25 ? 4 : plan.scale >= 10 ? 3 : 2, done = 0, best = null, bestScore = -Infinity, started = performance.now(), STEPS = tries + 2;
     var s = sheet('<h2>Growing the map</h2><p id="loadLine">Planting arrows</p><div class="lantern-bar"><i id="loadBar" style="width:6%;transition:width .25s ease"></i></div>');
@@ -400,14 +411,16 @@
   // The big test room has three times the area per board, so each side grows by about the square root of 3.
   var COOP_BIG = { w: 12, h: 16, minLen: 2, maxLen: 8, depth: 9, twins: 2, mirrors: 3, big: true };
   // Board size multiplies the area, so each side grows by its square root.
+  // Every board also gets the regular special arrows (compass, moon and star, patient, ghost, phase, red card, reverse).
+  // The server has the same function in match.js; both must stay the same.
   function coopSpec(k) {
-    if (k === 3) return Object.assign({}, COOP_BIG);
-    var r = Math.sqrt(k);
-    return { w: Math.round(7 * r), h: Math.round(9 * r), minLen: 2, maxLen: 6 + Math.round((r - 1) * 2.5), depth: 7 + Math.round((r - 1) * 3), twins: Math.max(1, Math.round(k / 1.5)), mirrors: 2 + Math.round(k / 2), big: k >= 3 };
+    var r = Math.sqrt(k), m = Math.max(1, Math.round(k / 2));
+    var s = k === 3 ? Object.assign({}, COOP_BIG) : { w: Math.round(7 * r), h: Math.round(9 * r), minLen: 2, maxLen: 6 + Math.round((r - 1) * 2.5), depth: 7 + Math.round((r - 1) * 3), twins: Math.max(1, Math.round(k / 1.5)), mirrors: 2 + Math.round(k / 2), big: k >= 3 };
+    return Object.assign(s, { compass: m, sleepers: m, patient: m, ghosts: m, unos: m, phases: m, reds: 1, redSlack: k > 1 ? 0.12 : 0 });
   }
   function openCoop(seed, big, spec) {
     seed = seed || 1 + Math.floor(Math.random() * 1e6);
-    withLoading(function () { openCoopRoom(function () { return E.coopRoom(seed, spec || (big ? COOP_BIG : undefined)); }, spec && spec.names); if (spec && spec.after) spec.after(); });
+    withLoading(function () { openCoopRoom(function () { return E.coopRoom(seed, spec || coopSpec(big ? 3 : 1)); }, spec && spec.names); if (spec && spec.after) spec.after(); });
   }
   // make() builds a fresh room, so Restart and Play again can rebuild it from the start.
   function openCoopRoom(make, names) {
@@ -426,7 +439,7 @@
     state.safe = !room.tutorial;
     coop.boards[0].state = state;
     coopSyncLives();
-    setCaption(room.tutorial ? room.boards[0].caption : coop.n === 2 ? 'Co-op test: clear both boards. Use the arrow at the edge to switch boards.' : 'Co-op test: clear all four boards. Use the arrows at the edges to switch boards.');
+    setCaption(room.caption ? room.caption : room.tutorial ? room.boards[0].caption : coop.n === 2 ? 'Co-op test: clear both boards. Use the arrow at the edge to switch boards.' : 'Co-op test: clear all four boards. Use the arrows at the edges to switch boards.');
     layout(); refresh();
     track('coop_open', { seed: room.seed, n: coop.n, tutorial: room.tutorial || '' });
   }
@@ -438,6 +451,56 @@
     if (B.state && E.isWon(B.state)) return 'Board ' + (i + 1) + ' is cleared.';
     return coop.room.tutorial ? B.level.caption : 'Board ' + (i + 1) + ' of ' + coop.n;
   }
+  /* Boarding Up: solo levels on several linked boards. Fixed seeds, so every player gets the same boards. */
+  var BOARD_NAMES = ['Pier', 'Reeds', 'Isle', 'Cove'];
+  var BOARDING = [
+    { caption: 'Two boards! Twin-shared arrows leave together, so clear the way on both.', spec: { n: 2, w: 5, h: 6, minLen: 2, maxLen: 4, depth: 4, twins: 0, mirrors: 0, noSnipers: true, lives: 5 } },
+    { caption: 'Sniper arrows fly to the other board and knock out the first arrow they hit.', spec: { n: 2, w: 5, h: 6, minLen: 2, maxLen: 4, depth: 4, twins: 0, mirrors: 1, noTwins: true, lives: 5 } },
+    { caption: 'Both kinds together. Plan which board to play next.', spec: { n: 2, w: 6, h: 7, minLen: 2, maxLen: 5, depth: 5, twins: 1, mirrors: 1, lives: 5 } },
+    { caption: 'Four boards now, in two rows. Snipers can fly up and down too.', spec: { n: 4, w: 5, h: 6, minLen: 2, maxLen: 4, depth: 4, twins: 0, mirrors: 1, lives: 6 } },
+    { caption: 'Special arrows join in: compass, patient and moon and star.', spec: { n: 4, w: 6, h: 7, minLen: 2, maxLen: 5, depth: 5, twins: 1, mirrors: 1, compass: 1, patient: 1, sleepers: 1, lives: 6 } },
+    { caption: 'Ghost, phase and reverse arrows on every board.', spec: { n: 4, w: 6, h: 8, minLen: 2, maxLen: 5, depth: 6, twins: 1, mirrors: 2, ghosts: 1, phases: 1, unos: 1, lives: 6 } },
+    { caption: 'The big one: four full boards and every kind of arrow.', spec: { n: 4, w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, mirrors: 2, compass: 1, sleepers: 1, patient: 1, ghosts: 1, phases: 1, unos: 1, reds: 1, lives: 6 } }
+  ];
+  function openBoarding(i) {
+    var b = BOARDING[i];
+    withLoading(function () {
+      openCoopRoom(function () { var room = E.coopRoom(7001 + i * 131, b.spec); room.title = 'Boarding Up ' + (i + 1); room.boarding = i; room.caption = b.caption; room.boards.forEach(function (l) { l.caption = b.caption; }); return room; }, BOARD_NAMES);
+      setCaption(b.caption);
+    });
+  }
+
+  /* ---------- Challenges: a goal other than clearing the board ---------- */
+  var CHALLENGES = window.UNWIND_CHALLENGES || [];
+  var CHALLENGE_GROUPS = [
+    { goal: 'golden', name: 'Golden ticket', note: 'Get the board stuck on purpose, so the safety net hands you a golden arrow.', caption: 'Challenge: make a golden arrow appear. Get the board stuck on purpose.' },
+    { goal: 'thaw', name: 'Thaw', note: 'Free every frozen arrow. Hit a frozen arrow with another arrow to thaw it.', caption: 'Challenge: thaw every frozen arrow. Hit them with other arrows.' },
+    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off at the same time, without losing all your lives.', caption: 'Challenge: get every red card arrow sent off at once.' }
+  ];
+  function challengeGroup(c) { return CHALLENGE_GROUPS.filter(function (g) { return g.goal === c.goal; })[0]; }
+  function openChallenge(i) {
+    var c = CHALLENGES[i];
+    if (!c) { levelsSheet('extra'); return; }
+    var g = challengeGroup(c), n = CHALLENGES.slice(0, i + 1).filter(function (x) { return x.goal === c.goal; }).length;
+    var lvl = E.prepare(JSON.parse(JSON.stringify({ w: c.w, h: c.h, mirrors: c.mirrors || [], flowers: null, arrows: c.arrows, lives: 3, hints: 0, timeLimit: null, season: null, caption: g.caption })));
+    begin({ id: 'ch-' + (i + 1), mode: 'challenge', index: i, goal: c.goal, level: lvl, title: g.name + ' ' + n, chapter: CHAPTERS[timeChapter()], sunY: 40 });
+    state.safe = c.goal === 'golden';
+    (c.frozen || []).forEach(function (id) { state.frozen[id] = 9999; });
+    boardLayer = null; refresh();
+  }
+  function challengeMet() {
+    var g = current.goal, l = current.level;
+    if (g === 'golden') return !!(state.freed && Object.keys(state.freed).length);
+    if (g === 'thaw') return Object.keys(state.frozen).length === 0;
+    if (g === 'red') { var reds = l.arrows.filter(function (a) { return a.red !== undefined; }); return reds.length > 0 && reds.every(function (a) { return !state.removed[a.id] && E.isRedCarded(state, a); }); }
+    return false;
+  }
+  function challengeCheck() {
+    if (ended || !current || current.mode !== 'challenge') return;
+    if (challengeMet()) { setTimeout(function () { if (!ended) finish(true); }, 500); return; }
+    if (E.isWon(state)) finish(false, 'goal');
+  }
+
   /* Co-op tutorials: two hand-made boards each, where the new arrow is the only way to win. */
   function coopArrow(id, cells, extra) {
     var n = cells.length, h = cells[n - 1], p = cells[n - 2], dir = h[1] < p[1] ? 0 : h[0] > p[0] ? 1 : h[1] > p[1] ? 2 : 3;
@@ -973,7 +1036,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-d';
+  var BUILD = '2026.11.23-e';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -1045,6 +1108,7 @@
     // A reconnect during the same game: keep playing, only the missed events are applied.
     if (coop && coop.online && coop.online.seed === m.seed && current && current.coop) return;
     net.ready = false; net.pending = [];
+    if ($('sheetHost').firstChild) closeSheet();
     var S = m.settings, me = netPid(), names = [], you = 0;
     m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
@@ -1066,7 +1130,7 @@
     openCoop(m.seed, false, spec);
   }
   /* ---------- Online game: every phone applies the server's events in the same order ---------- */
-  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1 };
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1 };
   var netApplying = false;
   function netGame(m) {
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
@@ -1078,8 +1142,21 @@
       return;
     }
     if (m.t === 'paused') { onlinePaused(m); return; }
-    if (m.t === 'offline') { if (m.b !== coop.you) showToast(m.name + ' lost connection. Waiting for them to come back…'); return; }
-    if (m.t === 'back') { if (m.b !== coop.you) showToast(m.name + ' is back.'); return; }
+    if (m.t === 'offline') {
+      if (m.b === coop.you) return;
+      coop.away = coop.away || {};
+      clearTimeout(coop.away[m.b]);
+      coop.away[m.b] = setTimeout(function () { coop.away[m.b] = 'shown'; showToast(m.name + ' lost connection. Waiting for them to come back…'); }, 8000);
+      return;
+    }
+    if (m.t === 'back') {
+      if (m.b === coop.you || !coop.away) return;
+      if (coop.away[m.b] === 'shown') showToast(m.name + ' is back.');
+      else clearTimeout(coop.away[m.b]);
+      delete coop.away[m.b];
+      return;
+    }
+    if (m.t === 'votes') { coop.votes = m; var vb = $('sheetHost').querySelector('#again'); if (vb) vb.textContent = 'Try again (' + m.count + '/' + m.total + ')'; return; }
     if (m.t === 'nope') { onlineNope(m); return; }
     applyEvent(m, false);
   }
@@ -1158,6 +1235,7 @@
       B.level.arrows.forEach(function (a) { B.state.removed[a.id] = true; });
       B.state.frozen = {}; B.queue = [];
       coop.left = coop.left || {}; coop.left[ev.b] = true;
+      if (coop.away && coop.away[ev.b]) { clearTimeout(coop.away[ev.b]); delete coop.away[ev.b]; }
       if (!quiet) {
         showToast(coopName(ev.b) + ' left the game. Their board was cleared.');
         pluck(392, 0, 0.1, 0.5); pluck(311.1, 0.12, 0.1, 0.6);
@@ -1490,6 +1568,8 @@
     $('bHint').disabled = hintsLeft <= 0 || ended;
     var onlineGame = !!(current.coop && coop && coop.online);
     $('bHint').hidden = $('bRestart').hidden = $('bRewind').hidden = onlineGame;
+    // Solo multi-board play has no one else to pause with.
+    if (current.coop && coop && !coop.online && (coop.room.boarding !== undefined || coop.room.endless)) $('bRewind').hidden = true;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
     var stuck = E.isStuck(current.level, state);
     $('bRewind').classList.toggle('call', stuck);
@@ -2977,6 +3057,7 @@
       track('not_ready', { arrow: id, frozen: state.frozen[id] !== undefined });
       return;
     }
+    if (res.thawed && current.mode === 'challenge') setTimeout(challengeCheck, 0);
     if (res.thawed) {
       // Cracking ice: the arrow bounces back, the other arrow is free, and no life is lost.
       res.results.forEach(function (r) {
@@ -3029,7 +3110,7 @@
       if (current.coop) coopAfterLaunch(id, res, now);
       hintStillGood();
       if (res.won && current.coop && !coopAllWon()) setCaption('Board ' + (coop.idx + 1) + ' cleared! Help clear the others.');
-      else if ((res.won || (current.coop && coopAllWon())) && !(coop && coop.online)) { bee = null; finish(true); }
+      else if ((res.won || (current.coop && coopAllWon())) && !(coop && coop.online) && current.mode !== 'challenge') { bee = null; finish(true); }
     } else {
       collisions++;
       res.results.forEach(function (r) {
@@ -3045,6 +3126,7 @@
       if (res.failed && !(current.coop && coop && coop.online)) finish(false, 'lives');
     }
     if (current.coop) coopSyncLives();
+    if (current.mode === 'challenge') challengeCheck();
     refresh();
   }
   // Normal boards react on touch. Big boards wait for release, so a drag moves the view instead of playing an arrow.
@@ -3139,7 +3221,11 @@
         progress.done[c.id] = true;
         if (perfect) progress.perfect[c.id] = true;
       } else if (c.mode === 'endless') progress.endlessBy[c.endlessKey] = (progress.endlessBy[c.endlessKey] || 0) + 1;
-      else progress.daily = todayKey();
+      else if (c.mode === 'challenge') progress.done[c.id] = true;
+      else if (c.coop) {
+        if (coop && coop.room.boarding !== undefined) { progress.done['bu-' + (coop.room.boarding + 1)] = true; if (perfect) progress.perfect['bu-' + (coop.room.boarding + 1)] = true; }
+        if (coop && coop.room.endless) progress.endlessBy[coop.room.endless] = (progress.endlessBy[coop.room.endless] || 0) + 1;
+      } else progress.daily = todayKey();
       save('unwind.progress2', progress);
       setTimeout(function () {
         victoryMusic(perfect);
@@ -3220,10 +3306,11 @@
   function bestKey(c) { return c.mode === 'endless' ? 'open-' + c.endlessKey : c.id; }
   function recordText(ms) { var t = Math.round(ms / 100) / 10, m = Math.floor(t / 60), sec = t - m * 60; var txt = m + ':' + (sec < 10 ? '0' : '') + sec.toFixed(1); return window.UnwindI18n.lang() === 'pt' ? txt.replace('.', ',') : txt; }
   function winSheet(c, st) {
+    if (c.coop && coop && coop.online) { onlineEndSheet(c, true); return; }
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
     // The end of a group leads to the next group. Only the very last level leads to open water.
     var nextSet = c.mode === 'levels' && !hasNext ? SET_FLOW[SET_FLOW.indexOf(c.set) + 1] : null;
-    var title = st.perfect ? 'Perfect!' : 'All clear';
+    var title = c.mode === 'challenge' ? 'Challenge complete!' : st.perfect ? 'Perfect!' : 'All clear';
     var lines = st.perfect ? ['You never lost a life.', 'Not one collision. Lovely.', 'Smooth as still water.']
       : c.level.lives === null ? ['Another calm stretch of water.'] : st.hits === 1 ? ['One small bump on the way.'] : [st.hits + ' bumps on the way, and you got there.'];
     var line = lines[Math.floor(Math.random() * lines.length)];
@@ -3238,7 +3325,8 @@
       : recordText(st.elapsedMs - best + 0) + ' behind it' + kind;
     var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
-    var nextLabel = hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var bu = c.coop && coop && coop.room.boarding !== undefined ? coop.room.boarding : -1, owc = c.coop && coop && coop.room.endless;
+    var nextLabel = c.mode === 'challenge' ? (c.index < CHALLENGES.length - 1 ? 'Next challenge' : 'Back to challenges') : bu >= 0 ? (bu < BOARDING.length - 1 ? 'Next level' : 'Back to levels') : owc ? 'Keep drifting' : hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
@@ -3249,7 +3337,9 @@
         if (hasNext) openLevel(c.set, c.index + 1);
         else if (nextSet) openLevel(nextSet, 0);
         else openEndless();
-      } else if (c.mode === 'endless') openEndless();
+      } else if (c.mode === 'endless' || owc) openEndless();
+      else if (c.mode === 'challenge') { if (c.index < CHALLENGES.length - 1) openChallenge(c.index + 1); else levelsSheet('extra'); }
+      else if (bu >= 0) { if (bu < BOARDING.length - 1) openBoarding(bu + 1); else levelsSheet('boarding'); }
       else levelsSheet('calm');
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
@@ -3257,7 +3347,26 @@
     s.querySelector('#winLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
+  // Online games end for everyone at once. Try again needs every player; the room and the main menu are always open.
+  function onlineEndSheet(c, won) {
+    var v = coop.votes || { count: 0, total: coop.n - Object.keys(coop.left || {}).length };
+    var gone = Object.keys(coop.left || {}).length > 0;
+    var s = sheet('<h2>' + (won ? 'All clear, together!' : 'Out of lives') + '</h2><p>' + (won ? 'Every board is clear.' : 'The room ran out of shared lives.') + '</p>' +
+      (gone ? '<p class="note">Someone left, so this game cannot be played again. Go back to the room to start a new one.</p>' : '<button class="primary" id="again">Try again (' + v.count + '/' + v.total + ')</button>') +
+      '<button class="secondary" id="toRoom">Go back to the online room</button><button class="secondary" id="toMenu">Go to Main Menu</button>');
+    var ag = s.querySelector('#again');
+    if (ag) ag.onclick = function () { netSend({ t: 'again' }); ag.disabled = true; };
+    s.querySelector('#toRoom').onclick = function () { netSend({ t: 'lobby' }); };
+    s.querySelector('#toMenu').onclick = function () { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); startMenu(); };
+  }
   function failSheet(c, st, why) {
+    if (c.coop && coop && coop.online) { onlineEndSheet(c, false); return; }
+    if (why === 'goal') {
+      var gs = sheet('<h2>Not quite</h2><p>The board is clear, but the challenge was not met. Try another order.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
+      gs.querySelector('#again').onclick = function () { openChallenge(c.index); };
+      gs.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+      return;
+    }
     var timeUp = why === 'time';
     var s = sheet('<h2>' + (timeUp ? "Time's up" : 'Out of lives') + '</h2><p>' + (timeUp ? 'The board was nearly there. Take a breath and go again.' : 'Take a moment, then try this board again.') + '</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Choose another level</button>');
     s.querySelector('#again').onclick = function () { restart(); };
@@ -3286,7 +3395,7 @@
       var first = !started; started = true;
       if (what === 'play') { if (!first) return; maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
       else if (what === 'levels') levelsSheet();
-      else if (what === 'open') levelsSheet('extra');
+      else if (what === 'open') levelsSheet('endless');
       else if (what === 'online') onlineSheet('home');
       else if (what === 'settings') settingsSheet();
       else if (what === 'leave') { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); }
@@ -3298,7 +3407,7 @@
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
-    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons'], ['extra', 'Extra'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons'], ['boarding', 'Boarding Up'], ['extra', 'Challenges'], ['endless', 'Endless'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
     var grid = function (set, from, to) {
       var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
@@ -3307,8 +3416,14 @@
       }
       return out + '</div>';
     };
-    if (tab !== 'extra' && tab !== 'online') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
-    if (tab === 'extra' || tab === 'online') {}
+    if (tab !== 'extra' && tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
+    if (tab === 'extra' || tab === 'online' || tab === 'endless') {}
+    else if (tab === 'boarding') {
+      html += '<p class="note">Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.</p><div class="lv">' + BOARDING.map(function (b, i) {
+        var id = 'bu-' + (i + 1);
+        return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Boarding Up ' + (i + 1) + '">' + (i + 1) + (progress.done[id] ? (progress.perfect[id] ? STAR_MARK : MOON_MARK) : '') + '</button>';
+      }).join('') + '</div>';
+    }
     else if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
     else if (tab === 'seasons') {
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
@@ -3320,20 +3435,32 @@
       var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
-    if (tab !== 'extra' && tab !== 'online') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
+    if (tab !== 'extra' && tab !== 'online' && tab !== 'endless' && tab !== 'boarding') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'online') {
       html += '<div class="chapter strong">Play with friends</div><div class="modes"><button id="mHostO"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="mPubO"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="mCodeO"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>';
-      html += '<div class="chapter strong">Learn the online arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
+      html += '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
     }
     if (tab === 'extra') {
-      html += '<div class="chapter strong">Daily and endless</div>';
-      html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
+      html += '<div class="chapter strong">Daily</div><div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button></div>';
+      CHALLENGE_GROUPS.forEach(function (g) {
+        html += '<div class="chapter strong">' + g.name + '</div><p class="note">' + g.note + '</p><div class="lv">';
+        CHALLENGES.forEach(function (c, i) {
+          if (c.goal !== g.goal) return;
+          var id = 'ch-' + (i + 1), n = CHALLENGES.slice(0, i + 1).filter(function (x) { return x.goal === g.goal; }).length;
+          html += '<button data-ch="' + i + '" class="' + (progress.done[id] ? 'done' : '') + '" aria-label="' + g.name + ' ' + n + '">' + n + (progress.done[id] ? STAR_MARK : '') + '</button>';
+        });
+        html += '</div>';
+      });
+    }
+    if (tab === 'endless') {
+      html += '<div class="modes"><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and combo arrows that mix up to 3 effects' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
-      '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + !endlessOpts().timed + '">No timer</button><button data-otimed="1" aria-pressed="' + !!endlessOpts().timed + '">Timed</button></div>' +
-      '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off) + '</small></span><b>›</b></button>' +
-      '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + (!endlessOpts().timed || (endlessOpts().boards || 1) > 1) + '">No timer</button><button data-otimed="1" aria-pressed="' + (!!endlessOpts().timed && (endlessOpts().boards || 1) === 1) + '"' + ((endlessOpts().boards || 1) > 1 ? ' disabled' : '') + '>Timed</button></div>' +
+      '<div class="setting"><span>Boards<small>' + ((endlessOpts().boards || 1) > 1 ? 'You play every board. Up to 5x each, no timer.' : 'One board, or several linked boards to play alone') + '</small></span></div><div class="sizes lseg o3" role="group" aria-label="Boards">' + [1, 2, 4].map(function (x) { return '<button data-oboards="' + x + '" aria-pressed="' + ((endlessOpts().boards || 1) === x) + '">' + (x === 1 ? '1 board' : x + ' boards') + '</button>'; }).join('') + '</div>' +
+      '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off, (endlessOpts().boards || 1) > 1) + '</small></span><b>›</b></button>' +
+      '<div class="setting"><span>Season effects<small>' + ((endlessOpts().boards || 1) > 1 ? 'Season effects work on a single board.' : 'Pick any number, or All for every effect at once.') + '</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'All']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.list.length === 4 : x[0] === 'none' ? !c.list.length : c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '"' + ((endlessOpts().boards || 1) > 1 ? ' disabled' : '') + '>' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
-      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
+      '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 2, 3, 5, 10, 25].map(function (x) { var multi = (endlessOpts().boards || 1) > 1; return '<button data-scale="' + x + '" aria-pressed="' + (Math.min(multi ? 5 : 99, endlessOpts().scale || 1) === x) + '"' + (multi && x > 5 ? ' disabled' : '') + '>' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
     }
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
@@ -3355,8 +3482,10 @@
       s.querySelector('#mTutSniperO').onclick = function () { openCoopTutorial('sniper'); };
       return;
     }
-    if (tab !== 'extra') return;
-    s.querySelector('#mDaily').onclick = openDaily;
+    if (s.querySelector('#mDaily')) s.querySelector('#mDaily').onclick = openDaily;
+    s.querySelectorAll('[data-ch]').forEach(function (b) { b.onclick = function () { openChallenge(+b.getAttribute('data-ch')); }; });
+    s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
+    if (tab !== 'endless') return;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () {
       // Loading Open Water with the default background: the music follows the backgrounds.
@@ -3366,21 +3495,22 @@
     [['ohard', 'hard'], ['otimed', 'timed']].forEach(function (pair) {
       s.querySelectorAll('[data-' + pair[0] + ']').forEach(function (b) { b.onclick = function () {
         var o = endlessOpts(); o[pair[1]] = b.getAttribute('data-' + pair[0]) === '1'; progress.endlessOpts = o; save('unwind.progress2', progress);
-        levelsSheet('extra', true);
+        levelsSheet('endless', true);
       }; });
     });
+    s.querySelectorAll('[data-oboards]').forEach(function (b) { b.onclick = function () { var o = endlessOpts(); o.boards = +b.getAttribute('data-oboards'); progress.endlessOpts = o; save('unwind.progress2', progress); levelsSheet('endless', true); }; });
     s.querySelector('#oTypes').onclick = function () {
-      arrowTypesBox(endlessOpts().off, false, function (off) { var o = endlessOpts(); o.off = off; progress.endlessOpts = o; save('unwind.progress2', progress); var l = $('oTypesLbl'); if (l) l.textContent = typesLabel(off); });
+      arrowTypesBox(endlessOpts().off, (endlessOpts().boards || 1) > 1, function (off) { var o = endlessOpts(); o.off = off; progress.endlessOpts = o; save('unwind.progress2', progress); var l = $('oTypesLbl'); if (l) l.textContent = typesLabel(off, (endlessOpts().boards || 1) > 1); });
     };
     wireBackgrounds(s);
     s.querySelectorAll('[data-effect]').forEach(function (b) {
       b.onclick = function () {
         var o = endlessOpts(), c = effectChoice(), k = b.getAttribute('data-effect'), list = c.list.slice(), random = c.random;
         if (k === 'none') { list = []; random = false; }
-        else if (k === 'random') { random = !random; if (random) list = []; }
+        else if (k === 'random') { random = false; list = list.length === 4 ? [] : SEASON_ORDER.slice(); }
         else { random = false; var at = list.indexOf(k); if (at >= 0) list.splice(at, 1); else list.push(k); }
         o.effectList = list; o.effectRandom = random; delete o.seasonChoice; progress.endlessOpts = o; save('unwind.progress2', progress);
-        s.querySelectorAll('[data-effect]').forEach(function (x) { var e = x.getAttribute('data-effect'); x.setAttribute('aria-pressed', e === 'random' ? random : e === 'none' ? !random && !list.length : !random && list.indexOf(e) >= 0); });
+        s.querySelectorAll('[data-effect]').forEach(function (x) { var e = x.getAttribute('data-effect'); x.setAttribute('aria-pressed', e === 'random' ? list.length === 4 : e === 'none' ? !random && !list.length : !random && list.indexOf(e) >= 0); });
       };
     });
     s.querySelectorAll('[data-scale]').forEach(function (b) {
@@ -3427,7 +3557,7 @@
       var chip = function (t) { return '<button data-type="' + t[0] + '" aria-pressed="' + !off[t[0]] + '"' + (locked ? ' disabled' : '') + '>' + typeIcon(t[0]) + '<span>' + t[1] + '</span></button>'; };
       box.innerHTML = '<div class="obox" role="dialog" aria-label="Arrow types"><h3>Arrow types</h3><p class="note">' + (locked ? 'Chosen by the host.' : 'Choose which arrows can appear on the boards. Plain arrows are always there.') + '</p>' +
         '<div class="chapter">Arrows</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
-        (mp ? '<div class="chapter">Multiplayer</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
+        (mp ? '<div class="chapter">Multiple boards</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
         (locked ? '' : '<div class="obtns"><button id="tAll">All</button><button id="tNone">None</button></div>') + '<button class="primary" id="tDone">Done</button></div>';
       // Chips change in place, so the box does not pop in again on every tap.
       var sync = function () { box.querySelectorAll('[data-type]').forEach(function (x) { x.setAttribute('aria-pressed', !off[x.getAttribute('data-type')]); }); };
@@ -3865,7 +3995,7 @@
     ];
     var hereMp = {};
     if (current.coop && coop) { coop.boards.forEach(function (B) { B.level.arrows.forEach(function (a) { if (a.sniper && !B.state.removed[a.id]) hereMp.sniper = 1; if (a.coopGroup !== undefined) hereMp.twinshared = 1; }); }); }
-    html += '<details class="mpx"' + (current.coop ? ' open' : '') + '><summary>Multiplayer exclusive arrows</summary>' + mp.map(function (it) {
+    html += '<details class="mpx"' + (current.coop ? ' open' : '') + '><summary>Multiple board arrows</summary>' + mp.map(function (it) {
       return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (hereMp[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p><button class="watch" data-watch="' + it.key + '">▶ Watch how it works</button></div></div>';
     }).join('') + '</details>';
     var s = sheet(html);
@@ -3876,6 +4006,7 @@
     track('guide_open', {});
   }
   function restart() {
+    if (current && current.mode === 'challenge') { openChallenge(current.index); return; }
     if (current && current.coop && coop && coop.online) { setCaption('Online games cannot be restarted. Clear the boards together!'); return; }
     if (current && current.coop && coop) { coopRestart(); return; }
     track('restart', { launches: state.launches });

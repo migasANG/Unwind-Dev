@@ -908,7 +908,7 @@
   function coopRoom(seed, spec) {
     var r = rng32(seed || 1), boards = [], groups = [];
     spec = applyTypes(Object.assign({}, spec || { w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, mirrors: 2 }), spec && spec.off);
-    var n = spec.n || 4, lives = spec.lives || 12;
+    var n = spec.n || 4, lives = spec.lives === undefined ? 12 : spec.lives;
     for (var b = 0; b < n; b++) {
       var lvl = generate(spec, (seed || 1) + b * 977, 200) || generate(Object.assign({}, spec, { mirrors: 0 }), (seed || 1) + b * 977, 200);
       lvl.lives = lives; lvl.hints = 0;

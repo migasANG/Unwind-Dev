@@ -359,7 +359,6 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast),body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast) *{animation-play-state:paused!important}
 .toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;max-width:calc(100% - 32px);padding:12px 18px;border-radius:16px;background:var(--ink);color:var(--card);font-weight:600;font-size:.9375rem;text-align:center;box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 35%,transparent);animation:pop .3s cubic-bezier(.3,1.4,.5,1) both;transition:opacity .4s ease}
 .toast.out{opacity:0}
-.tabs button[data-tab="extra"],.tabs button[data-tab="online"]{grid-column:span 2}
 .otp{display:flex;align-items:center;justify-content:center;gap:5px}
 .otp .otpc{width:0;flex:1 1 0;max-width:42px;min-width:0;height:52px;padding:0;border-radius:12px;border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-size:1.4rem;font-weight:700;text-align:center;text-transform:uppercase}
 .otp .otpc:focus{outline:none;border-width:2.5px;background:color-mix(in srgb,currentColor 8%,transparent)}
@@ -374,6 +373,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 .smleave{border:1.5px solid #c8202f;color:#c8202f;height:44px;border-radius:22px;opacity:1}
 @media (max-width:380px){.card{padding:22px 16px}.lplayers .st{padding:3px 6px;font-size:.6875rem}.lsum{grid-template-columns:1fr 1fr;}.lsum span:last-child{grid-column:1/-1}}
 .orejoin{background:#3fae6a;color:#fff;border-color:#3fae6a}
+.sizes button[disabled]{opacity:.35;cursor:default}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes fadeout{from{opacity:1}to{opacity:0}}
@@ -436,6 +436,6 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 <div id="sheetHost"></div>
 
 <script>/*__ENGINE__*/</script>
-<script>window.UNWIND_LEVELS=/*__LEVELS__*/;</script>
+<script>window.UNWIND_LEVELS=/*__LEVELS__*/;window.UNWIND_CHALLENGES=/*__CHALLENGES__*/;</script>
 <script>/*__MUSIC__*/</script>
 <script>/*__GAME__*/</script>
