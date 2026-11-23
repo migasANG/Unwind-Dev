@@ -536,7 +536,7 @@
         if (!coop) return;
         coopEffect('exit', from, fl.edge, c.endDir, performance.now());
         pluck(987.8, 0, 0.1, 0.35); pluck(740, 0.05, 0.09, 0.35); pluck(493.9, 0.1, 0.08, 0.4);
-        coopShotLeft(from, to, c.endDir, corner);
+        if (!coop.online) coopShotLeft(from, to, c.endDir, corner);
       }, Math.max(0, t * fl.duration));
     });
     coopNav();
@@ -594,6 +594,12 @@
   function coopResolve(B, q, now) {
     var L = B.level, S = B.state, hit = q.flying.hit, b = coop.boards.indexOf(B);
     B.queue.shift();
+    if (coop.online) {
+      // The server applies the hit for everyone once this board's player has watched it arrive.
+      if (b === coop.you) netSend({ t: 'hit', b: b, qid: q.qid });
+      coopMaybeStart(b); coopNav();
+      return;
+    }
     if (hit.kind === 'arrow' && S.removed[hit.id]) hit = coopWalk(L, S, q.entry, q.dir);
     if (hit.kind === 'arrow') {
       var a = L.arrows[hit.id], ids = [a.id];
@@ -800,6 +806,7 @@
   var coopPaused = null;
   function coopPause() {
     if (!coop || ended || coopPaused) return;
+    if (coop.online) { coopPaused = { set: [coop.you], you: coop.you, frozen: false, timers: [], online: true }; netSend({ t: 'pause' }); coopPauseSheet(); return; }
     var you = coop.you || 0, others = []; for (var i = 0; i < coop.n; i++) if (i !== you) others.push(i);
     coopPaused = { set: [you], you: you, frozen: false, timers: [] };
     coopPauseSheet();
@@ -811,7 +818,7 @@
   function coopPauseSheet() {
     var P = coopPaused;
     if (!P) return;
-    if (P.set.length * 2 >= coop.n) P.frozen = true;
+    if (!P.online && P.set.length * 2 >= coop.n) P.frozen = true;
     if (!P.set.length) { P.timers.forEach(clearTimeout); coopPaused = null; closeSheet(); setCaption('Everyone is back. Game on!'); return; }
     var youPaused = P.set.indexOf(P.you) >= 0;
     if (!P.frozen && !youPaused) { P.timers.forEach(clearTimeout); coopPaused = null; closeSheet(); return; }
@@ -821,14 +828,14 @@
     html += '<ul class="lplayers">' + Array.apply(null, Array(coop.n)).map(function (_, b) { var on = P.set.indexOf(b) >= 0; return '<li><span class="dot" style="background:' + colors.twins[b % colors.twins.length] + '">' + coopName(b).charAt(0) + '</span><span class="nm">' + coopName(b) + (b === P.you ? ' <em>(you)</em>' : '') + '</span><span class="st ' + (on ? '' : 'on') + '">' + (on ? 'Paused' : 'Playing') + '</span></li>'; }).join('') + '</ul>';
     if (P.frozen) html += '<p class="note">The game and the clock are stopped for everyone until all players are back.</p>';
     if (youPaused) html += '<button class="primary" id="pResume">Resume</button>';
-    else if (P.set.length === 1) html += '<p class="note">Only ' + names[0] + ' is still paused. As the host, you can carry on without them.</p><button class="primary" id="pOverride">Resume for everyone</button>';
+    else if (P.set.length === 1 && (!P.online || (net.room && net.room.host === netPid()))) html += '<p class="note">Only ' + names[0] + ' is still paused. As the host, you can carry on without them.</p><button class="primary" id="pOverride">Resume for everyone</button>';
     else html += '<p class="lwait">Waiting for ' + names.join(' and ') + '…</p>';
-    html += '<p class="note" style="text-align:center">Preview: the other players are simulated.</p>';
+    if (!P.online) html += '<p class="note" style="text-align:center">Preview: the other players are simulated.</p>';
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.pausecard');
     if (card) card.innerHTML = html; else { sheet(html, 'pausecard'); card = $('sheetHost').querySelector('.card'); }
     var r = card.querySelector('#pResume'), o = card.querySelector('#pOverride');
-    if (r) r.onclick = function () { P.set = P.set.filter(function (x) { return x !== P.you; }); coopPauseSheet(); };
-    if (o) o.onclick = function () { P.set = []; coopPauseSheet(); };
+    if (r) r.onclick = function () { if (P.online) { netSend({ t: 'resume' }); return; } P.set = P.set.filter(function (x) { return x !== P.you; }); coopPauseSheet(); };
+    if (o) o.onclick = function () { if (P.online) { netSend({ t: 'resumeAll' }); return; } P.set = []; coopPauseSheet(); };
   }
   /* ---------- Co-op room preview: what the host sees before a game. Players other than you are simulated. ---------- */
   var LOBBY_ADJ = ['Sleepy', 'Brave', 'Quiet', 'Lucky', 'Gentle', 'Swift', 'Misty', 'Sunny', 'Cozy', 'Clever', 'Mellow', 'Bright'];
@@ -969,6 +976,7 @@
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.t === 'room') onServerRoom(m.room);
       else if (m.t === 'start') onServerStart(m);
+      else if (GAME_EVENTS[m.t]) netGame(m);
       else if (m.t === 'kicked') { netClose(); lobby = null; onlineSheet('home', 0, 'The host removed you from the room.'); }
       else if (m.t === 'error') {
         if (m.code === 'full' || m.code === 'started') { netClose(); lobby = null; onlineSheet('home', 0, m.message); }
@@ -988,6 +996,7 @@
   function onlineError(msg) { lobby = null; onlineSheet('home', 0, msg); }
   // The server's room becomes the lobby screen: you first, then the others; seats say who plays which board.
   function onServerRoom(room) {
+    net.room = room;
     var me = netPid(), fresh = !lobby || !lobby.online;
     if (fresh) lobby = { online: true, timers: [], pick: -1, status: '', askName: !load('unwind.onlineName', '') };
     var L = lobby, mine = null;
@@ -1001,15 +1010,117 @@
     lobbySheet(true);
   }
   function onServerStart(m) {
+    // A reconnect during the same game: keep playing, only the missed events are applied.
+    if (coop && coop.online && coop.online.seed === m.seed && current && current.coop) return;
+    net.ready = false; net.pending = [];
     var S = m.settings, me = netPid(), names = [], you = 0;
     m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
     if (lobby) lobby.timers.forEach(clearTimeout);
     lobby = null;
-    spec.after = function () { coop.you = you; coop.online = { code: net.code }; coop.room.title = 'Online room ' + net.code; if (you > 0) coopSwitch(you); $('where').textContent = coopWhere(coop.idx); setCaption('Online room ' + net.code + ': you are on board ' + (you + 1) + '. Moves are not shared yet: that comes in the next step.'); };
+    spec.after = function () {
+      coop.you = you; coop.online = { code: net.code, seed: m.seed, applied: 0 }; coop.room.title = 'Online room ' + net.code;
+      if (you > 0) coopSwitch(you);
+      $('where').textContent = coopWhere(coop.idx);
+      setCaption('Online room ' + net.code + ': you play board ' + (you + 1) + '. The other boards update live.');
+      net.ready = true;
+      var queued = net.pending; net.pending = [];
+      queued.forEach(netGame);
+    };
     // Every phone builds the same boards from the server's seed.
     openCoop(m.seed, false, spec);
   }
+  /* ---------- Online game: every phone applies the server's events in the same order ---------- */
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1 };
+  var netApplying = false;
+  function netGame(m) {
+    if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
+    if (m.t === 'log') {
+      var evs = m.events || [];
+      for (var i = coop.online.applied; i < evs.length; i++) applyEvent(evs[i], true);
+      boardLayer = null; coopNav(); refresh();
+      coop.boards.forEach(function (B, b) { coopMaybeStart(b); });
+      return;
+    }
+    if (m.t === 'paused') { onlinePaused(m); return; }
+    if (m.t === 'nope') { onlineNope(m); return; }
+    applyEvent(m, false);
+  }
+  function onlineNope(m) {
+    if (m.b === coop.idx && m.id !== undefined) { nudges[m.id] = performance.now() + 360; pluck(220, 0, 0.07, 0.3); }
+    var say = { sniper: 'Wait: a sniper is coming in.', paused: 'The game is paused.', notyours: 'You can only play your own board.', ended: 'This game is over.' }[m.why];
+    if (m.why === 'sleepy') say = 'Its twin on board ' + (m.board + 1) + ' is not ready yet.';
+    if (say) setCaption(say);
+  }
+  function onlinePaused(m) {
+    var set = m.seats || [];
+    if (!set.length) {
+      if (coopPaused) { coopPaused = null; if ($('sheetHost').querySelector('.card.pausecard')) closeSheet(); setCaption('Everyone is back. Game on!'); }
+      return;
+    }
+    if (!m.frozen && set.indexOf(coop.you) < 0) { if (coopPaused) { coopPaused = null; if ($('sheetHost').querySelector('.card.pausecard')) closeSheet(); } return; }
+    coopPaused = { set: set, you: coop.you, frozen: !!m.frozen, timers: [], online: true };
+    coopPauseSheet();
+  }
+  function quietTap(b, id) {
+    var B = coop.boards[b], L = B.level, S = B.state, a = L.arrows[id];
+    S.lives = coop.lives;
+    var res = E.tap(L, S, id);
+    if (res.ok && a.coopGroup !== undefined) {
+      coop.room.groups[a.coopGroup].members.forEach(function (m) {
+        if (m[0] === b) return;
+        var O = coop.boards[m[0]];
+        if (O.state.removed[m[1]]) return;
+        O.state.lives = coop.lives;
+        E.tap(O.level, O.state, m[1]);
+        if (m[0] === coop.idx) { var oa = O.level.arrows[m[1]]; addRipple(px(oa.cells[oa.cells.length >> 1]), arrowColor(oa), 2.2); }
+      });
+    }
+    return res;
+  }
+  function applyEvent(ev, quiet) {
+    if (ev.t !== 'nope' && ev.t !== 'paused') coop.online.applied++;
+    var now = performance.now(), B;
+    if (ev.t === 'tap') {
+      if (!quiet && ev.b === coop.idx && !ended) { netApplying = true; try { onTap(ev.id); } finally { netApplying = false; } }
+      else quietTap(ev.b, ev.id);
+      coop.lives = ev.lives; coopSyncLivesTo(ev.lives);
+      boardLayer = null;
+    } else if (ev.t === 'bounce') {
+      coop.lives = ev.lives; coopSyncLivesTo(ev.lives);
+      if (!quiet && ev.b === coop.idx) {
+        var ba = coop.boards[ev.b].level.arrows[ev.id];
+        bounces[ev.id] = { start: now, reach: 0.18, pts: trackOf(ba, E.check(coop.boards[ev.b].level, state, ba)) };
+        thud(); buzz(26); collisions++;
+        setCaption('Its twin on board ' + (ev.blocked + 1) + ' is blocked.');
+      } else if (!quiet) setCaption(coopName(ev.b) + '\'s twin-shared arrow bounced. A shared life is gone.');
+    } else if (ev.t === 'shot') {
+      B = coop.boards[ev.to];
+      B.queue.push({ qid: ev.qid, from: ev.from, dir: ev.dir, entry: ev.entry, extra: 1, targetId: ev.targetId, pass: false, flying: null, waiting: false });
+      if (!quiet) {
+        pluck(659.3, 0, 0.12, 0.5); pluck(523.3, 0.14, 0.12, 0.6); buzz(18);
+        if (ev.to === coop.idx) coopMaybeStart(ev.to);
+        else { setCaption('Something is happening on board ' + (ev.to + 1) + '.'); $('caption').setAttribute('data-goto', ev.to); $('caption').classList.add('goto'); }
+      }
+    } else if (ev.t === 'hit') {
+      B = coop.boards[ev.b];
+      var L = B.level, S = B.state;
+      B.queue = B.queue.filter(function (q) { return q.qid !== ev.qid; });
+      (ev.ids || []).forEach(function (id) {
+        S.removed[id] = true; delete S.frozen[id];
+        if (!quiet && ev.b === coop.idx) { var m = L.arrows[id]; addRipple(px(m.cells[m.cells.length >> 1]), '#b3122e', 2.6); }
+      });
+      if (ev.kind === 'flower') { S.picked = Object.assign({}, S.picked); S.picked[ev.k] = true; }
+      if (S.safe && E.isStuck(L, S)) E.ensurePlay(L, S);
+      if (!quiet && ev.b === coop.idx && ev.ids && ev.ids.length) { pluck(196, 0, 0.16, 0.5); pluck(392, 0.04, 0.1, 0.6); buzz(22); }
+      boardLayer = null;
+      if (!quiet) coopMaybeStart(ev.b);
+    } else if (ev.t === 'end') {
+      if (!ended) finish(ev.result === 'win', ev.result === 'win' ? undefined : 'lives');
+    }
+    if (!quiet) { coopNav(); refresh(); }
+  }
+  function coopSyncLivesTo(n) { coop.lives = n; coop.boards.forEach(function (B) { if (B.state) B.state.lives = n; }); }
   function hostOnline(btn) {
     if (btn) { btn.disabled = true; btn.querySelector('b').textContent = 'Creating room…'; }
     netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 4 } }) })
@@ -2771,7 +2882,13 @@
   }
   function onTap(id) {
     if (ended || id < 0) return;
-    if (current.coop && !coopAllow(id)) return;
+    if (current.coop && coop && coop.online && !netApplying) {
+      // Online: only your own board, and the server decides. Its answer comes back as an event every phone applies.
+      if (coop.idx !== coop.you) { nudges[id] = performance.now() + 360; pluck(220, 0, 0.07, 0.3); setCaption('This is ' + coopName(coop.idx) + '\'s board. You can watch, but only play your own.'); return; }
+      netSend({ t: 'tap', b: coop.idx, id: id });
+      return;
+    }
+    if (current.coop && !(coop && coop.online) && !coopAllow(id)) return;
     var l = current.level, res = E.tap(l, state, id), now = performance.now();
     takeEarlyFlowers(now);
     if (res.notReady) {
@@ -2834,7 +2951,7 @@
       if (current.coop) coopAfterLaunch(id, res, now);
       hintStillGood();
       if (res.won && current.coop && !coopAllWon()) setCaption('Board ' + (coop.idx + 1) + ' cleared! Help clear the others.');
-      else if (res.won || (current.coop && coopAllWon())) { bee = null; finish(true); }
+      else if ((res.won || (current.coop && coopAllWon())) && !(coop && coop.online)) { bee = null; finish(true); }
     } else {
       collisions++;
       res.results.forEach(function (r) {
@@ -2847,7 +2964,7 @@
         track('collision', { arrow: r.id, blocker: r.check.blocker, fire: !!r.check.fire, flower: !!r.check.flower });
       });
       thud(); buzz(26);
-      if (res.failed) finish(false, 'lives');
+      if (res.failed && !(current.coop && coop && coop.online)) finish(false, 'lives');
     }
     if (current.coop) coopSyncLives();
     refresh();
@@ -3058,7 +3175,7 @@
       else levelsSheet('calm');
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
-    s.querySelector('#again').onclick = function () { if (c.coop && coop) coopRestart(); else begin(c); };
+    s.querySelector('#again').onclick = function () { if (c.coop && coop && coop.online) { netSend({ t: 'lobby' }); closeSheet(); return; } if (c.coop && coop) coopRestart(); else begin(c); };
     s.querySelector('#winLevels').onclick = function () { levelsSheet(c.set || 'calm'); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
@@ -3667,6 +3784,7 @@
     track('guide_open', {});
   }
   function restart() {
+    if (current && current.coop && coop && coop.online) { setCaption('Online games cannot be restarted. Clear the boards together!'); return; }
     if (current && current.coop && coop) { coopRestart(); return; }
     track('restart', { launches: state.launches });
     begin(current);
@@ -3852,7 +3970,7 @@
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); },
+    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); }, netDrop: function () { if (net.ws) net.ws.close(); }, netState: function () { return { ready: net.ws && net.ws.readyState, retries: net.retries, leaving: net.leaving, code: net.code, gameReady: net.ready, pending: (net.pending || []).length }; },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
