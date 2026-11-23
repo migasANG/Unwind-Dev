@@ -773,7 +773,7 @@
     $('where').textContent = coopWhere(i);
     capMode = '';
     setCaption(coopBoardCaption(i));
-    if (focusId !== undefined) { coopFocus = focusId; setCaption('Holding: this is its twin on ' + coopName(i) + "'s board."); }
+    if (focusId !== undefined) { coopFocus = focusId; coopFocusStart = performance.now(); boardLayer = null; setCaption('Holding: this is its twin on ' + coopName(i) + "'s board."); }
     coopMaybeStart(i);
     pluck(523.3, 0, 0.06, 0.4);
   }
@@ -856,14 +856,93 @@
     L.seats.length = Math.min(L.seats.length, L.settings.players);
   }
   function lobbyClose() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; closeSheet(); }
-  function lobbySheet(inPlace) {
-    if (!lobby) {
-      var mine = load('unwind.onlineName', '') || '';
-      lobby = { code: lobbyCode(), view: 'host', timers: [], askName: !mine, settings: { players: 4, hard: false, size: 1, snipers: true, twins: true, timed: false }, pick: -1, seats: [], players: [{ name: mine || lobbyName(), you: true, host: true, ready: false }] };
-      sheet('<div id="lobbyCard"></div>', 'tall lobby');
-      lobbyFill();
+  function lobbyLeave() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; onlineSheet('home'); }
+  /* Play online: host a room, browse public rooms, or join a private one with its code. */
+  var publicRooms = null;
+  function makePublicRooms() {
+    var out = [], n = 5 + Math.floor(Math.random() * 3);
+    for (var i = 0; i < n; i++) {
+      var players = Math.random() < 0.6 ? 4 : 2;
+      out.push({ host: lobbyName(), players: players, count: 1 + Math.floor(Math.random() * players), size: [1, 1, 2, 3, 5][Math.floor(Math.random() * 5)], hard: Math.random() < 0.3, snipers: Math.random() < 0.8, twins: Math.random() < 0.8, timed: Math.random() < 0.3, public: true });
     }
-    var L = lobby, S = L.settings, host = L.view === 'host', me = L.players[0], card = $('sheetHost').querySelector('.card');
+    return out;
+  }
+  function onlineSheet(screen, filter) {
+    var mine = load('unwind.onlineName', '') || '', html;
+    if (screen === 'public') {
+      publicRooms = publicRooms || makePublicRooms();
+      filter = filter || 0;
+      var list = publicRooms.filter(function (r) { return !filter || r.players === filter; });
+      html = '<div class="orow"><button class="oback" id="oBack">‹ Back</button><button class="close" id="x" aria-label="Close">×</button></div><h2>Public rooms</h2>' +
+        '<div class="ofilter"><div class="sizes lseg o3" role="group" aria-label="Players">' + [[0, 'All'], [2, '2 players'], [4, '4 players']].map(function (f) { return '<button data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div><button id="oRefresh" aria-label="Refresh" title="Refresh">&#x21bb;</button></div>' +
+        (list.length ? '<ul class="orooms">' + list.map(function (r) {
+          var full = r.count >= r.players, i = publicRooms.indexOf(r);
+          return '<li><div class="oinfo"><b>' + r.host + '\'s room</b><span>' + r.count + ' / ' + r.players + ' players · ' + r.size + 'x boards · ' + (r.hard ? 'Hard' : 'Normal') + '</span><span class="otags">' + (r.snipers ? '<i>Snipers</i>' : '') + (r.twins ? '<i>Twin-shared</i>' : '') + (r.timed ? '<i>Timed</i>' : '') + '</span></div><button class="ojoin" data-room="' + i + '"' + (full ? ' disabled' : '') + '>' + (full ? 'Full' : 'Join') + '</button></li>';
+        }).join('') + '</ul>' : '<p class="note">No public rooms right now. Try again soon, or host one.</p>') +
+        '<p class="note" style="text-align:center">Preview: these rooms are simulated.</p>';
+    } else {
+      html = '<div class="row"><h2>Play online</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+        '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
+        '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
+        '<div class="chapter">Join a room</div>' +
+        '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
+        '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
+        '<p class="note" style="text-align:center">Preview: other players and rooms are simulated.</p>' +
+        '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><input id="oCodeIn" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" aria-label="Room code"><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
+    }
+    var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
+    if (card) card.innerHTML = html; else { sheet(html, 'tall online'); card = $('sheetHost').querySelector('.card'); }
+    card.scrollTop = 0;
+    card.querySelector('#x').onclick = closeSheet;
+    var saveName = function () { var n = card.querySelector('#oName'); if (n && n.value.trim()) save('unwind.onlineName', n.value.trim()); };
+    if (screen === 'public') {
+      card.querySelector('#oBack').onclick = function () { onlineSheet('home'); };
+      card.querySelector('#oRefresh').onclick = function () { publicRooms = makePublicRooms(); onlineSheet('public', filter); };
+      card.querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { onlineSheet('public', +b.getAttribute('data-filter')); }; });
+      card.querySelectorAll('[data-room]').forEach(function (b) { b.onclick = function () { var r = publicRooms[+b.getAttribute('data-room')]; publicRooms = null; lobby = null; lobbySheet(false, r); }; });
+      return;
+    }
+    var nameIn = card.querySelector('#oName');
+    nameIn.oninput = saveName;
+    card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
+    card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; lobbySheet(); };
+    card.querySelector('#oPublic').onclick = function () { saveName(); onlineSheet('public'); };
+    var box = card.querySelector('#oBox'), codeIn = card.querySelector('#oCodeIn'), join = card.querySelector('#oJoin'), err = card.querySelector('#oErr');
+    var clean = function () { return codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
+    card.querySelector('#oCode').onclick = function () { saveName(); box.hidden = false; codeIn.value = ''; err.textContent = ''; join.disabled = true; setTimeout(function () { codeIn.focus(); }, 30); };
+    card.querySelector('#oCancel').onclick = function () { box.hidden = true; };
+    box.onclick = function (ev) { if (ev.target === box) box.hidden = true; };
+    codeIn.oninput = function () { var c = clean(); codeIn.value = c.length > 3 ? c.slice(0, 3) + '-' + c.slice(3) : c; join.disabled = c.length !== 6; err.textContent = ''; };
+    codeIn.onkeydown = function (ev) { if (ev.key === 'Enter' && !join.disabled) join.onclick(); };
+    join.onclick = function () {
+      var c = clean();
+      if (c.length !== 6) { err.textContent = 'Room codes have 6 letters and numbers.'; return; }
+      join.disabled = true; join.textContent = 'Looking…';
+      setTimeout(function () {
+        if (!card.isConnected) return;
+        var players = Math.random() < 0.6 ? 4 : 2;
+        lobby = null;
+        lobbySheet(false, { code: c.slice(0, 3) + '-' + c.slice(3), host: lobbyName(), players: players, count: 1 + Math.floor(Math.random() * (players - 1)), size: 1, hard: false, snipers: true, twins: true, timed: false });
+      }, 700);
+    };
+  }
+  // Joining someone else's room (from the public list or a code) puts you in as a guest, next to the host.
+  function lobbyCreate(join) {
+    var mine = load('unwind.onlineName', '') || '';
+    var me = { name: mine || lobbyName(), you: true, host: !join, ready: false };
+    lobby = { code: join ? join.code || '' : lobbyCode(), view: join ? 'guest' : 'host', joined: !!join, timers: [], askName: !mine, pick: -1, seats: [], players: [me],
+      settings: join ? { players: join.players, hard: join.hard, size: join.size, snipers: join.snipers, twins: join.twins, timed: join.timed, public: !!join.public } : { players: 4, hard: false, size: 1, snipers: true, twins: true, timed: false, public: false } };
+    if (join) {
+      lobby.players.push({ name: join.host, host: true, ready: true });
+      for (var i = 2; i < join.count + 1 && i < join.players; i++) lobby.players.push({ name: lobbyName(), ready: Math.random() < 0.6 });
+      lobby.players.forEach(function (p) { if (!p.you && !p.ready) lobbyLater(function () { if (lobby.players.indexOf(p) >= 0) { p.ready = true; lobbySheet(true); } }, 2000 + Math.random() * 3000); });
+    }
+    sheet('<div id="lobbyCard"></div>', 'tall lobby');
+    lobbyFill();
+  }
+  function lobbySheet(inPlace, join) {
+    if (!lobby) lobbyCreate(join);
+    var L = lobby, S = L.settings, host = L.view === 'host' && !L.joined, me = L.players[0], card = $('sheetHost').querySelector('.card');
     if (!card) return;
     lobbySeats();
     var perLife = S.hard ? 2 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
@@ -871,19 +950,21 @@
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
     var html = '<div class="row"><h2>Co-op room</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
-    html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
-    html += '<div class="lcode"><small>Room code</small><b id="lCode">' + L.code + '</b><button id="lCopy">Copy</button><p>' + (host ? 'Share this code with your friends so they can join.' : 'You joined with this code.') + '</p></div>';
+    if (!L.joined) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
+    html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
+      : '<div class="lcode"><small>Room code</small><b id="lCode">' + L.code + '</b><button id="lCopy">Copy</button><p>' + (host ? 'Share this code with your friends so they can join.' : 'You joined with this code.') + '</p></div>';
     html += '<div class="chapter">Your online name</div><div class="lname"><input id="lName" maxlength="16" value="' + me.name.replace(/"/g, '&quot;') + '" aria-label="Your online name"><button id="lNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">' + (L.askName ? 'First online room: pick the name your friends will see. You can change it in Settings later.' : 'You can change it until the game starts.') + '</p>';
     html += '<div class="chapter">Players ' + L.players.length + ' / ' + S.players + '</div><ul class="lplayers">';
     for (var i = 0; i < S.players; i++) {
       var p = L.players[i];
       if (!p) { html += '<li class="empty"><span class="dot"></span><span class="nm">Waiting for a player…</span></li>'; continue; }
-      var isHost = host ? p.host : i === 1, you = host ? p.you : i === 0;
+      var isHost = host || L.joined ? p.host : i === 1, you = host || L.joined ? p.you : i === 0;
       html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm">' + p.name + (you ? ' <em>(you)</em>' : '') + (isHost ? ' <i class="crown" title="Host">♛ Host</i>' : '') + '</span><span class="bd">Board ' + (lobby.seats.indexOf(p) + 1) + '</span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+    html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
     html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
@@ -894,12 +975,14 @@
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
     else html += '<p class="lwait">' + (all ? 'Everyone is ready. Waiting for the host to start…' : 'The game starts when everyone is ready and the host starts it.') + '</p>';
+    if (L.joined && all && !L.starting) { L.starting = true; lobbyLater(lobbyStart, 2200); }
+    if (!all) L.starting = false;
     html += '<button class="lleave" id="lLeave">Leave room</button><p class="note" style="text-align:center">Preview only: the other players are simulated.</p>';
     var top = card.scrollTop;
     card.innerHTML = '<div id="lobbyCard"></div>' + html; card.scrollTop = top;
-    card.querySelector('#x').onclick = lobbyClose; card.querySelector('#lLeave').onclick = lobbyClose;
+    card.querySelector('#x').onclick = lobbyLeave; card.querySelector('#lLeave').onclick = lobbyLeave;
     card.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { L.view = b.getAttribute('data-view'); lobbySheet(true); }; });
-    card.querySelector('#lCopy').onclick = function () {
+    if (card.querySelector('#lCopy')) card.querySelector('#lCopy').onclick = function () {
       var btn = this;
       try { navigator.clipboard.writeText(L.code).then(function () { btn.textContent = 'Copied'; }, function () { btn.textContent = 'Select it'; }); } catch (e) { btn.textContent = 'Select it'; }
     };
@@ -910,6 +993,7 @@
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
+      if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
       // Changing a setting asks everyone to confirm again.
       L.players.forEach(function (p) { if (!p.you && p.ready) { p.ready = false; lobbyLater(function () { if (L.players.indexOf(p) >= 0) { p.ready = true; lobbySheet(true); } }, 1200 + Math.random() * 2000); } });
@@ -949,14 +1033,17 @@
     card.querySelectorAll('[data-kick]').forEach(function (b) { b.onclick = function () { L.players.splice(+b.getAttribute('data-kick'), 1); lobbySheet(true); lobbyJoin(2500); }; });
     card.querySelector('#lReady').onclick = function () { me.ready = !me.ready; pluck(me.ready ? 784 : 392, 0, 0.06, 0.3); lobbySheet(true); };
     var st = card.querySelector('#lStart');
-    if (st) st.onclick = function () {
-      if (!all) return;
-      var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
-      var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
-      lobby.timers.forEach(clearTimeout); lobby = null;
-      spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
-      openCoop(0, false, spec);
-    };
+    if (st) st.onclick = function () { if (all) lobbyStart(); };
+  }
+  function lobbyStart() {
+    var L = lobby;
+    if (!L || !$('lobbyCard')) return;
+    var S = L.settings, me = L.players[0], lives = (S.hard ? 2 : 3) * S.players;
+    var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
+    var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
+    lobby.timers.forEach(clearTimeout); lobby = null;
+    spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
+    openCoop(0, false, spec);
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -1200,11 +1287,19 @@
   }
   // Arrows that animate are always drawn live. The rest can sit in the cached board.
   var boardLayer = null, layerBuilding = false, boardDpr = 2, unoFlip = {};
+  // A held twin's partner swells and shrinks like a hint does, but keeps its own colour.
+  var coopFocusStart = 0;
+  function focusAmt(now) {
+    var t = now - coopFocusStart;
+    if (t < HINT_IN) { var x = Math.max(0, t / HINT_IN); return x * x * (3 - 2 * x); }
+    return 0.75 + 0.25 * Math.cos((t - HINT_IN) / 1000 * 2 * Math.PI);
+  }
   function staticArrow(a, now) {
     if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.uno !== undefined || a.red || (state.freed && state.freed[a.id]) || a.rot || state.frozen[a.id] !== undefined || (a.wait && state.launches < a.wait) || introOf(a, now) < 1) return false;
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (bounces[a.id] || (nudges[a.id] && now < nudges[a.id]) || (blockerGlow[a.id] && now < blockerGlow[a.id]) || (a.burnUntil && now < a.burnUntil)) return false;
     if (hintArrow === a.id || (hintArrow >= 0 && a.kind === 'twin' && a.twin === hintArrow)) return false;
+    if (coop && coopFocus === a.id) return false;
     return true;
   }
   function zoomAt(x, y, factor) {
@@ -1377,7 +1472,7 @@
       if (state.removed[a.id] || offscreen(a)) return;
       var intro = introOf(a, now);
       if (intro <= 0) return;
-      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : coop && coopFocus === a.id ? 0.75 + 0.25 * Math.sin(now / 200) : 0, isReady = ready(a);
+      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : coop && coopFocus === a.id ? focusAmt(now) : 0, isReady = ready(a);
       if (b) {
         var bt = (now - b.start) / 440;
         if (bt >= 1) delete bounces[a.id]; else shift = Math.sin(bt * Math.PI) * b.reach;
@@ -1424,12 +1519,6 @@
         var pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 220);
         setStroke('#ffd23f', width * (2.6 + pulse * 1.8), 0.22 + pulse * 0.2); strokeWindow(pts, shift, shift + len);
         setStroke('#fff3b0', width * 1.6, 0.5); strokeWindow(pts, shift, shift + len);
-      }
-      if (coop && coopFocus === a.id) {
-        // Held from another board: the partner glows in its own colour.
-        var fp = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 200);
-        setStroke(color, width * (2.8 + fp * 2), 0.18 + fp * 0.18); strokeWindow(pts, shift, shift + len);
-        setStroke(color, width * 1.7, 0.35); strokeWindow(pts, shift, shift + len);
       }
       setStroke(color, width, alpha);
       if (!isReady && !isFrozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
@@ -1714,7 +1803,7 @@
     ctx.globalAlpha = 0.92 * fade; ctx.fillStyle = colors.card;
     ctx.beginPath(); ctx.roundRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8, 8); ctx.fill();
     // The map only changes when arrows do, so it is drawn once per change and reused.
-    var key = [current.id, state.launches, hintArrow, colors.name, Math.round(r.w)].join();
+    var key = [current.id, state.launches, hintArrow, coopFocus, colors.name, Math.round(r.w)].join();
     if (!miniCache || miniCache.key !== key) {
       var cv = miniCache && miniCache.canvas || document.createElement('canvas'), mc = cv.getContext('2d');
       cv.width = Math.ceil(r.w * 2); cv.height = Math.ceil(r.h * 2);
@@ -2422,13 +2511,13 @@
     ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
     ctx.fillStyle = colors.card; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif';
+    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif';
     var lw = ctx.measureText(letter).width;
-    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif';
+    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif';
     var pw = ctx.measureText('+').width, x0 = c.x - (lw + pw) / 2;
     ctx.textAlign = 'left';
-    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
-    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.12);
+    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
+    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.14);
     ctx.restore();
   }
   function drawCrosshair(c, r, color) {
@@ -2890,7 +2979,7 @@
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mLobby"><b>Co-op room (preview)</b><span>What the room host would see: players, code and settings.</span></button><button id="mTutSniper"><b>Tutorial: Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Tutorial: Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
+    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mLobby"><b>Play online (preview)</b><span>Host a room, browse public rooms or join with a code. Other players are simulated.</span></button><button id="mTutSniper"><b>Tutorial: Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Tutorial: Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -2904,7 +2993,7 @@
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mCoop').onclick = function () { openCoop(); };
     s.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
-    s.querySelector('#mLobby').onclick = function () { lobbySheet(); };
+    s.querySelector('#mLobby').onclick = function () { onlineSheet('home'); };
     s.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
     s.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
     s.querySelector('#mDaily').onclick = openDaily;
@@ -3356,10 +3445,10 @@
       '<details class="mpx"' + (seasonHere ? ' open' : '') + '><summary>Seasonal arrows and effects</summary>' + items.filter(function (it) { return SEASONAL[it.key]; }).map(row).join('') + '</details>';
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
-      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
-        art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' },
       { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.',
-        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' }
+        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' },
+      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
+        art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' }
     ];
     var hereMp = {};
     if (current.coop && coop) { coop.boards.forEach(function (B) { B.level.arrows.forEach(function (a) { if (a.sniper && !B.state.removed[a.id]) hereMp.sniper = 1; if (a.coopGroup !== undefined) hereMp.twinshared = 1; }); }); }
@@ -3555,7 +3644,7 @@
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobbySheet(); },
+    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },

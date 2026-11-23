@@ -280,6 +280,40 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 #lStart[disabled]{opacity:.5}
 .lwait{text-align:center;font-weight:600;margin:0}
 .lleave{height:40px;border-radius:20px;font-weight:600;opacity:.8}
+.card.online{gap:12px}
+.card.online>*{flex:none}
+.card.online h2{margin:0}
+.orow{display:flex;justify-content:space-between;align-items:center}
+.orow .close{margin:-4px -8px 0 0}
+.oback{height:36px;padding:0 12px;border-radius:18px;font-weight:600;background:color-mix(in srgb,currentColor 9%,transparent)}
+.obig{text-align:left;padding:14px 16px;border-radius:16px;border:1.5px solid currentColor;display:grid;gap:3px;line-height:1.3}
+.obig b{font-size:1.05rem}
+.obig span{font-size:.8125rem;opacity:.8}
+#oHost{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.ofilter{display:flex;gap:8px;align-items:center}
+.ofilter .sizes{flex:1;grid-template-columns:repeat(3,1fr)}
+.ofilter>button{width:40px;height:40px;border-radius:12px;border:1.5px solid currentColor;font-size:1.1rem;flex:none}
+.orooms{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.orooms li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,currentColor 7%,transparent)}
+.oinfo{flex:1;min-width:0;display:grid;gap:3px}
+.oinfo b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oinfo span{font-size:.75rem;opacity:.85}
+.otags{display:flex;flex-wrap:wrap;gap:4px}
+.otags i{font-style:normal;font-size:.6875rem;font-weight:600;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,currentColor 12%,transparent)}
+.ojoin{height:36px;padding:0 16px;border-radius:18px;background:var(--ink);color:var(--card);font-weight:700;flex:none}
+.ojoin[disabled]{opacity:.4}
+.ocodebox{position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--sky-a) 50%,transparent);animation:fade .2s ease both}
+.ocodebox[hidden]{display:none}
+.obox{width:100%;max-width:320px;background:var(--card);border-radius:20px;padding:20px;display:grid;gap:10px;box-shadow:0 10px 40px color-mix(in srgb,var(--ink) 30%,transparent);animation:pop .25s cubic-bezier(.3,1.4,.5,1) both}
+.obox h3{margin:0;font-size:1.1rem}
+.obox input{height:52px;border-radius:14px;border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-size:1.6rem;font-weight:700;letter-spacing:.14em;text-align:center;text-transform:uppercase;min-width:0}
+.oerr{margin:0;min-height:1em;font-size:.8125rem;color:#c8202f}
+.obtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.obtns button{height:44px;border-radius:22px;font-weight:600}
+.obtns button:first-child{border:1.5px solid currentColor}
+.obtns .primary[disabled]{opacity:.45}
+.lcode.lpublic b{font-size:1.25rem;letter-spacing:0}
+.lseg.o3{grid-template-columns:repeat(3,1fr)}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes fadeout{from{opacity:1}to{opacity:0}}
@@ -1769,7 +1803,7 @@ window.UnwindI18n = (function () {
     'Arrow guide': 'Guia das setas', 'On this board': 'Neste tabuleiro', '▶ Watch how it works': '▶ Ver como funciona', 'Music and sound': 'Música e som', 'Settings': 'Definições', 'Language': 'Idioma', 'Music': 'Música', 'Sound effects': 'Efeitos sonoros', 'Theme': 'Tema', 'Follow the level': 'Seguir o nível', 'Matches the time of day or season': 'Acompanha a hora do dia ou a estação do ano', 'Music is off': 'Música desligada',
     'Sound on for the full experience': 'Liga o som para a experiência completa', 'Tap to begin': 'Toca para começar',
     'Puzzle board. Tap an arrow to send it off the board.': 'Tabuleiro do puzzle. Toca numa seta para a enviar para fora do tabuleiro.', 'Music and sound settings': 'Definições de música e som', 'Settings ': 'Definições', 'Choose a background': 'Escolher um fundo', 'Zoom in': 'Aproximar', 'Zoom out': 'Afastar', 'Show the whole board': 'Mostrar o tabuleiro todo', 'Close': 'Fechar',
-    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'The backgrounds will change with the music: when a song ends, the next scene fades in.': 'Os fundos mudam com a música: quando uma música acaba, o cenário seguinte aparece suavemente.', 'High Sun': 'Sol a Pino', 'Noon: sunny vibraphone and soft guitar': 'Meio-dia: vibrafone solarengo e guitarra suave', 'Next Theme': 'Tema seguinte', 'Co-op test: 4 boards': 'Teste cooperativo: 4 tabuleiros', 'Co-op room (preview)': 'Sala cooperativa (pré-visualização)', 'What the room host would see: players, code and settings.': 'O que o anfitrião da sala veria: jogadores, código e definições.', 'Tutorial: Sniper arrows': 'Tutorial: Setas sniper', 'Tutorial: Twin-shared arrows': 'Tutorial: Setas gémeas partilhadas', 'Two boards. You control both.': 'Dois tabuleiros. Controlas os dois.', 'Sniper arrows': 'Setas sniper', 'Twin-shared arrows': 'Setas gémeas partilhadas', 'The red arrow with a sight is a sniper. When it leaves, it flies on to the next board and destroys the first arrow it hits.': 'A seta vermelha com uma mira é uma sniper. Quando sai, voa até ao tabuleiro seguinte e destrói a primeira seta em que acerta.', 'The two middle arrows block each other. Only Ana\'s sniper arrow can break them free.': 'As duas setas do meio bloqueiam-se uma à outra. Só a seta sniper da Ana as consegue libertar.', 'The X+ arrow has a twin on Bruno\'s board. They leave together, so both paths must be clear.': 'A seta X+ tem uma gémea no tabuleiro do Bruno. Saem juntas, por isso os dois caminhos têm de estar livres.', 'Clear the way for X+ here too. Hold an X+ arrow to see its twin.': 'Abre caminho para a X+ aqui também. Mantém premida uma seta X+ para veres a gémea.', 'Co-op test: clear both boards. Use the arrow at the edge to switch boards.': 'Teste cooperativo: limpa os dois tabuleiros. Usa a seta na margem para mudar de tabuleiro.', 'Nothing can move here yet. Check the other boards.': 'Ainda nada se pode mexer aqui. Vê os outros tabuleiros.', 'Co-op room': 'Sala cooperativa', 'Leave room': 'Sair da sala', 'Preview as': 'Ver como', 'Host': 'Anfitrião', 'Player': 'Jogador', 'Room code': 'Código da sala', 'Copy': 'Copiar', 'Copied': 'Copiado', 'Select it': 'Seleciona-o', 'Share this code with your friends so they can join.': 'Partilha este código com os teus amigos para eles entrarem.', 'You joined with this code.': 'Entraste com este código.', 'Your online name': 'O teu nome online', 'Random name': 'Nome aleatório', 'First online room: pick the name your friends will see. You can change it in Settings later.': 'Primeira sala online: escolhe o nome que os teus amigos vão ver. Podes mudá-lo depois nas Definições.', 'You can change it until the game starts.': 'Podes mudá-lo até o jogo começar.', 'Waiting for a player…': 'À espera de um jogador…', '(you)': '(tu)', '♛ Host': '♛ Anfitrião', 'Ready': 'Pronto', 'Not ready': 'Não está pronto', 'Boards': 'Tabuleiros', 'Side by side: snipers fly left and right.': 'Lado a lado: as snipers voam para a esquerda e para a direita.', 'Two rows of two: snipers fly to the board beside, above or below.': 'Duas filas de dois: as snipers voam para o tabuleiro ao lado, acima ou abaixo.', 'Room settings': 'Definições da sala', 'Room settings · set by the host': 'Definições da sala · escolhidas pelo anfitrião', 'Players': 'Jogadores', 'Rooms are for 2 or 4 players': 'As salas são para 2 ou 4 jogadores', '2 players': '2 jogadores', '4 players': '4 jogadores', 'Difficulty': 'Dificuldade', 'Bigger boards, 2 lives per player': 'Tabuleiros maiores, 2 vidas por jogador', '3 lives per player': '3 vidas por jogador', 'Normal': 'Normal', 'Board size': 'Tamanho do tabuleiro', 'The same for every player': 'Igual para todos os jogadores', 'Big (3x)': 'Grande (3x)', 'Optional bonus shots onto other boards': 'Tiros bónus opcionais para outros tabuleiros', 'Arrows that leave together across boards': 'Setas que saem juntas em tabuleiros diferentes', 'One shared clock, normal time +25%': 'Um relógio partilhado, tempo normal +25%', 'Shared lives': 'Vidas partilhadas', 'Shared timer': 'Relógio partilhado', 'Off': 'Desligado', 'Win': 'Vitória', 'All boards cleared': 'Todos os tabuleiros limpos', 'I\'m ready': 'Estou pronto', 'Ready ✓ (tap to cancel)': 'Pronto ✓ (toca para cancelar)', 'Start game': 'Começar jogo', 'Everyone is ready. Waiting for the host to start…': 'Estão todos prontos. À espera que o anfitrião comece…', 'The game starts when everyone is ready and the host starts it.': 'O jogo começa quando estiverem todos prontos e o anfitrião o iniciar.', 'Preview only: the other players are simulated.': 'Só pré-visualização: os outros jogadores são simulados.', 'Sniper arrow': 'Seta sniper', 'Multiplayer only. When a sniper arrow leaves its board, it flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move.': 'Só no multijogador. Quando uma seta sniper sai do seu tabuleiro, voa até ao tabuleiro seguinte e destrói a primeira seta em que acerta. O impacto não conta como jogada.', 'These two arrows block each other': 'Estas duas setas bloqueiam-se uma à outra', 'A sniper flies on to the next board': 'Uma sniper voa até ao tabuleiro seguinte', 'It destroyed the first arrow it hit': 'Destruiu a primeira seta em que acertou', 'Multiplayer only. Same colour, letter and a plus. They leave together with their twins on other boards, so every path must be clear. Hold one to see its twins.': 'Só no multijogador. A mesma cor, letra e um mais. Saem juntas com as gémeas noutros tabuleiros, por isso todos os caminhos têm de estar livres. Mantém uma premida para veres as gémeas.', 'Its twin on the other board is blocked': 'A gémea no outro tabuleiro está bloqueada', 'Clear the way on that board first': 'Primeiro abre caminho nesse tabuleiro', 'Now both leave together': 'Agora saem as duas juntas', 'Multiplayer exclusive arrows': 'Setas exclusivas do multijogador', 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.': 'Voa até ao tabuleiro do jogador seguinte e destrói a primeira seta em que acerta. O impacto não conta como jogada.', 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.': 'A mesma cor, letra e um mais. Saem juntas com as gémeas nos tabuleiros dos outros jogadores, por isso todos os caminhos têm de estar livres. Mantém uma premida para veres as gémeas.', 'Side by side. Tap two boards to swap their players.': 'Lado a lado. Toca em dois tabuleiros para trocar os jogadores.', 'Two rows of two. Tap two boards to swap their players.': 'Duas filas de dois. Toca em dois tabuleiros para trocar os jogadores.', 'Side by side. The host chooses who plays each board.': 'Lado a lado. O anfitrião escolhe quem joga em cada tabuleiro.', 'Two rows of two. The host chooses who plays each board.': 'Duas filas de dois. O anfitrião escolhe quem joga em cada tabuleiro.', 'The same for every player. Bigger boards can be zoomed.': 'Igual para todos os jogadores. Os tabuleiros maiores podem ser ampliados.', '1 shared timer between all players': '1 relógio partilhado entre todos os jogadores', 'Yes': 'Sim', 'No': 'Não', '2 lives per player, and arrows with several effects at once': '2 vidas por jogador e setas com vários efeitos ao mesmo tempo', 'Pause': 'Pausa', 'Game paused': 'Jogo em pausa', 'You paused': 'Puseste em pausa', 'This player has paused the game:': 'Este jogador pôs o jogo em pausa:', 'These people have paused the game:': 'Estas pessoas puseram o jogo em pausa:', 'Only you are paused, so the game keeps going for the others. It stops for everyone when half or more of the players pause.': 'Só tu estás em pausa, por isso o jogo continua para os outros. Para para todos quando metade ou mais dos jogadores fizerem pausa.', 'Paused': 'Em pausa', 'Playing': 'A jogar', 'The game and the clock are stopped for everyone until all players are back.': 'O jogo e o relógio estão parados para todos até todos os jogadores voltarem.', 'Resume': 'Continuar', 'Resume for everyone': 'Continuar para todos', 'Preview: the other players are simulated.': 'Pré-visualização: os outros jogadores são simulados.', 'Everyone is back. Game on!': 'Voltaram todos. Vamos a isso!', 'You': 'Tu', 'Generic arrows': 'Setas genéricas', 'Seasonal arrows and effects': 'Setas e efeitos das estações', 'Shared timer between all players': 'Relógio partilhado entre todos os jogadores', 'Side by side. Tap two boards, or drag one onto another, to swap their players.': 'Lado a lado. Toca em dois tabuleiros, ou arrasta um para cima de outro, para trocar os jogadores.', 'Two rows of two. Tap two boards, or drag one onto another, to swap their players.': 'Duas filas de dois. Toca em dois tabuleiros, ou arrasta um para cima de outro, para trocar os jogadores.', 'Loading boards…': 'A carregar os tabuleiros…', 'Loading board…': 'A carregar o tabuleiro…', 'Co-op test: big boards': 'Teste cooperativo: tabuleiros grandes', 'Same test, each board three times the size.': 'O mesmo teste, com cada tabuleiro três vezes maior.', 'Temporary. You control all four boards.': 'Temporário. Controlas os quatro tabuleiros.', 'Co-op test: clear all four boards. Use the arrows at the edges to switch boards.': 'Teste cooperativo: limpa os quatro tabuleiros. Usa as setas nas margens para mudar de tabuleiro.', 'Wait: a sniper is coming in.': 'Espera: vem aí um sniper.', 'A sniper is coming in!': 'Vem aí um sniper!', 'Co-op test': 'Teste cooperativo', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
+    'Tap an arrow to send it off the board. Get them all out to win.': 'Toca numa seta para a enviar para fora do tabuleiro. Tira-as todas para ganhar.', 'Hit a frozen arrow with another arrow to open the way. It costs nothing.': 'Acerta numa seta congelada com outra seta para abrires caminho. Não custa nada.', 'Next': 'Próxima', 'Next play: the highlighted arrow.': 'Próxima jogada: a seta destacada.', 'A play exists, but this board may not clear from here.': 'Há uma jogada, mas daqui o tabuleiro pode não ficar limpo.', 'Next play: hit the ice with the highlighted arrow. It costs nothing.': 'Próxima jogada: acerta no gelo com a seta destacada. Não custa nada.', 'Dead end: no play is possible.': 'Sem saída: não há jogadas possíveis.', 'Test level: ice warning': 'Nível de teste: aviso do gelo', 'Temporary. After 2 launches, only hitting the ice is possible.': 'Temporário. Depois de 2 lançamentos, só é possível acertar no gelo.', 'Test level': 'Nível de teste', 'Test level: play the two arrows on the left, then watch the message here.': 'Nível de teste: joga as duas setas da esquerda e vê a mensagem aqui.', 'Arrows with several effects': 'Setas com vários efeitos', 'In Hard, one arrow can carry up to 3 effects at once. Every one of its rules applies, so read all of its symbols.': 'No modo Difícil, uma seta pode ter até 3 efeitos ao mesmo tempo. Aplicam-se todas as regras, por isso lê todos os símbolos.', 'Patient and reverse: it must wait 1 launch': 'Paciente e inversa: tem de esperar 1 lançamento', 'One launch, and its tip also swaps ends': 'Um lançamento, e a ponta também troca de lado', 'Both rules are met: it leaves the other way': 'As duas regras cumpridas: sai pelo outro lado', 'A golden arrow! It can fly through anything.': 'Uma seta dourada! Consegue atravessar tudo.', 'Test level: golden arrow': 'Nível de teste: seta dourada', 'Temporary. After 1 launch, two arrows block each other and one turns golden.': 'Temporário. Depois de 1 lançamento, duas setas bloqueiam-se e uma fica dourada.', 'Test level: play the arrow at the top to see the golden arrow.': 'Nível de teste: joga a seta de cima para veres a seta dourada.', 'Golden arrow': 'Seta dourada', 'Only appears if arrows truly block each other. It sparkles, hums and can fly through anything, so the board can always be cleared.': 'Só aparece quando há setas que se bloqueiam mesmo umas às outras. Brilha, faz um som especial e atravessa tudo, por isso o tabuleiro pode sempre ser limpo.', 'Music volume': 'Volume da música', 'Sound volume': 'Volume dos sons', 'The backgrounds will change with the music: when a song ends, the next scene fades in.': 'Os fundos mudam com a música: quando uma música acaba, o cenário seguinte aparece suavemente.', 'High Sun': 'Sol a Pino', 'Noon: sunny vibraphone and soft guitar': 'Meio-dia: vibrafone solarengo e guitarra suave', 'Next Theme': 'Tema seguinte', 'Co-op test: 4 boards': 'Teste cooperativo: 4 tabuleiros', 'Co-op room (preview)': 'Sala cooperativa (pré-visualização)', 'What the room host would see: players, code and settings.': 'O que o anfitrião da sala veria: jogadores, código e definições.', 'Tutorial: Sniper arrows': 'Tutorial: Setas sniper', 'Tutorial: Twin-shared arrows': 'Tutorial: Setas gémeas partilhadas', 'Two boards. You control both.': 'Dois tabuleiros. Controlas os dois.', 'Sniper arrows': 'Setas sniper', 'Twin-shared arrows': 'Setas gémeas partilhadas', 'The red arrow with a sight is a sniper. When it leaves, it flies on to the next board and destroys the first arrow it hits.': 'A seta vermelha com uma mira é uma sniper. Quando sai, voa até ao tabuleiro seguinte e destrói a primeira seta em que acerta.', 'The two middle arrows block each other. Only Ana\'s sniper arrow can break them free.': 'As duas setas do meio bloqueiam-se uma à outra. Só a seta sniper da Ana as consegue libertar.', 'The X+ arrow has a twin on Bruno\'s board. They leave together, so both paths must be clear.': 'A seta X+ tem uma gémea no tabuleiro do Bruno. Saem juntas, por isso os dois caminhos têm de estar livres.', 'Clear the way for X+ here too. Hold an X+ arrow to see its twin.': 'Abre caminho para a X+ aqui também. Mantém premida uma seta X+ para veres a gémea.', 'Co-op test: clear both boards. Use the arrow at the edge to switch boards.': 'Teste cooperativo: limpa os dois tabuleiros. Usa a seta na margem para mudar de tabuleiro.', 'Nothing can move here yet. Check the other boards.': 'Ainda nada se pode mexer aqui. Vê os outros tabuleiros.', 'Co-op room': 'Sala cooperativa', 'Leave room': 'Sair da sala', 'Preview as': 'Ver como', 'Host': 'Anfitrião', 'Player': 'Jogador', 'Room code': 'Código da sala', 'Copy': 'Copiar', 'Copied': 'Copiado', 'Select it': 'Seleciona-o', 'Share this code with your friends so they can join.': 'Partilha este código com os teus amigos para eles entrarem.', 'You joined with this code.': 'Entraste com este código.', 'Your online name': 'O teu nome online', 'Random name': 'Nome aleatório', 'First online room: pick the name your friends will see. You can change it in Settings later.': 'Primeira sala online: escolhe o nome que os teus amigos vão ver. Podes mudá-lo depois nas Definições.', 'You can change it until the game starts.': 'Podes mudá-lo até o jogo começar.', 'Waiting for a player…': 'À espera de um jogador…', '(you)': '(tu)', '♛ Host': '♛ Anfitrião', 'Ready': 'Pronto', 'Not ready': 'Não está pronto', 'Boards': 'Tabuleiros', 'Side by side: snipers fly left and right.': 'Lado a lado: as snipers voam para a esquerda e para a direita.', 'Two rows of two: snipers fly to the board beside, above or below.': 'Duas filas de dois: as snipers voam para o tabuleiro ao lado, acima ou abaixo.', 'Room settings': 'Definições da sala', 'Room settings · set by the host': 'Definições da sala · escolhidas pelo anfitrião', 'Players': 'Jogadores', 'Rooms are for 2 or 4 players': 'As salas são para 2 ou 4 jogadores', '2 players': '2 jogadores', '4 players': '4 jogadores', 'Difficulty': 'Dificuldade', 'Bigger boards, 2 lives per player': 'Tabuleiros maiores, 2 vidas por jogador', '3 lives per player': '3 vidas por jogador', 'Normal': 'Normal', 'Board size': 'Tamanho do tabuleiro', 'The same for every player': 'Igual para todos os jogadores', 'Big (3x)': 'Grande (3x)', 'Optional bonus shots onto other boards': 'Tiros bónus opcionais para outros tabuleiros', 'Arrows that leave together across boards': 'Setas que saem juntas em tabuleiros diferentes', 'One shared clock, normal time +25%': 'Um relógio partilhado, tempo normal +25%', 'Shared lives': 'Vidas partilhadas', 'Shared timer': 'Relógio partilhado', 'Off': 'Desligado', 'Win': 'Vitória', 'All boards cleared': 'Todos os tabuleiros limpos', 'I\'m ready': 'Estou pronto', 'Ready ✓ (tap to cancel)': 'Pronto ✓ (toca para cancelar)', 'Start game': 'Começar jogo', 'Everyone is ready. Waiting for the host to start…': 'Estão todos prontos. À espera que o anfitrião comece…', 'The game starts when everyone is ready and the host starts it.': 'O jogo começa quando estiverem todos prontos e o anfitrião o iniciar.', 'Preview only: the other players are simulated.': 'Só pré-visualização: os outros jogadores são simulados.', 'Sniper arrow': 'Seta sniper', 'Multiplayer only. When a sniper arrow leaves its board, it flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move.': 'Só no multijogador. Quando uma seta sniper sai do seu tabuleiro, voa até ao tabuleiro seguinte e destrói a primeira seta em que acerta. O impacto não conta como jogada.', 'These two arrows block each other': 'Estas duas setas bloqueiam-se uma à outra', 'A sniper flies on to the next board': 'Uma sniper voa até ao tabuleiro seguinte', 'It destroyed the first arrow it hit': 'Destruiu a primeira seta em que acertou', 'Multiplayer only. Same colour, letter and a plus. They leave together with their twins on other boards, so every path must be clear. Hold one to see its twins.': 'Só no multijogador. A mesma cor, letra e um mais. Saem juntas com as gémeas noutros tabuleiros, por isso todos os caminhos têm de estar livres. Mantém uma premida para veres as gémeas.', 'Its twin on the other board is blocked': 'A gémea no outro tabuleiro está bloqueada', 'Clear the way on that board first': 'Primeiro abre caminho nesse tabuleiro', 'Now both leave together': 'Agora saem as duas juntas', 'Multiplayer exclusive arrows': 'Setas exclusivas do multijogador', 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.': 'Voa até ao tabuleiro do jogador seguinte e destrói a primeira seta em que acerta. O impacto não conta como jogada.', 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.': 'A mesma cor, letra e um mais. Saem juntas com as gémeas nos tabuleiros dos outros jogadores, por isso todos os caminhos têm de estar livres. Mantém uma premida para veres as gémeas.', 'Side by side. Tap two boards to swap their players.': 'Lado a lado. Toca em dois tabuleiros para trocar os jogadores.', 'Two rows of two. Tap two boards to swap their players.': 'Duas filas de dois. Toca em dois tabuleiros para trocar os jogadores.', 'Side by side. The host chooses who plays each board.': 'Lado a lado. O anfitrião escolhe quem joga em cada tabuleiro.', 'Two rows of two. The host chooses who plays each board.': 'Duas filas de dois. O anfitrião escolhe quem joga em cada tabuleiro.', 'The same for every player. Bigger boards can be zoomed.': 'Igual para todos os jogadores. Os tabuleiros maiores podem ser ampliados.', '1 shared timer between all players': '1 relógio partilhado entre todos os jogadores', 'Yes': 'Sim', 'No': 'Não', '2 lives per player, and arrows with several effects at once': '2 vidas por jogador e setas com vários efeitos ao mesmo tempo', 'Pause': 'Pausa', 'Game paused': 'Jogo em pausa', 'You paused': 'Puseste em pausa', 'This player has paused the game:': 'Este jogador pôs o jogo em pausa:', 'These people have paused the game:': 'Estas pessoas puseram o jogo em pausa:', 'Only you are paused, so the game keeps going for the others. It stops for everyone when half or more of the players pause.': 'Só tu estás em pausa, por isso o jogo continua para os outros. Para para todos quando metade ou mais dos jogadores fizerem pausa.', 'Paused': 'Em pausa', 'Playing': 'A jogar', 'The game and the clock are stopped for everyone until all players are back.': 'O jogo e o relógio estão parados para todos até todos os jogadores voltarem.', 'Resume': 'Continuar', 'Resume for everyone': 'Continuar para todos', 'Preview: the other players are simulated.': 'Pré-visualização: os outros jogadores são simulados.', 'Everyone is back. Game on!': 'Voltaram todos. Vamos a isso!', 'You': 'Tu', 'Generic arrows': 'Setas genéricas', 'Seasonal arrows and effects': 'Setas e efeitos das estações', 'Shared timer between all players': 'Relógio partilhado entre todos os jogadores', 'Side by side. Tap two boards, or drag one onto another, to swap their players.': 'Lado a lado. Toca em dois tabuleiros, ou arrasta um para cima de outro, para trocar os jogadores.', 'Two rows of two. Tap two boards, or drag one onto another, to swap their players.': 'Duas filas de dois. Toca em dois tabuleiros, ou arrasta um para cima de outro, para trocar os jogadores.', 'Loading boards…': 'A carregar os tabuleiros…', 'Loading board…': 'A carregar o tabuleiro…', 'Play online (preview)': 'Jogar online (pré-visualização)', 'Host a room, browse public rooms or join with a code. Other players are simulated.': 'Cria uma sala, procura salas públicas ou entra com um código. Os outros jogadores são simulados.', 'Play online': 'Jogar online', 'Pick a name': 'Escolhe um nome', 'The name your friends will see. No account needed.': 'O nome que os teus amigos vão ver. Não precisas de conta.', 'Host a room': 'Criar uma sala', 'Pick the settings and invite friends with a code, or open it to everyone.': 'Escolhe as definições e convida amigos com um código, ou abre-a a todos.', 'Join a room': 'Entrar numa sala', 'Public rooms': 'Salas públicas', 'Browse open rooms and jump in.': 'Vê as salas abertas e entra.', 'Enter a room code': 'Introduzir um código de sala', 'A friend sent you a code for a private room.': 'Um amigo enviou-te o código de uma sala privada.', 'Preview: other players and rooms are simulated.': 'Pré-visualização: os outros jogadores e salas são simulados.', 'Cancel': 'Cancelar', 'Join': 'Entrar', 'Looking…': 'A procurar…', 'Room codes have 6 letters and numbers.': 'Os códigos de sala têm 6 letras e números.', '‹ Back': '‹ Voltar', 'All': 'Todas', 'Refresh': 'Atualizar', 'Full': 'Cheia', 'Snipers': 'Snipers', 'Twin-shared': 'Gémeas partilhadas', 'No public rooms right now. Try again soon, or host one.': 'Não há salas públicas agora. Tenta daqui a pouco, ou cria uma.', 'Preview: these rooms are simulated.': 'Pré-visualização: estas salas são simuladas.', 'Public room': 'Sala pública', 'Anyone can find and join it in Public rooms. No code needed.': 'Qualquer pessoa a pode encontrar e entrar nas Salas públicas. Não é preciso código.', 'You joined from Public rooms.': 'Entraste a partir das Salas públicas.', 'Room type': 'Tipo de sala', 'Listed in Public rooms for anyone to join': 'Aparece nas Salas públicas para qualquer pessoa entrar', 'Only people with the code can join': 'Só quem tem o código pode entrar', 'Private': 'Privada', 'Public': 'Pública', 'Co-op test: big boards': 'Teste cooperativo: tabuleiros grandes', 'Same test, each board three times the size.': 'O mesmo teste, com cada tabuleiro três vezes maior.', 'Temporary. You control all four boards.': 'Temporário. Controlas os quatro tabuleiros.', 'Co-op test: clear all four boards. Use the arrows at the edges to switch boards.': 'Teste cooperativo: limpa os quatro tabuleiros. Usa as setas nas margens para mudar de tabuleiro.', 'Wait: a sniper is coming in.': 'Espera: vem aí um sniper.', 'A sniper is coming in!': 'Vem aí um sniper!', 'Co-op test': 'Teste cooperativo', 'Twins leave together. Both paths must be clear.': 'As gémeas saem juntas. Os dois caminhos têm de estar livres.', 'Compass arrows turn a quarter each time something leaves.': 'As setas bússola rodam um quarto de volta sempre que algo sai.', 'Moon arrows are asleep. Send the star arrow away to wake them.': 'As setas lua estão a dormir. Faz sair a seta estrela para as acordares.', 'Mirrors turn an arrow on its way out. Follow the new path.': 'Os espelhos viram a seta ao sair. Segue o novo caminho.', 'Patient arrows show a number. They can leave after that many launches.': 'As setas pacientes mostram um número. Podem sair ao fim desses lançamentos.', 'Ghost arrows swap form on every launch. Play them only when solid.': 'As setas fantasma mudam de forma a cada lançamento. Joga-as só quando estão sólidas.', 'Phase arrows can slip through one blocked tile on their way out.': 'As setas atravessadoras conseguem atravessar uma casa ocupada ao sair.', 'Play this arrow before its count runs out, or it gets a red card.': 'Joga esta seta antes de a contagem acabar, ou leva cartão vermelho.', 'Reverse arrows swap their tip to the other end on every launch.': 'As setas inversas trocam a ponta para a outra extremidade a cada lançamento.', 'Ice can trap arrows. Hit a frozen arrow with another arrow to free it.': 'O gelo pode prender setas. Acerta numa seta congelada com outra para a libertares.', 'Flowers block arrows. Each launch, a bee carries one away.': 'As flores bloqueiam as setas. A cada lançamento, uma abelha leva uma.', 'Burning tiles stop arrows for a few launches. Wait, or find another way.': 'As casas a arder travam as setas durante alguns lançamentos. Espera, ou procura outro caminho.', 'Wind can spin arrows around their tails when there is room.': 'O vento pode rodar as setas à volta da cauda, quando há espaço.',
     // Demos
     'Get every arrow off the board': 'Tira todas as setas do tabuleiro', 'The goal of the game is to make every arrow leave the board. An arrow leaves the way it points, so its path must be clear. Hitting another arrow costs a life.': 'O objetivo do jogo é fazer sair todas as setas do tabuleiro. Uma seta sai na direção para onde aponta, por isso o caminho tem de estar livre. Acertar noutra seta custa uma vida.', 'Tap an arrow and it leaves the way it points': 'Toca numa seta e ela sai na direção para onde aponta', 'If another arrow is in the way, it bounces back': 'Se houver outra seta no caminho, ressalta', 'So clear the way first': 'Por isso, liberta primeiro o caminho', 'Now it can leave too': 'Agora também pode sair', 'All arrows gone: board cleared!': 'Saíram todas: tabuleiro limpo!',
     'Twins share a colour and a letter. They leave together, so both paths must be clear.': 'As gémeas têm a mesma cor e letra. Saem juntas, por isso os dois caminhos têm de estar livres.', 'One twin is blocked, so neither can go': 'Uma gémea está bloqueada, por isso nenhuma sai', 'Clear the way first': 'Primeiro, liberta o caminho', 'Now both leave together': 'Agora saem as duas juntas',
@@ -1794,6 +1828,7 @@ window.UnwindI18n = (function () {
     [/^Hint (\d+)$/, 'Dica $1'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
 [/^Players (\d) \/ (\d)$/, 'Jogadores $1 / $2'], [/^Waiting for (\d) players? to join$/, function (m, n) { return n === '1' ? 'À espera que entre 1 jogador' : 'À espera que entrem ' + n + ' jogadores'; }], [/^Waiting for (\d) players? to be ready$/, function (m, n) { return n === '1' ? 'À espera que 1 jogador fique pronto' : 'À espera que ' + n + ' jogadores fiquem prontos'; }], [/^Remove (.+)$/, 'Remover $1'],
 [/^Board (\d)$/, 'Tabuleiro $1'], [/^Only (.+) is still paused\. As the host, you can carry on without them\.$/, 'Só $1 ainda está em pausa. Como anfitrião, podes continuar sem essa pessoa.'], [/^Waiting for (.+) and (.+)…$/, 'À espera de $1 e $2…'],
+[/^(.+)'s room$/, 'Sala de $1'], [/^(\d) \/ (\d) players · (\d)x boards · (Hard|Normal)$/, function (m, a, b, c, d) { return a + ' / ' + b + ' jogadores · tabuleiros ' + c + 'x · ' + (d === 'Hard' ? 'Difícil' : 'Normal'); }],
     [/^(\d+) lives left$/, '$1 vidas restantes'], [/^(\d+) arrows? left$/, function (m, n) { return n + (n === '1' ? ' seta restante' : ' setas restantes'); }],
     [/^(\d+) of (\d+) lives left$/, '$1 de $2 vidas restantes'], [/^(\d+) of (\d+)$/, '$1 de $2'], [/^(\d+) of (\d+) lanterns lit, (\d+) golden$/, '$1 de $2 lanternas acesas, $3 douradas'],
     [/^(\d+) bumps on the way, and you got there\.$/, '$1 toques pelo caminho, mas chegaste lá.'], [/^Beat your old time of (.+)$/, 'Bateste o teu tempo anterior de $1'], [/^(\S+) behind it for this map type$/, 'A $1 do recorde neste tipo de mapa'], [/^(\S+) behind it$/, 'A $1 do recorde'],
@@ -2648,7 +2683,7 @@ window.UnwindI18n = (function () {
     $('where').textContent = coopWhere(i);
     capMode = '';
     setCaption(coopBoardCaption(i));
-    if (focusId !== undefined) { coopFocus = focusId; setCaption('Holding: this is its twin on ' + coopName(i) + "'s board."); }
+    if (focusId !== undefined) { coopFocus = focusId; coopFocusStart = performance.now(); boardLayer = null; setCaption('Holding: this is its twin on ' + coopName(i) + "'s board."); }
     coopMaybeStart(i);
     pluck(523.3, 0, 0.06, 0.4);
   }
@@ -2731,14 +2766,93 @@ window.UnwindI18n = (function () {
     L.seats.length = Math.min(L.seats.length, L.settings.players);
   }
   function lobbyClose() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; closeSheet(); }
-  function lobbySheet(inPlace) {
-    if (!lobby) {
-      var mine = load('unwind.onlineName', '') || '';
-      lobby = { code: lobbyCode(), view: 'host', timers: [], askName: !mine, settings: { players: 4, hard: false, size: 1, snipers: true, twins: true, timed: false }, pick: -1, seats: [], players: [{ name: mine || lobbyName(), you: true, host: true, ready: false }] };
-      sheet('<div id="lobbyCard"></div>', 'tall lobby');
-      lobbyFill();
+  function lobbyLeave() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; onlineSheet('home'); }
+  /* Play online: host a room, browse public rooms, or join a private one with its code. */
+  var publicRooms = null;
+  function makePublicRooms() {
+    var out = [], n = 5 + Math.floor(Math.random() * 3);
+    for (var i = 0; i < n; i++) {
+      var players = Math.random() < 0.6 ? 4 : 2;
+      out.push({ host: lobbyName(), players: players, count: 1 + Math.floor(Math.random() * players), size: [1, 1, 2, 3, 5][Math.floor(Math.random() * 5)], hard: Math.random() < 0.3, snipers: Math.random() < 0.8, twins: Math.random() < 0.8, timed: Math.random() < 0.3, public: true });
     }
-    var L = lobby, S = L.settings, host = L.view === 'host', me = L.players[0], card = $('sheetHost').querySelector('.card');
+    return out;
+  }
+  function onlineSheet(screen, filter) {
+    var mine = load('unwind.onlineName', '') || '', html;
+    if (screen === 'public') {
+      publicRooms = publicRooms || makePublicRooms();
+      filter = filter || 0;
+      var list = publicRooms.filter(function (r) { return !filter || r.players === filter; });
+      html = '<div class="orow"><button class="oback" id="oBack">‹ Back</button><button class="close" id="x" aria-label="Close">×</button></div><h2>Public rooms</h2>' +
+        '<div class="ofilter"><div class="sizes lseg o3" role="group" aria-label="Players">' + [[0, 'All'], [2, '2 players'], [4, '4 players']].map(function (f) { return '<button data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div><button id="oRefresh" aria-label="Refresh" title="Refresh">&#x21bb;</button></div>' +
+        (list.length ? '<ul class="orooms">' + list.map(function (r) {
+          var full = r.count >= r.players, i = publicRooms.indexOf(r);
+          return '<li><div class="oinfo"><b>' + r.host + '\'s room</b><span>' + r.count + ' / ' + r.players + ' players · ' + r.size + 'x boards · ' + (r.hard ? 'Hard' : 'Normal') + '</span><span class="otags">' + (r.snipers ? '<i>Snipers</i>' : '') + (r.twins ? '<i>Twin-shared</i>' : '') + (r.timed ? '<i>Timed</i>' : '') + '</span></div><button class="ojoin" data-room="' + i + '"' + (full ? ' disabled' : '') + '>' + (full ? 'Full' : 'Join') + '</button></li>';
+        }).join('') + '</ul>' : '<p class="note">No public rooms right now. Try again soon, or host one.</p>') +
+        '<p class="note" style="text-align:center">Preview: these rooms are simulated.</p>';
+    } else {
+      html = '<div class="row"><h2>Play online</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+        '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
+        '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
+        '<div class="chapter">Join a room</div>' +
+        '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
+        '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
+        '<p class="note" style="text-align:center">Preview: other players and rooms are simulated.</p>' +
+        '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><input id="oCodeIn" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" aria-label="Room code"><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
+    }
+    var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
+    if (card) card.innerHTML = html; else { sheet(html, 'tall online'); card = $('sheetHost').querySelector('.card'); }
+    card.scrollTop = 0;
+    card.querySelector('#x').onclick = closeSheet;
+    var saveName = function () { var n = card.querySelector('#oName'); if (n && n.value.trim()) save('unwind.onlineName', n.value.trim()); };
+    if (screen === 'public') {
+      card.querySelector('#oBack').onclick = function () { onlineSheet('home'); };
+      card.querySelector('#oRefresh').onclick = function () { publicRooms = makePublicRooms(); onlineSheet('public', filter); };
+      card.querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { onlineSheet('public', +b.getAttribute('data-filter')); }; });
+      card.querySelectorAll('[data-room]').forEach(function (b) { b.onclick = function () { var r = publicRooms[+b.getAttribute('data-room')]; publicRooms = null; lobby = null; lobbySheet(false, r); }; });
+      return;
+    }
+    var nameIn = card.querySelector('#oName');
+    nameIn.oninput = saveName;
+    card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
+    card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; lobbySheet(); };
+    card.querySelector('#oPublic').onclick = function () { saveName(); onlineSheet('public'); };
+    var box = card.querySelector('#oBox'), codeIn = card.querySelector('#oCodeIn'), join = card.querySelector('#oJoin'), err = card.querySelector('#oErr');
+    var clean = function () { return codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); };
+    card.querySelector('#oCode').onclick = function () { saveName(); box.hidden = false; codeIn.value = ''; err.textContent = ''; join.disabled = true; setTimeout(function () { codeIn.focus(); }, 30); };
+    card.querySelector('#oCancel').onclick = function () { box.hidden = true; };
+    box.onclick = function (ev) { if (ev.target === box) box.hidden = true; };
+    codeIn.oninput = function () { var c = clean(); codeIn.value = c.length > 3 ? c.slice(0, 3) + '-' + c.slice(3) : c; join.disabled = c.length !== 6; err.textContent = ''; };
+    codeIn.onkeydown = function (ev) { if (ev.key === 'Enter' && !join.disabled) join.onclick(); };
+    join.onclick = function () {
+      var c = clean();
+      if (c.length !== 6) { err.textContent = 'Room codes have 6 letters and numbers.'; return; }
+      join.disabled = true; join.textContent = 'Looking…';
+      setTimeout(function () {
+        if (!card.isConnected) return;
+        var players = Math.random() < 0.6 ? 4 : 2;
+        lobby = null;
+        lobbySheet(false, { code: c.slice(0, 3) + '-' + c.slice(3), host: lobbyName(), players: players, count: 1 + Math.floor(Math.random() * (players - 1)), size: 1, hard: false, snipers: true, twins: true, timed: false });
+      }, 700);
+    };
+  }
+  // Joining someone else's room (from the public list or a code) puts you in as a guest, next to the host.
+  function lobbyCreate(join) {
+    var mine = load('unwind.onlineName', '') || '';
+    var me = { name: mine || lobbyName(), you: true, host: !join, ready: false };
+    lobby = { code: join ? join.code || '' : lobbyCode(), view: join ? 'guest' : 'host', joined: !!join, timers: [], askName: !mine, pick: -1, seats: [], players: [me],
+      settings: join ? { players: join.players, hard: join.hard, size: join.size, snipers: join.snipers, twins: join.twins, timed: join.timed, public: !!join.public } : { players: 4, hard: false, size: 1, snipers: true, twins: true, timed: false, public: false } };
+    if (join) {
+      lobby.players.push({ name: join.host, host: true, ready: true });
+      for (var i = 2; i < join.count + 1 && i < join.players; i++) lobby.players.push({ name: lobbyName(), ready: Math.random() < 0.6 });
+      lobby.players.forEach(function (p) { if (!p.you && !p.ready) lobbyLater(function () { if (lobby.players.indexOf(p) >= 0) { p.ready = true; lobbySheet(true); } }, 2000 + Math.random() * 3000); });
+    }
+    sheet('<div id="lobbyCard"></div>', 'tall lobby');
+    lobbyFill();
+  }
+  function lobbySheet(inPlace, join) {
+    if (!lobby) lobbyCreate(join);
+    var L = lobby, S = L.settings, host = L.view === 'host' && !L.joined, me = L.players[0], card = $('sheetHost').querySelector('.card');
     if (!card) return;
     lobbySeats();
     var perLife = S.hard ? 2 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
@@ -2746,19 +2860,21 @@ window.UnwindI18n = (function () {
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
     var html = '<div class="row"><h2>Co-op room</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
-    html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
-    html += '<div class="lcode"><small>Room code</small><b id="lCode">' + L.code + '</b><button id="lCopy">Copy</button><p>' + (host ? 'Share this code with your friends so they can join.' : 'You joined with this code.') + '</p></div>';
+    if (!L.joined) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
+    html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
+      : '<div class="lcode"><small>Room code</small><b id="lCode">' + L.code + '</b><button id="lCopy">Copy</button><p>' + (host ? 'Share this code with your friends so they can join.' : 'You joined with this code.') + '</p></div>';
     html += '<div class="chapter">Your online name</div><div class="lname"><input id="lName" maxlength="16" value="' + me.name.replace(/"/g, '&quot;') + '" aria-label="Your online name"><button id="lNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">' + (L.askName ? 'First online room: pick the name your friends will see. You can change it in Settings later.' : 'You can change it until the game starts.') + '</p>';
     html += '<div class="chapter">Players ' + L.players.length + ' / ' + S.players + '</div><ul class="lplayers">';
     for (var i = 0; i < S.players; i++) {
       var p = L.players[i];
       if (!p) { html += '<li class="empty"><span class="dot"></span><span class="nm">Waiting for a player…</span></li>'; continue; }
-      var isHost = host ? p.host : i === 1, you = host ? p.you : i === 0;
+      var isHost = host || L.joined ? p.host : i === 1, you = host || L.joined ? p.you : i === 0;
       html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm">' + p.name + (you ? ' <em>(you)</em>' : '') + (isHost ? ' <i class="crown" title="Host">♛ Host</i>' : '') + '</span><span class="bd">Board ' + (lobby.seats.indexOf(p) + 1) + '</span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+    html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
     html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
@@ -2769,12 +2885,14 @@ window.UnwindI18n = (function () {
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
     else html += '<p class="lwait">' + (all ? 'Everyone is ready. Waiting for the host to start…' : 'The game starts when everyone is ready and the host starts it.') + '</p>';
+    if (L.joined && all && !L.starting) { L.starting = true; lobbyLater(lobbyStart, 2200); }
+    if (!all) L.starting = false;
     html += '<button class="lleave" id="lLeave">Leave room</button><p class="note" style="text-align:center">Preview only: the other players are simulated.</p>';
     var top = card.scrollTop;
     card.innerHTML = '<div id="lobbyCard"></div>' + html; card.scrollTop = top;
-    card.querySelector('#x').onclick = lobbyClose; card.querySelector('#lLeave').onclick = lobbyClose;
+    card.querySelector('#x').onclick = lobbyLeave; card.querySelector('#lLeave').onclick = lobbyLeave;
     card.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { L.view = b.getAttribute('data-view'); lobbySheet(true); }; });
-    card.querySelector('#lCopy').onclick = function () {
+    if (card.querySelector('#lCopy')) card.querySelector('#lCopy').onclick = function () {
       var btn = this;
       try { navigator.clipboard.writeText(L.code).then(function () { btn.textContent = 'Copied'; }, function () { btn.textContent = 'Select it'; }); } catch (e) { btn.textContent = 'Select it'; }
     };
@@ -2785,6 +2903,7 @@ window.UnwindI18n = (function () {
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
+      if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
       // Changing a setting asks everyone to confirm again.
       L.players.forEach(function (p) { if (!p.you && p.ready) { p.ready = false; lobbyLater(function () { if (L.players.indexOf(p) >= 0) { p.ready = true; lobbySheet(true); } }, 1200 + Math.random() * 2000); } });
@@ -2824,14 +2943,17 @@ window.UnwindI18n = (function () {
     card.querySelectorAll('[data-kick]').forEach(function (b) { b.onclick = function () { L.players.splice(+b.getAttribute('data-kick'), 1); lobbySheet(true); lobbyJoin(2500); }; });
     card.querySelector('#lReady').onclick = function () { me.ready = !me.ready; pluck(me.ready ? 784 : 392, 0, 0.06, 0.3); lobbySheet(true); };
     var st = card.querySelector('#lStart');
-    if (st) st.onclick = function () {
-      if (!all) return;
-      var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
-      var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
-      lobby.timers.forEach(clearTimeout); lobby = null;
-      spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
-      openCoop(0, false, spec);
-    };
+    if (st) st.onclick = function () { if (all) lobbyStart(); };
+  }
+  function lobbyStart() {
+    var L = lobby;
+    if (!L || !$('lobbyCard')) return;
+    var S = L.settings, me = L.players[0], lives = (S.hard ? 2 : 3) * S.players;
+    var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
+    var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
+    lobby.timers.forEach(clearTimeout); lobby = null;
+    spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
+    openCoop(0, false, spec);
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
   function openDaily() {
@@ -3075,11 +3197,19 @@ window.UnwindI18n = (function () {
   }
   // Arrows that animate are always drawn live. The rest can sit in the cached board.
   var boardLayer = null, layerBuilding = false, boardDpr = 2, unoFlip = {};
+  // A held twin's partner swells and shrinks like a hint does, but keeps its own colour.
+  var coopFocusStart = 0;
+  function focusAmt(now) {
+    var t = now - coopFocusStart;
+    if (t < HINT_IN) { var x = Math.max(0, t / HINT_IN); return x * x * (3 - 2 * x); }
+    return 0.75 + 0.25 * Math.cos((t - HINT_IN) / 1000 * 2 * Math.PI);
+  }
   function staticArrow(a, now) {
     if (state.removed[a.id] || a.kind === 'compass' || a.isKey || a.phase || a.ghostPhase !== undefined || a.uno !== undefined || a.red || (state.freed && state.freed[a.id]) || a.rot || state.frozen[a.id] !== undefined || (a.wait && state.launches < a.wait) || introOf(a, now) < 1) return false;
     if (a.key !== undefined && !state.removed[a.key]) return false;
     if (bounces[a.id] || (nudges[a.id] && now < nudges[a.id]) || (blockerGlow[a.id] && now < blockerGlow[a.id]) || (a.burnUntil && now < a.burnUntil)) return false;
     if (hintArrow === a.id || (hintArrow >= 0 && a.kind === 'twin' && a.twin === hintArrow)) return false;
+    if (coop && coopFocus === a.id) return false;
     return true;
   }
   function zoomAt(x, y, factor) {
@@ -3252,7 +3382,7 @@ window.UnwindI18n = (function () {
       if (state.removed[a.id] || offscreen(a)) return;
       var intro = introOf(a, now);
       if (intro <= 0) return;
-      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : coop && coopFocus === a.id ? 0.75 + 0.25 * Math.sin(now / 200) : 0, isReady = ready(a);
+      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : coop && coopFocus === a.id ? focusAmt(now) : 0, isReady = ready(a);
       if (b) {
         var bt = (now - b.start) / 440;
         if (bt >= 1) delete bounces[a.id]; else shift = Math.sin(bt * Math.PI) * b.reach;
@@ -3299,12 +3429,6 @@ window.UnwindI18n = (function () {
         var pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 220);
         setStroke('#ffd23f', width * (2.6 + pulse * 1.8), 0.22 + pulse * 0.2); strokeWindow(pts, shift, shift + len);
         setStroke('#fff3b0', width * 1.6, 0.5); strokeWindow(pts, shift, shift + len);
-      }
-      if (coop && coopFocus === a.id) {
-        // Held from another board: the partner glows in its own colour.
-        var fp = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 200);
-        setStroke(color, width * (2.8 + fp * 2), 0.18 + fp * 0.18); strokeWindow(pts, shift, shift + len);
-        setStroke(color, width * 1.7, 0.35); strokeWindow(pts, shift, shift + len);
       }
       setStroke(color, width, alpha);
       if (!isReady && !isFrozen) ctx.setLineDash([cs * 0.18, cs * 0.3]);
@@ -3589,7 +3713,7 @@ window.UnwindI18n = (function () {
     ctx.globalAlpha = 0.92 * fade; ctx.fillStyle = colors.card;
     ctx.beginPath(); ctx.roundRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8, 8); ctx.fill();
     // The map only changes when arrows do, so it is drawn once per change and reused.
-    var key = [current.id, state.launches, hintArrow, colors.name, Math.round(r.w)].join();
+    var key = [current.id, state.launches, hintArrow, coopFocus, colors.name, Math.round(r.w)].join();
     if (!miniCache || miniCache.key !== key) {
       var cv = miniCache && miniCache.canvas || document.createElement('canvas'), mc = cv.getContext('2d');
       cv.width = Math.ceil(r.w * 2); cv.height = Math.ceil(r.h * 2);
@@ -4297,13 +4421,13 @@ window.UnwindI18n = (function () {
     ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
     ctx.fillStyle = colors.card; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif';
+    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif';
     var lw = ctx.measureText(letter).width;
-    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif';
+    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif';
     var pw = ctx.measureText('+').width, x0 = c.x - (lw + pw) / 2;
     ctx.textAlign = 'left';
-    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
-    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.12);
+    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
+    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.14);
     ctx.restore();
   }
   function drawCrosshair(c, r, color) {
@@ -4765,7 +4889,7 @@ window.UnwindI18n = (function () {
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
     (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mLobby"><b>Co-op room (preview)</b><span>What the room host would see: players, code and settings.</span></button><button id="mTutSniper"><b>Tutorial: Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Tutorial: Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
+    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mLobby"><b>Play online (preview)</b><span>Host a room, browse public rooms or join with a code. Other players are simulated.</span></button><button id="mTutSniper"><b>Tutorial: Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Tutorial: Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
     html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span id="lHard">Harder<small>2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
       '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
@@ -4779,7 +4903,7 @@ window.UnwindI18n = (function () {
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
     s.querySelector('#mCoop').onclick = function () { openCoop(); };
     s.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
-    s.querySelector('#mLobby').onclick = function () { lobbySheet(); };
+    s.querySelector('#mLobby').onclick = function () { onlineSheet('home'); };
     s.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
     s.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
     s.querySelector('#mDaily').onclick = openDaily;
@@ -5231,10 +5355,10 @@ window.UnwindI18n = (function () {
       '<details class="mpx"' + (seasonHere ? ' open' : '') + '><summary>Seasonal arrows and effects</summary>' + items.filter(function (it) { return SEASONAL[it.key]; }).map(row).join('') + '</details>';
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
-      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
-        art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' },
       { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.',
-        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' }
+        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' },
+      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
+        art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' }
     ];
     var hereMp = {};
     if (current.coop && coop) { coop.boards.forEach(function (B) { B.level.arrows.forEach(function (a) { if (a.sniper && !B.state.removed[a.id]) hereMp.sniper = 1; if (a.coopGroup !== undefined) hereMp.twinshared = 1; }); }); }
@@ -5430,7 +5554,7 @@ window.UnwindI18n = (function () {
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobbySheet(); },
+    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
