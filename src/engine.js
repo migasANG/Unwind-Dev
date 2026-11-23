@@ -907,7 +907,7 @@
   // board's own solution, so playing each board's solution in turn always lets every group leave together.
   function coopRoom(seed, spec) {
     var r = rng32(seed || 1), boards = [], groups = [];
-    spec = spec || { w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, mirrors: 2 };
+    spec = applyTypes(Object.assign({}, spec || { w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, mirrors: 2 }), spec && spec.off);
     var n = spec.n || 4, lives = spec.lives || 12;
     for (var b = 0; b < n; b++) {
       var lvl = generate(spec, (seed || 1) + b * 977, 200) || generate(Object.assign({}, spec, { mirrors: 0 }), (seed || 1) + b * 977, 200);
@@ -949,21 +949,32 @@
   function traitCount(a) {
     return (a.kind === 'twin' ? 1 : 0) + (a.key !== undefined ? 1 : 0) + (a.isKey ? 1 : 0) + (a.wait ? 1 : 0) + (a.ghostPhase !== undefined ? 1 : 0) + (a.phase ? 1 : 0) + (a.red ? 1 : 0) + (a.uno !== undefined ? 1 : 0);
   }
+  // Arrow types the player switched off are left out of a generated board.
+  var TYPE_KEYS = { twins: ['twins'], compass: ['compass'], moon: ['sleepers'], mirror: ['mirrors'], patient: ['patient'], ghost: ['ghosts'], phase: ['phases'], red: ['reds'], reverse: ['unos'] };
+  function applyTypes(spec, off) {
+    if (!off) return spec;
+    Object.keys(TYPE_KEYS).forEach(function (k) { if (off[k]) TYPE_KEYS[k].forEach(function (f) { spec[f] = 0; }); });
+    spec.off = off;
+    if (off.ghost && off.reverse && off.phase && off.patient && off.red) spec.combos = 0;
+    if (off.sniper) spec.noSnipers = true;
+    if (off.twinshared) spec.noTwins = true;
+    return spec;
+  }
   function assignCombos(level, spec, r) {
     var n = level.solution.length, stepOf = {};
     level.solution.forEach(function (id, i) { stepOf[id] = i; });
     var pool = level.arrows.filter(function (a) { return a.kind === 'plain' && a.cells.length >= 3 && stepOf[a.id] !== undefined; });
     pool = shuffle(pool, r).sort(function (p, q) { return traitCount(q) - traitCount(p); });
-    var made = 0;
+    var made = 0, off = spec.off || {};
     pool.some(function (a) {
       if (made >= spec.combos) return true;
       var step = stepOf[a.id], want = traitCount(a) ? 2 + (r() < 0.4 ? 1 : 0) : 2 + (r() < 0.3 ? 1 : 0);
       var adders = shuffle([
-        function () { if (a.ghostPhase !== undefined) return false; a.ghostPhase = step % 2; return true; },
-        function () { if (a.uno !== undefined) return false; a.uno = step % 2; return true; },
-        function () { if (a.phase) return false; a.phase = true; return true; },
-        function () { if (a.wait || a.isKey || step < 2) return false; a.wait = 2 + Math.floor(r() * Math.min(step - 1, 5)); return true; },
-        function () { if (a.red || a.isKey) return false; var count = Math.max(3, step + 2 + Math.floor(n * (spec.redSlack || 0))); if (count > n - 2) return false; a.red = count; return true; }
+        function () { if (a.ghostPhase !== undefined || off.ghost) return false; a.ghostPhase = step % 2; return true; },
+        function () { if (a.uno !== undefined || off.reverse) return false; a.uno = step % 2; return true; },
+        function () { if (a.phase || off.phase) return false; a.phase = true; return true; },
+        function () { if (a.wait || a.isKey || step < 2 || off.patient) return false; a.wait = 2 + Math.floor(r() * Math.min(step - 1, 5)); return true; },
+        function () { if (a.red || a.isKey || off.red) return false; var count = Math.max(3, step + 2 + Math.floor(n * (spec.redSlack || 0))); if (count > n - 2) return false; a.red = count; return true; }
       ], r);
       for (var i = 0; i < adders.length && traitCount(a) < Math.min(3, want); i++) adders[i]();
       if (traitCount(a) >= 2) made++;
@@ -1044,7 +1055,7 @@
   }
   // Builds a board, simplifying the mix of special arrows if a seed cannot fit them all.
   function endlessBoard(n, opts, seed) {
-    var spec = endlessSpec(n, opts);
+    var spec = applyTypes(endlessSpec(n, opts), opts && opts.off);
     var tries = spec.big ? 3 : 30;
     var lvl = generate(spec, seed, tries)
       || generate(Object.assign({}, spec, { mirrors: Math.ceil((spec.mirrors || 0) / 2) }), seed, tries)
@@ -1058,7 +1069,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    TUTORIALS: TUTORIALS, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, isReady: isReady, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };

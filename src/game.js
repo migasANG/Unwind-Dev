@@ -347,7 +347,7 @@
     // Big boards get extra time, since the player also has to move around them.
     if (o.timed) lvl.timeLimit = Math.round(E.timeLimitFor(lvl.solution.length) * (scale > 1 ? 1.3 : 1));
     var tags = (o.effects.length === 1 ? ' · ' + SET_INFO[o.effects[0]].label : o.effects.length ? ' · ' + o.effects.length + ' effects' : '') + (scale > 1 ? ' · ' + scale + 'x' : '') + (o.hard ? ' · Harder' : '') + (o.timed ? ' · Timed' : '');
-    begin({ id: 'open-' + plan.key + '-' + (plan.n + 1), endlessKey: plan.key, mode: 'endless', level: lvl, title: 'Open Water ' + (plan.n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
+    begin({ id: 'open-' + plan.key + '-' + (plan.n + 1), endlessKey: plan.key, mode: 'endless', level: lvl, title: 'Open Waters ' + (plan.n + 1) + tags, chapter: backgroundPalette(), sunY: 34, background: true });
   }
   // A tangled, well-filled board plays better than one with many arrows free at the start.
   function boardQuality(lvl) {
@@ -676,7 +676,7 @@
       var m = partners[coopHold.step % partners.length];
       coopHold.peeking = true; coopHold.step++;
       coopSwitch(m[0], m[1]);
-      if (partners.length > 1) coopHold.timer = setTimeout(peek, 5000);
+      if (partners.length > 1) coopHold.timer = setTimeout(peek, 4000);
     }, 420);
   }
   function coopHoldEnd(released) {
@@ -931,7 +931,7 @@
     var mine = load('unwind.onlineName', '') || '';
     var me = { name: mine || lobbyName(), you: true, host: !join, ready: false };
     lobby = { code: join ? join.code || '' : lobbyCode(), view: join ? 'guest' : 'host', joined: !!join, timers: [], askName: !mine, pick: -1, seats: [], players: [me],
-      settings: join ? { players: join.players, hard: join.hard, size: join.size, snipers: join.snipers, twins: join.twins, timed: join.timed, public: !!join.public } : { players: 4, hard: false, size: 1, snipers: true, twins: true, timed: false, public: false } };
+      settings: join ? { players: join.players, hard: join.hard, size: join.size, off: { sniper: !join.snipers, twinshared: !join.twins }, timed: join.timed, public: !!join.public } : { players: 4, hard: false, size: 1, off: {}, timed: false, public: false } };
     if (join) {
       lobby.players.push({ name: join.host, host: true, ready: true });
       for (var i = 2; i < join.count + 1 && i < join.players; i++) lobby.players.push({ name: lobbyName(), ready: Math.random() < 0.6 });
@@ -966,11 +966,10 @@
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
-    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player, basic game difficulty') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Timer<small>Shared timer between all players</small></span></div>' + seg('timed', [[false, 'No timer'], [true, 'Timed']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
-    html += sw('snipers', 'Sniper arrows', 'Optional bonus shots onto other boards');
-    html += sw('twins', 'Twin-shared arrows', 'Arrows that leave together across boards');
-    html += sw('timed', 'Timed', 'Shared timer between all players');
+    html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
     html += '<div class="lsum"><span>Shared lives<b>' + lives + '</b></span><span>Shared timer<b>' + (S.timed ? 'Yes' : 'No') + '</b></span><span>Win<b>All boards cleared</b></span></div>';
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
@@ -1000,6 +999,7 @@
       me.ready = false;
       lobbySheet(true);
     }; });
+    card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { S.off = off; me.ready = false; lobbySheet(true); }, !host); };
     card.querySelectorAll('[data-sw]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-sw'); S[k] = !S[k]; me.ready = false; lobbySheet(true); }; });
     // Dragging a board onto another swaps their players too.
     if (host) card.querySelectorAll('[data-seat]').forEach(function (b) {
@@ -1040,7 +1040,7 @@
     if (!L || !$('lobbyCard')) return;
     var S = L.settings, me = L.players[0], lives = (S.hard ? 2 : 3) * S.players;
     var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
-    var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
+    var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, off: S.off, names: names, combos: S.hard ? 2 : 0 });
     lobby.timers.forEach(clearTimeout); lobby = null;
     spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
     openCoop(0, false, spec);
@@ -2507,17 +2507,17 @@
   // Twin-shared arrows look like twins: the same round badge, with the group letter and a plus.
   function drawCoopTag(c, a, color) {
     if (!coop) return;
-    var r = cs * 0.29, letter = coopLabel(a.coopGroup).charAt(0);
+    // The rounded game font for the letter, and a drawn plus sitting at the middle of the badge.
+    var r = cs * 0.3, letter = coopLabel(a.coopGroup).charAt(0), ps = r * 0.26, gap = r * 0.08;
     ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
-    ctx.fillStyle = colors.card; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif';
-    var lw = ctx.measureText(letter).width;
-    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif';
-    var pw = ctx.measureText('+').width, x0 = c.x - (lw + pw) / 2;
-    ctx.textAlign = 'left';
-    ctx.font = '700 ' + Math.round(r * 1.25) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
-    ctx.font = '700 ' + Math.round(r * 0.9) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.14);
+    ctx.font = '600 ' + Math.round(r * 1.18) + 'px Fredoka,Figtree,system-ui,sans-serif';
+    var lw = ctx.measureText(letter).width, total = lw + gap + ps * 2, x0 = c.x - total / 2;
+    ctx.fillStyle = colors.card; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(letter, x0, c.y + r * 0.06);
+    var px0 = x0 + lw + gap + ps;
+    ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1.2, r * 0.17); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(px0 - ps, c.y); ctx.lineTo(px0 + ps, c.y); ctx.moveTo(px0, c.y - ps); ctx.lineTo(px0, c.y + ps); ctx.stroke();
     ctx.restore();
   }
   function drawCrosshair(c, r, color) {
@@ -2953,11 +2953,33 @@
   var STAR_MARK = '<svg class="mk s" viewBox="0 0 24 24" aria-hidden="true">' + STAR_PATH + '</svg>';
   var MOON_MARK = '<svg class="mk m" viewBox="0 0 24 24" aria-hidden="true">' + MOON_PATH + '</svg>';
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
+  /* The start menu. Its first tap also unlocks sound, which browsers only allow after a tap. */
+  function startMenu() {
+    var last = progress.last || { set: 'calm', index: 0 }, info = SET_INFO[last.set] || SET_INFO.calm;
+    var where = (info.label || 'Calm') + ' · Level ' + ((last.index || 0) + 1 + (info.offset || 0));
+    var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
+      '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
+      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
+      languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
+    var s = sheet(html, 'start');
+    s.classList.add('startsheet');
+    wireLanguage(s);
+    var go = function (what) {
+      audio(); closeSheet(); holdTutorials = false;
+      if (what === 'play') { maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
+      else if (what === 'levels') levelsSheet();
+      else if (what === 'open') levelsSheet('extra');
+      else if (what === 'online') onlineSheet('home');
+      else if (what === 'settings') settingsSheet();
+    };
+    s.querySelector('#begin').onclick = function () { go('play'); };
+    s.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
+  }
   function levelsSheet(tab, inPlace) {
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
-    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+    html += '<div class="tabs" role="tablist">' + [['extra', 'Extra'], ['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
     var grid = function (set, from, to) {
       var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
@@ -2966,8 +2988,9 @@
       }
       return out + '</div>';
     };
-    html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
-    if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
+    if (tab !== 'extra') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
+    if (tab === 'extra') {}
+    else if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
     else if (tab === 'seasons') {
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
@@ -2978,24 +3001,31 @@
       var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
       return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
-    (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
-    html += '<div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mLobby"><b>Play online (preview)</b><span>Host a room, browse public rooms or join with a code. Other players are simulated.</span></button><button id="mTutSniper"><b>Tutorial: Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Tutorial: Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
-    html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Water</b><span>' + openLabel() + '</span></button>' +
-      '<div class="setting"><span id="lHard">Harder<small>2 lives, no hints, and arrows with several effects at once</small></span><button class="switch" id="oHard" role="switch" aria-labelledby="lHard" aria-checked="' + !!endlessOpts().hard + '"></button></div>' +
-      '<div class="setting"><span id="lTimed">Timed<small>Clear each board before the clock runs out</small></span><button class="switch" id="oTimed" role="switch" aria-labelledby="lTimed" aria-checked="' + !!endlessOpts().timed + '"></button></div>' +
+    if (tab !== 'extra') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
+    if (tab === 'extra') {
+      html += '<div class="chapter">Daily and endless</div>';
+      html += '<div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
+      '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and arrows with several effects at once' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
+      '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + !endlessOpts().timed + '">No timer</button><button data-otimed="1" aria-pressed="' + !!endlessOpts().timed + '">Timed</button></div>' +
+      '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off) + '</small></span><b>›</b></button>' +
       '<div class="setting"><span>Season effects<small>Pick any number. Random uses 1 to 4 for each board.</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'Random']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.random : x[0] === 'none' ? !c.random && !c.list.length : !c.random && c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 3, 5, 10, 25].map(function (x) { return '<button data-scale="' + x + '" aria-pressed="' + ((endlessOpts().scale || 1) === x) + '">' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
+      html += '<div class="chapter">Online</div><div class="modes"><button id="mLobby"><b>Play online (preview)</b><span>Host a room, browse public rooms or join with a code. Other players are simulated.</span></button></div>';
+      html += '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
+      html += '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>';
+    }
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
-    s.querySelector('#mCoop').onclick = function () { openCoop(); };
-    s.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
-    s.querySelector('#mLobby').onclick = function () { onlineSheet('home'); };
-    s.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
-    s.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
+    if (s.querySelector('#mCoop')) s.querySelector('#mCoop').onclick = function () { openCoop(); };
+    if (s.querySelector('#mCoopBig')) s.querySelector('#mCoopBig').onclick = function () { openCoop(0, true); };
+    if (s.querySelector('#mLobby')) s.querySelector('#mLobby').onclick = function () { onlineSheet('home'); };
+    if (s.querySelector('#mTutSniper')) s.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
+    if (s.querySelector('#mTutTwins')) s.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
+    if (tab !== 'extra') return;
     s.querySelector('#mDaily').onclick = openDaily;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
     s.querySelector('#mGo').onclick = function () {
@@ -3003,13 +3033,15 @@
       if (backgroundChoice() === 'default') audioPrefs.theme = 'auto';
       openEndless();
     };
-    [['#oHard', 'hard'], ['#oTimed', 'timed']].forEach(function (pair) {
-      s.querySelector(pair[0]).onclick = function () {
-        var o = endlessOpts(); o[pair[1]] = !o[pair[1]]; progress.endlessOpts = o; save('unwind.progress2', progress);
-        this.setAttribute('aria-checked', o[pair[1]]);
-        s.querySelector('#mOpen span').textContent = openLabel();
-      };
+    [['ohard', 'hard'], ['otimed', 'timed']].forEach(function (pair) {
+      s.querySelectorAll('[data-' + pair[0] + ']').forEach(function (b) { b.onclick = function () {
+        var o = endlessOpts(); o[pair[1]] = b.getAttribute('data-' + pair[0]) === '1'; progress.endlessOpts = o; save('unwind.progress2', progress);
+        levelsSheet('extra', true);
+      }; });
     });
+    s.querySelector('#oTypes').onclick = function () {
+      arrowTypesBox(endlessOpts().off, false, function (off) { var o = endlessOpts(); o.off = off; progress.endlessOpts = o; save('unwind.progress2', progress); var l = $('oTypesLbl'); if (l) l.textContent = typesLabel(off); });
+    };
     wireBackgrounds(s);
     s.querySelectorAll('[data-effect]').forEach(function (b) {
       b.onclick = function () {
@@ -3028,6 +3060,36 @@
         s.querySelector('#mOpen span').textContent = openLabel();
       };
     });
+  }
+  /* Arrow types: which special arrows a generated board may use. Shown as a small box over the menu. */
+  var ARROW_TYPES = [['twins', 'Twins'], ['compass', 'Compass'], ['moon', 'Moon and star'], ['mirror', 'Mirror'], ['patient', 'Patient'], ['ghost', 'Ghost'], ['phase', 'Phase'], ['red', 'Red card'], ['reverse', 'Reverse']];
+  var MP_TYPES = [['twinshared', 'Twin-shared'], ['sniper', 'Sniper']];
+  function typesLabel(off, mp) {
+    var all = ARROW_TYPES.concat(mp ? MP_TYPES : []), on = all.filter(function (t) { return !off || !off[t[0]]; }).length;
+    return on === all.length ? 'All arrow types' : on === 0 ? 'Plain arrows only' : on + ' of ' + all.length + ' arrow types';
+  }
+  function arrowTypesBox(off, mp, onChange, locked) {
+    off = Object.assign({}, off || {});
+    var box = document.createElement('div');
+    box.className = 'ocodebox typesbox';
+    var paint = function () {
+      var chip = function (t) { return '<button data-type="' + t[0] + '" aria-pressed="' + !off[t[0]] + '"' + (locked ? ' disabled' : '') + '>' + t[1] + '</button>'; };
+      box.innerHTML = '<div class="obox" role="dialog" aria-label="Arrow types"><h3>Arrow types</h3><p class="note">' + (locked ? 'Chosen by the host.' : 'Choose which arrows can appear on the boards. Plain arrows are always there.') + '</p>' +
+        '<div class="chapter">Arrows</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
+        (mp ? '<div class="chapter">Multiplayer</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
+        (locked ? '' : '<div class="obtns"><button id="tAll">All</button><button id="tNone">None</button></div>') + '<button class="primary" id="tDone">Done</button></div>';
+      // Chips change in place, so the box does not pop in again on every tap.
+      var sync = function () { box.querySelectorAll('[data-type]').forEach(function (x) { x.setAttribute('aria-pressed', !off[x.getAttribute('data-type')]); }); };
+      box.querySelectorAll('[data-type]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-type'); if (off[k]) delete off[k]; else off[k] = true; sync(); }; });
+      if (!locked) {
+        box.querySelector('#tAll').onclick = function () { off = {}; sync(); };
+        box.querySelector('#tNone').onclick = function () { ARROW_TYPES.concat(mp ? MP_TYPES : []).forEach(function (t) { off[t[0]] = true; }); sync(); };
+      }
+      box.querySelector('#tDone').onclick = function () { box.remove(); if (!locked) onChange(off); };
+    };
+    paint();
+    box.onclick = function (ev) { if (ev.target === box) { box.remove(); if (!locked) onChange(off); } };
+    document.body.appendChild(box);
   }
   function openLabel() {
     var o = endlessOpts(), size = (o.scale || 1) > 1 ? o.scale + 'x maps' : 'Endless boards';
@@ -3676,9 +3738,7 @@
   openLevel(SETS[last.set] ? last.set : 'calm', Math.min(last.index || 0, (SETS[last.set] || SETS.calm).length - 1));
   // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
   (function () {
-    var s = sheet('<h2>Unwind</h2><p>Sound on for the full experience</p><button class="primary" id="begin" style="width:100%">Tap to begin</button>' + languageRow(), 'begin');
-    wireLanguage(s);
-    s.onclick = function () { audio(); closeSheet(); holdTutorials = false; maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); };
+    startMenu();
   })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);
