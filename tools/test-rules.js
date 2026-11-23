@@ -54,6 +54,13 @@ t('phase arrows slip through one tile of anything, but not two in a row, and fir
  l=mk({flowers:[[1,0],[3,0]]});assert.equal(E.check(l,E.newState(l),l.arrows[0]).clear,false);
  l=E.endlessBoard(2,{scale:10,effects:['summer']},5);E.prepare(l);let max=0;for(let i=0;i<120;i++){l.seed=i;const st=E.newState(l);E.tap(l,st,E.legalMoves(l,st)[0]);max=Math.max(max,E.seasonStep(l,st).burn.length)}assert(max>5&&max<=5*Math.round(l.w*l.h/56*.75),'10x fire '+max)});
 t('every tutorial plays exactly as scripted under the real rules and clears its board',()=>{Object.keys(E.TUTORIALS).forEach(key=>{const t=E.tutorialStart(key);t.steps.forEach((st,i)=>{if(st.spin!==undefined){E.tutorialSpin(t.level,st.spin);return}const r=E.tap(t.level,t.state,st.tap);if(st.spinWith!==undefined)E.tutorialSpin(t.level,st.spinWith);const got=r.ok?'ok':r.notReady?'wait':r.thawed?'thaw':'hit';assert.equal(got,st.expect,key+' step '+(i+1))});assert(E.isWon(t.state),key+' not cleared')})});
+t('a golden arrow only appears once no arrow can leave, never while a compass or any other arrow still can',()=>{
+ // Compass 0 points out now. Arrows 1 and 2 block each other, so the board cannot be cleared, but a move remains.
+ const l=E.prepare({w:5,h:5,lives:3,arrows:[{id:0,kind:'compass',cells:[[2,0]],dir:0},{id:1,kind:'plain',cells:[[0,2],[1,2]],dir:1},{id:2,kind:'plain',cells:[[4,2],[3,2]],dir:3}]});
+ const s=E.newState(l);s.safe=true;E.ensurePlay(l,s);
+ assert.equal(Object.keys(s.freed||{}).length,0,'no golden while the compass can leave');
+ assert.equal(E.tap(l,s,0).ok,true);
+ assert.equal(E.legalMoves(l,s).length>0||Object.keys(s.freed||{}).length>0,true,'once stuck, a golden arrow appears')});
 t('ice that opens nothing counts as stuck, and the rescue clears it without a tap on the ice',()=>{
  // Arrow 0 hits frozen arrow 1. Arrow 1 is blocked by fire. Thawing it opens nothing, because arrow 0 still hits arrow 1.
  const l=E.prepare({w:6,h:4,lives:3,effects:['winter','summer'],seed:1,arrows:[{id:0,kind:'plain',cells:[[0,1],[1,1]],dir:1},{id:1,kind:'plain',cells:[[3,0],[3,1],[3,2]],dir:2},{id:2,kind:'plain',cells:[[5,3],[5,2]],dir:0}]});
@@ -69,7 +76,7 @@ t('a crack that does open a play stays a free action and is not treated as stuck
  const s=E.newState(l);s.frozen[1]=50;
  assert.equal(E.legalMoves(l,s).length,0);assert.equal(E.isStuck(l,s),false);
  const r=E.tap(l,s,0);assert.deepEqual(r.thawed,[1]);assert.equal(s.launches,0,'not a turn');assert.equal(s.lives,3,'no life lost');assert.equal(E.legalMoves(l,s).length>0,true)});
-t('the safety net: with it on, no random play ever reaches a dead end, on any set or open water board',()=>{let rescues=0,games=0;const play1=(l,runs)=>{for(let g=0;g<runs;g++){const x=E.prepare(JSON.parse(JSON.stringify(l)));x.seed=g*97+5;const s=E.newState(x);s.lives=null;s.safe=true;let guard=0;while(!E.isWon(s)&&guard++<3000){const all=E.legalMoves(x,s).concat(E.iceHits(x,s));assert(all.length,'dead end');assert(E.boardClearable(x,s),'not clearable');const id=all[Math.floor(Math.random()*all.length)];const r=E.tap(x,s,id);if(r.ok&&!r.won)E.seasonStep(x,s)}assert(E.isWon(s),'never cleared');rescues+=s.rescueCount||0;games++}};
+t('the safety net: with it on, no random play is ever left without a move, on any set or open water board',()=>{let rescues=0,games=0,golds=0;const play1=(l,runs)=>{for(let g=0;g<runs;g++){const x=E.prepare(JSON.parse(JSON.stringify(l)));x.seed=g*97+5;const s=E.newState(x);s.lives=null;s.safe=true;let guard=0;while(!E.isWon(s)&&guard++<3000){const all=E.legalMoves(x,s).concat(E.iceHits(x,s));assert(all.length,'dead end');const freedBefore=Object.keys(s.freed||{}).length,hadMoves=all.length;const id=all[Math.floor(Math.random()*all.length)];const r=E.tap(x,s,id);if(r.ok&&!r.won)E.seasonStep(x,s);if(Object.keys(s.freed||{}).length>freedBefore){const probe=Object.assign({},s,{freed:{}});golds++;}}assert(E.isWon(s),'never cleared');rescues+=s.rescueCount||0;games++}};
  ALL.forEach(x=>play1(x,6));
  [{},{hard:true},{effects:['winter','spring','summer','autumn']},{hard:true,effects:['winter','spring','summer','autumn']},{scale:3,hard:true,effects:['spring','winter']},{scale:5,effects:['summer','autumn']}].forEach(o=>{for(let n=0;n<6;n++)play1(E.endlessBoard(n,o,800+n*13),2)});
  console.log('  ',games,'random games, rescues used:',rescues)});

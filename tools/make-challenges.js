@@ -1,12 +1,15 @@
-// Builds the Challenges levels by search: each board is checked so the goal can be reached and a careless order fails.
+// Builds the Challenges levels: 3x boards with Hard rules (2 lives, no hints, combo arrows).
+// Each board is tested by many random playthroughs: the goal must be reachable, but rarely by chance.
 // node tools/make-challenges.js > src/challenges.json
 const E = require('../src/engine.js');
-const strip = (l) => ({ w: l.w, h: l.h, mirrors: l.mirrors || [], flowers: null, arrows: l.arrows.map((a) => { const o = { id: a.id, kind: a.kind, dir: a.dir, cells: a.cells }; ['twin', 'pair', 'red', 'key', 'wait', 'isKey', 'uno', 'ghostPhase', 'phase'].forEach((k) => { if (a[k] !== undefined) o[k] = a[k]; }); return o; }) });
+const KEEP = ['twin', 'pair', 'red', 'key', 'wait', 'isKey', 'uno', 'ghostPhase', 'phase'];
+const strip = (l) => ({ w: l.w, h: l.h, big: true, mirrors: l.mirrors || [], flowers: null, arrows: l.arrows.map((a) => { const o = { id: a.id, kind: a.kind, dir: a.dir, cells: a.cells }; KEEP.forEach((k) => { if (a[k] !== undefined) o[k] = a[k]; }); return o; }) });
 function fresh(base, ch) {
-  const l = E.prepare(JSON.parse(JSON.stringify(Object.assign({ lives: 3, hints: 0, timeLimit: null, season: null, flowers: null }, base))));
+  const l = E.prepare(JSON.parse(JSON.stringify(Object.assign({ lives: 2, hints: 0, timeLimit: null, season: null, flowers: null }, base))));
   const s = E.newState(l);
   s.safe = ch.goal === 'golden';
-  (ch.frozen || []).forEach((id) => { s.frozen[id] = 999; });
+  s.keepIce = ch.goal === 'thaw';
+  (ch.frozen || []).forEach((id) => { s.frozen[id] = 9999; });
   return { l, s };
 }
 const goals = {
@@ -14,71 +17,73 @@ const goals = {
   thaw: (l, s) => Object.keys(s.frozen).length === 0,
   red: (l, s) => { const reds = l.arrows.filter((a) => a.red !== undefined); return reds.length > 0 && reds.every((a) => !s.removed[a.id] && E.isRedCarded(s, a)); },
 };
-// Breadth-first over move orders. A move is a tap that does something (leaves, thaws); bumps cost a life and are skipped.
-function play(base, ch, seq) {
-  const { l, s } = fresh(base, ch);
-  for (const id of seq) { const r = E.tap(l, s, id); if (!r.ok && !r.thawed) return null; }
-  return { l, s };
-}
+// Taps that move the game on without costing a life: launches, and for Thaw, hits that crack ice.
 function movesOf(l, s, ch) {
   const out = [];
   l.arrows.forEach((a) => {
-    if (s.removed[a.id] || (a.kind === 'twin' && a.twin < a.id) || !E.isReady(s, a)) return;
-    const c = E.check(l, s, a);
-    if (c.clear || (c.frozen && ch.goal === 'thaw')) out.push(a.id);
+    if (s.removed[a.id] || (a.kind === 'twin' && a.twin < a.id)) return;
+    const members = a.kind === 'twin' ? [a, l.arrows[a.twin]] : [a];
+    if (!members.every((m) => E.isReady(s, m))) return;
+    const cs = members.map((m) => E.check(l, s, m)), hit = cs.filter((c) => !c.clear);
+    if (!hit.length || (ch.goal === 'thaw' && hit.every((c) => c.frozen))) out.push(a.id);
   });
   return out;
 }
-// Breadth-first over move orders from a starting sequence. Bumps cost a life, so they are never part of a solution.
-function search(base, ch, maxDepth, prefix) {
-  const seen = new Set(), queue = [prefix || []];
-  while (queue.length) {
-    const seq = queue.shift(), g = play(base, ch, seq);
-    if (!g) continue;
-    const { l, s } = g;
+// One random playthrough. Returns the moves if the goal was reached.
+function rollout(base, ch, r) {
+  const { l, s } = fresh(base, ch), seq = [];
+  for (let guard = 0; guard < 400; guard++) {
     if (goals[ch.goal](l, s)) return seq;
-    if (ch.goal !== 'golden' && s.freed && Object.keys(s.freed).length) continue;
-    if (E.isWon(s) || seq.length >= maxDepth) continue;
-    const key = s.removed.map((x) => (x ? 1 : 0)).join('') + '|' + Object.keys(s.frozen).sort().join(',') + '|' + s.launches;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    movesOf(l, s, ch).forEach((id) => queue.push(seq.concat(id)));
+    if (E.isWon(s)) return null;
+    if (ch.goal !== 'golden' && s.freed && Object.keys(s.freed).length) return null;
+    const m = movesOf(l, s, ch);
+    if (!m.length) return null;
+    const id = m[Math.floor(r() * m.length)];
+    E.tap(l, s, id); seq.push(id);
   }
   return null;
 }
-// A good challenge has a wrong first move: one after which the goal can no longer be reached.
-function hasTrap(base, ch, maxDepth) {
-  const g = play(base, ch, []);
-  return movesOf(g.l, g.s, ch).some((id) => !search(base, ch, maxDepth + 1, [id]));
+function replay(base, ch, seq) {
+  const { l, s } = fresh(base, ch);
+  for (const id of seq) { const res = E.tap(l, s, id); if (!res.ok && !res.thawed) return false; }
+  return goals[ch.goal](l, s);
 }
 const out = [];
-module.exports = { search, strip, fresh, E };
-function find(kind, spec, picks) {
+function find(goal, extra, picks, runs) {
   let seed = 1, got = 0;
-  while (got < picks.length && seed < 1500) {
+  while (got < picks.length && seed < 400) {
     const p = picks[got];
-    const lvl = E.generate(Object.assign({}, spec, p.spec || {}), seed * 131 + kind.length * 7, 30);
+    const spec = Object.assign(E.endlessSpec(4 + got, { hard: true, scale: 3 }), { flowers: 0, gaps: 0 }, extra, p.spec || {});
+    const lvl = E.generate(spec, seed * 131 + goal.length * 7, 4);
     seed++;
     if (!lvl) continue;
-    const base = strip(lvl), ch = { goal: kind };
-    if (kind === 'thaw') {
-      // Freeze arrows that something else runs into, so each one can be hit free.
-      // Any arrows may be frozen; the search below keeps only boards where every one can be hit free in time.
-      const r = E.rng32(seed * 977), pool = base.arrows.filter((a) => a.kind !== 'twin').map((a) => a.id);
+    const base = strip(lvl), ch = { goal };
+    if (goal === 'thaw') {
+      const r = E.rng32(seed * 977), pool = base.arrows.filter((a) => a.kind === 'plain' && !E.traitCount(a)).map((a) => a.id);
       for (let i = pool.length - 1; i > 0; i--) { const k = Math.floor(r() * (i + 1)); const t = pool[i]; pool[i] = pool[k]; pool[k] = t; }
-      if (pool.length < p.frozen + 2) continue;
+      if (pool.length < p.frozen + 4) continue;
       ch.frozen = pool.slice(0, p.frozen);
     }
-    const best = search(base, ch, p.max);
-    if (!best || best.length < p.min) continue;
-    if (!hasTrap(base, ch, p.max)) continue;
-    out.push(Object.assign({ goal: kind, frozen: ch.frozen, moves: best.length, solution: best }, base));
+    if (goal === 'red' && base.arrows.filter((a) => a.red !== undefined).length < p.reds) continue;
+    const r = E.rng32(seed * 31 + 5);
+    let wins = 0, best = null;
+    for (let i = 0; i < runs; i++) {
+      const seq = rollout(base, ch, r);
+      if (seq) { wins++; if (!best || seq.length > best.length) best = seq; }
+      // Stop early once it is clearly too easy.
+      if (wins / runs > p.max) break;
+    }
+    const rate = wins / runs;
+    process.stderr.write(`${goal} seed ${seed} arrows ${base.arrows.length} rate ${rate.toFixed(2)}\n`);
+    if (!best || rate > p.max || !replay(base, ch, best)) continue;
+    out.push(Object.assign({ goal, frozen: ch.frozen, moves: best.length, rate, solution: best }, base));
     got++;
   }
 }
+module.exports = { strip, fresh, goals, movesOf, replay, E };
 if (require.main === module) {
-find('golden', { w: 5, h: 5, minLen: 2, maxLen: 4, depth: 4, compass: 2 }, [{ min: 1, max: 3 }, { min: 3, max: 5 }, { min: 4, max: 7 }]);
-find('thaw', { w: 5, h: 6, minLen: 2, maxLen: 4, depth: 5, compass: 2 }, [{ frozen: 2, min: 2, max: 5 }, { frozen: 3, min: 4, max: 7 }, { frozen: 4, min: 5, max: 9 }]);
-find('red', { w: 5, h: 6, minLen: 2, maxLen: 4, depth: 5, reds: 2 }, [{ min: 2, max: 5 }, { min: 4, max: 7, spec: { reds: 3 } }, { min: 5, max: 8, spec: { reds: 3, w: 6, h: 7 } }]);
-console.log(JSON.stringify(out));
+  find('golden', { compass: 4, reds: 0 }, [{ max: 0.3 }, { max: 0.15 }, { max: 0.08 }], 26);
+  find('thaw', { compass: 2 }, [{ frozen: 5, max: 0.3 }, { frozen: 7, max: 0.15 }, { frozen: 9, max: 0.08 }], 40);
+  find('red', { reds: 3, redSlack: 0 }, [{ reds: 3, max: 0.3 }, { reds: 4, max: 0.15, spec: { reds: 4 } }, { reds: 5, max: 0.08, spec: { reds: 5 } }], 40);
+  console.log(JSON.stringify(out));
 }

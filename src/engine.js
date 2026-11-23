@@ -206,7 +206,7 @@
     if (ice.length && ice.length === hit.length) {
       ice.forEach(function (r) { delete state.frozen[r.check.blocker]; });
       // Freed but still hemmed in by fire or more ice: clear them, so effects can never trap the player.
-      if (!state.safe && isStuck(level, state)) { state.frozen = {}; state.burning = {}; }
+      if (!state.safe && !state.keepIce && isStuck(level, state)) { state.frozen = {}; state.burning = {}; }
       unstickGhosts(level, state);
       if (state.safe) ensurePlay(level, state);
       return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
@@ -402,6 +402,9 @@
       var red = carded[i];
       if (tryRescue(level, state, function () { state.redLift[red.id] = true; })) { state.rescued.freed.push(red.id); return true; }
     }
+    // A golden arrow only appears when the player truly has no move left. While any arrow can still leave
+    // (or crack ice), play goes on; once the last move is made, this runs again and hands out the golden arrow.
+    if (legalMoves(level, state).length || iceOpensPlay(level, state)) return false;
     // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
     // A compass keeps its own rule, so it is only ever freed if nothing else can be.
     var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
@@ -915,7 +918,8 @@
       boards.push(lvl);
     }
     var empty = function (lvl) { return { removed: lvl.arrows.map(function () { return true; }), launches: 0, frozen: {}, burning: {} }; };
-    var plain = function (a) { return a.kind === 'plain' && a.key === undefined && !a.isKey && !a.wait && !a.sniper && a.coopGroup === undefined; };
+    // Snipers and cross-board twins never carry another effect, the same as twins in single player.
+    var plain = function (a) { return a.kind === 'plain' && !traitCount(a) && !a.sniper && a.coopGroup === undefined; };
     // Snipers: between 1 in 25 and 1 in 10 of each board's arrows, aimed so they reach a neighbouring board.
     if (!spec.noSnipers) boards.forEach(function (lvl, b) {
       var n = lvl.arrows.length, want = Math.max(1, Math.min(Math.floor(n / 10), Math.max(Math.ceil(n / 25), Math.round(n / 13))));
@@ -976,7 +980,9 @@
         function () { if (a.wait || a.isKey || step < 2 || off.patient) return false; a.wait = 2 + Math.floor(r() * Math.min(step - 1, 5)); return true; },
         function () { if (a.red || a.isKey || off.red) return false; var count = Math.max(3, step + 2 + Math.floor(n * (spec.redSlack || 0))); if (count > n - 2) return false; a.red = count; return true; }
       ], r);
-      for (var i = 0; i < adders.length && traitCount(a) < Math.min(3, want); i++) adders[i]();
+      // An arrow only carries as many effects as its body has room to show: one per cell after the tail, at most 3.
+      var room = Math.min(3, a.cells.length - 1);
+      for (var i = 0; i < adders.length && traitCount(a) < Math.min(room, want); i++) adders[i]();
       if (traitCount(a) >= 2) made++;
       return false;
     });
