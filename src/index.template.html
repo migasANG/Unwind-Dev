@@ -53,6 +53,7 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .volbar{display:flex;align-items:center;gap:12px;font-size:.875rem;margin-top:-6px}
 .volbar span{flex:none;width:7.5em}
 .volbar input{flex:1;min-width:0;accent-color:var(--ink);height:24px}
+.volbar output{flex:none;width:3.2em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 #coopNav{position:fixed;inset:0;pointer-events:none;z-index:2}
 .cnav{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 25%,transparent);display:grid;place-items:center;line-height:1}
 .cnav b{font-size:1.15rem;font-weight:700}
@@ -320,9 +321,12 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .typesbox .obox{max-width:360px;max-height:calc(100% - 32px);overflow:auto;gap:10px}
 .typesbox .note{margin:0}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.tgrid button{height:40px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);font-weight:600;font-size:.875rem;opacity:.6}
+.tgrid button{display:flex;align-items:center;gap:8px;padding:0 10px;text-align:left;height:42px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);font-weight:600;font-size:.875rem;opacity:.6}
 .tgrid button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink);opacity:1}
 .tgrid button[disabled]{cursor:default}
+.tgrid svg{width:28px;height:24px;flex:none}
+.tgrid button span{min-width:0;line-height:1.15}
+.tomenu{height:46px;border-radius:23px;border:1.5px solid currentColor;font-weight:700;flex:none}
 .typesbox .primary{height:46px;border-radius:23px}
 .card.start{max-width:380px;gap:14px;text-align:center;padding-block:30px}
 .card.start>*{flex:none}
@@ -391,6 +395,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
   <button id="bNextTheme" hidden><svg viewBox="0 0 24 24"><path d="M5 5v14l9-7ZM14 5v14l5.500-7Z"/></svg>Next Theme</button>
+  <button id="bMenu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Menu</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
 <div id="sheetHost"></div>

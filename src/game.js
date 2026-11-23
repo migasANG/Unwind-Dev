@@ -945,7 +945,7 @@
     var L = lobby, S = L.settings, host = L.view === 'host' && !L.joined, me = L.players[0], card = $('sheetHost').querySelector('.card');
     if (!card) return;
     lobbySeats();
-    var perLife = S.hard ? 2 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
+    var perLife = S.hard ? 1 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
     var waitingFor = S.players - L.players.length, notReady = L.players.filter(function (p) { return !p.ready; }).length;
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
@@ -966,7 +966,7 @@
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
-    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player, basic game difficulty') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player, no hints, and arrows with several effects at once' : '3 lives for each player, extra time and no hints') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Timer<small>Shared timer between all players</small></span></div>' + seg('timed', [[false, 'No timer'], [true, 'Timed']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
@@ -1038,7 +1038,7 @@
   function lobbyStart() {
     var L = lobby;
     if (!L || !$('lobbyCard')) return;
-    var S = L.settings, me = L.players[0], lives = (S.hard ? 2 : 3) * S.players;
+    var S = L.settings, me = L.players[0], lives = (S.hard ? 1 : 3) * S.players;
     var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, off: S.off, names: names, combos: S.hard ? 2 : 0 });
     lobby.timers.forEach(clearTimeout); lobby = null;
@@ -1538,7 +1538,9 @@
       var centre = pointAlong(pts, shift + len / 2);
       // Badges and icons pop in once their arrow is mostly drawn.
       var pop = Math.max(0, (intro - 0.45) / 0.55); pop = ease(pop);
+      traitBoost = 1 + amt * 0.4;
       drawTraits(a, pts, shift, len, color, ghostForm, pop, now);
+      traitBoost = 1;
       if (golden) goldSparkles(a, pts, shift, len, now);
       var tailPoint = px(a.cells[0]);
       if (a.isKey) scaled(tailPoint, pop, function () { drawStar(tailPoint, cs * 0.34, now); if (a.pairNo) pairTag(tailPoint, cs * 0.34, a.pairNo); });
@@ -2451,9 +2453,11 @@
     ctx.restore();
   }
   // An arrow's symbols, spaced evenly along it when it carries more than one.
+  // Badges grow with their arrow while it is highlighted (a hint, or a held twin's partner).
+  var traitBoost = 1;
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
-    if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+    if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29 * traitBoost, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
     if (a.coopGroup !== undefined) items.push(function (c) { drawCoopTag(c, a, color); });
     if (a.sniper) items.push(function (c) { drawCrosshair(c, cs * 0.27, color); });
     if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
@@ -2508,15 +2512,15 @@
   function drawCoopTag(c, a, color) {
     if (!coop) return;
     // The rounded game font for the letter, and a drawn plus sitting at the middle of the badge.
-    var r = cs * 0.3, letter = coopLabel(a.coopGroup).charAt(0), ps = r * 0.26, gap = r * 0.08;
+    var r = cs * 0.35 * traitBoost, letter = coopLabel(a.coopGroup).charAt(0), ps = r * 0.22, gap = r * 0.07;
     ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
-    ctx.font = '600 ' + Math.round(r * 1.18) + 'px Fredoka,Figtree,system-ui,sans-serif';
+    ctx.font = '600 ' + Math.round(r * 0.98) + 'px Fredoka,Figtree,system-ui,sans-serif';
     var lw = ctx.measureText(letter).width, total = lw + gap + ps * 2, x0 = c.x - total / 2;
     ctx.fillStyle = colors.card; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(letter, x0, c.y + r * 0.06);
     var px0 = x0 + lw + gap + ps;
-    ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1.2, r * 0.17); ctx.lineCap = 'round';
+    ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1.2, r * 0.15); ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(px0 - ps, c.y); ctx.lineTo(px0 + ps, c.y); ctx.moveTo(px0, c.y - ps); ctx.lineTo(px0, c.y + ps); ctx.stroke();
     ctx.restore();
   }
@@ -2954,9 +2958,10 @@
   var MOON_MARK = '<svg class="mk m" viewBox="0 0 24 24" aria-hidden="true">' + MOON_PATH + '</svg>';
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
   /* The start menu. Its first tap also unlocks sound, which browsers only allow after a tap. */
+  var started = false;
   function startMenu() {
     var last = progress.last || { set: 'calm', index: 0 }, info = SET_INFO[last.set] || SET_INFO.calm;
-    var where = (info.label || 'Calm') + ' · Level ' + ((last.index || 0) + 1 + (info.offset || 0));
+    var where = started && $('where').textContent ? $('where').textContent : (info.label || 'Calm') + ' · Level ' + ((last.index || 0) + 1 + (info.offset || 0));
     var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
       '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
@@ -2966,7 +2971,8 @@
     wireLanguage(s);
     var go = function (what) {
       audio(); closeSheet(); holdTutorials = false;
-      if (what === 'play') { maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
+      var first = !started; started = true;
+      if (what === 'play') { if (!first) return; maybeTutorials(); introStart = performance.now(); if (current.level.flowers && current.level.flowers.length) sendBee(state.launches, performance.now() + 900); }
       else if (what === 'levels') levelsSheet();
       else if (what === 'open') levelsSheet('extra');
       else if (what === 'online') onlineSheet('home');
@@ -2979,7 +2985,7 @@
     tab = tab || (current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
-    html += '<div class="tabs" role="tablist">' + [['extra', 'Extra'], ['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons'], ['extra', 'Extra']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
     var grid = function (set, from, to) {
       var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
@@ -3015,8 +3021,10 @@
       html += '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button></div>';
       html += '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>';
     }
+    html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
+    s.querySelector('#toMenu').onclick = startMenu;
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
     s.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { openLevel(b.getAttribute('data-set'), +b.getAttribute('data-l')); }; });
@@ -3064,6 +3072,22 @@
   /* Arrow types: which special arrows a generated board may use. Shown as a small box over the menu. */
   var ARROW_TYPES = [['twins', 'Twins'], ['compass', 'Compass'], ['moon', 'Moon and star'], ['mirror', 'Mirror'], ['patient', 'Patient'], ['ghost', 'Ghost'], ['phase', 'Phase'], ['red', 'Red card'], ['reverse', 'Reverse']];
   var MP_TYPES = [['twinshared', 'Twin-shared'], ['sniper', 'Sniper']];
+  // Small pictures for the arrow type buttons. They use the text colour, so they follow the button's state.
+  function typeIcon(k) {
+    var base = '<path d="M3 13H27"/><path d="M22 8L28 13L22 18"/>', o = '';
+    if (k === 'twins') o = base + '<circle cx="13" cy="13" r="5.5" fill="currentColor" stroke="none"/>';
+    else if (k === 'compass') o = '<circle cx="15" cy="13" r="9"/><path d="M15 17V7M11 11L15 6.5L19 11"/>';
+    else if (k === 'moon') o = base + '<path d="M15 6.5a6.5 6.5 0 1 0 0 13a5 5 0 1 1 0-13Z" fill="currentColor" stroke="none"/>';
+    else if (k === 'mirror') o = '<path d="M3 13H14L14 4"/><path d="M10 8L14 3.5L18 8"/><path d="M8 21L22 7" stroke-width="3.2"/>';
+    else if (k === 'patient') o = base + '<circle cx="13" cy="13" r="6" fill="var(--card)"/><path d="M13 9.5V13L15.5 14.5" stroke-width="1.8"/>';
+    else if (k === 'ghost') o = '<path d="M3 13H27" stroke-dasharray="3 3.5"/><path d="M22 8L28 13L22 18"/>';
+    else if (k === 'phase') o = base + '<rect x="10" y="7" width="8" height="12" rx="2" stroke-width="1.6" stroke-dasharray="2 2"/>';
+    else if (k === 'red') o = base + '<rect x="9" y="6.5" width="8" height="12" rx="1.5" fill="#d4161f" stroke="var(--card)" stroke-width="1.4"/>';
+    else if (k === 'reverse') o = '<path d="M5 13H25"/><path d="M20 8L26 13L20 18"/><path d="M10 8L4 13L10 18" stroke-width="1.6" stroke-dasharray="2 2"/>';
+    else if (k === 'twinshared') o = base + '<circle cx="13" cy="13" r="6.5" fill="currentColor" stroke="none"/><path d="M11.5 13H16.5M14 10.5V15.5" stroke="var(--card)" stroke-width="1.6"/>';
+    else if (k === 'sniper') o = '<path d="M3 13H27" stroke="#c8202f"/><path d="M22 8L28 13L22 18" stroke="#c8202f"/><circle cx="14" cy="13" r="5.5" fill="var(--card)" stroke="#c8202f" stroke-width="1.8"/><circle cx="14" cy="13" r="1.8" fill="#c8202f" stroke="none"/>';
+    return '<svg viewBox="0 0 30 26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
+  }
   function typesLabel(off, mp) {
     var all = ARROW_TYPES.concat(mp ? MP_TYPES : []), on = all.filter(function (t) { return !off || !off[t[0]]; }).length;
     return on === all.length ? 'All arrow types' : on === 0 ? 'Plain arrows only' : on + ' of ' + all.length + ' arrow types';
@@ -3073,7 +3097,7 @@
     var box = document.createElement('div');
     box.className = 'ocodebox typesbox';
     var paint = function () {
-      var chip = function (t) { return '<button data-type="' + t[0] + '" aria-pressed="' + !off[t[0]] + '"' + (locked ? ' disabled' : '') + '>' + t[1] + '</button>'; };
+      var chip = function (t) { return '<button data-type="' + t[0] + '" aria-pressed="' + !off[t[0]] + '"' + (locked ? ' disabled' : '') + '>' + typeIcon(t[0]) + '<span>' + t[1] + '</span></button>'; };
       box.innerHTML = '<div class="obox" role="dialog" aria-label="Arrow types"><h3>Arrow types</h3><p class="note">' + (locked ? 'Chosen by the host.' : 'Choose which arrows can appear on the boards. Plain arrows are always there.') + '</p>' +
         '<div class="chapter">Arrows</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
         (mp ? '<div class="chapter">Multiplayer</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
@@ -3546,7 +3570,8 @@
   }
   function volumeBar(id, label, value) {
     var v = Math.round((value === undefined ? 1 : value) * 100);
-    return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"></label>';
+    v = Math.round(v / 5) * 5;
+    return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"><output class="notr" id="' + id + 'Pct">' + v + '%</output></label>';
   }
   var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
   function settingsSheet() {
@@ -3554,9 +3579,11 @@
     var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' + volumeBar('vMusic', 'Music volume', audioPrefs.musicVol) +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
-      '<div class="chapter" style="margin-bottom:-6px">Theme</div><p class="now" id="nowPlaying"></p><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div>';
+      '<p class="now" id="nowPlaying"></p><details class="mpx"><summary>Music themes</summary><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div></details>';
+    html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     var s = sheet(html);
     wireLanguage(s);
+    s.querySelector('#toMenu').onclick = startMenu;
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
     showNow();
     s.querySelector('#x').onclick = closeSheet;
@@ -3567,11 +3594,11 @@
       this.setAttribute('aria-checked', audioPrefs.music); refresh(); showNow(); musicTick();
     };
     s.querySelector('#vMusic').oninput = function () {
-      audioPrefs.musicVol = this.value / 100; save('unwind.audio', audioPrefs); audio();
+      audioPrefs.musicVol = this.value / 100; save('unwind.audio', audioPrefs); audio(); s.querySelector('#vMusicPct').textContent = this.value + '%';
       if (musicBus && ac) { musicBus.gain.cancelScheduledValues(ac.currentTime); musicBus.gain.setTargetAtTime(musicLevel(), ac.currentTime, 0.05); }
     };
     s.querySelector('#vSound').oninput = function () {
-      audioPrefs.soundVol = this.value / 100; save('unwind.audio', audioPrefs); audio();
+      audioPrefs.soundVol = this.value / 100; save('unwind.audio', audioPrefs); audio(); s.querySelector('#vSoundPct').textContent = this.value + '%';
       if (sfxBus && ac) sfxBus.gain.setTargetAtTime(soundLevel(), ac.currentTime, 0.05);
     };
     s.querySelector('#vSound').onchange = function () { pluck(659, 0, 0.2, 0.8); };
@@ -3650,6 +3677,7 @@
   $('bgButton').onclick = function () { audio(); backgroundSheet(); };
   $('bGuide').onclick = function () { audio(); guideSheet(); };
   $('bLevels').onclick = function () { audio(); levelsSheet(); };
+  $('bMenu').onclick = function () { audio(); startMenu(); };
   $('mute').onclick = function () { audio(); settingsSheet(); };
 
   /* ---------- Hidden analytics view: add #debug or ?debug=1 to the address ---------- */
