@@ -356,7 +356,7 @@
   // Big maps build on a loading screen: try several boards, keep the best, and only reveal it once it is ready to draw.
   function openEndless(ready) {
     var plan = endlessPlan();
-    if (ready === true || plan.scale < 5) { startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); return; }
+    if (ready === true || plan.scale < 5) { if (plan.scale >= 3 && ready !== true) withLoading(function () { startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); }, 'Loading board…'); else startEndless(plan, E.endlessBoard(plan.n, plan.o, plan.seed)); return; }
     var tries = plan.scale >= 25 ? 4 : plan.scale >= 10 ? 3 : 2, done = 0, best = null, bestScore = -Infinity, started = performance.now(), STEPS = tries + 2;
     var s = sheet('<h2>Growing the map</h2><p id="loadLine">Planting arrows</p><div class="lantern-bar"><i id="loadBar" style="width:6%;transition:width .25s ease"></i></div>');
     var mark = function (text, stepsDone) {
@@ -406,7 +406,7 @@
   }
   function openCoop(seed, big, spec) {
     seed = seed || 1 + Math.floor(Math.random() * 1e6);
-    openCoopRoom(function () { return E.coopRoom(seed, spec || (big ? COOP_BIG : undefined)); }, spec && spec.names);
+    withLoading(function () { openCoopRoom(function () { return E.coopRoom(seed, spec || (big ? COOP_BIG : undefined)); }, spec && spec.names); if (spec && spec.after) spec.after(); });
   }
   // make() builds a fresh room, so Restart and Play again can rebuild it from the start.
   function openCoopRoom(make, names) {
@@ -468,7 +468,18 @@
     }
   };
   function openCoopTutorial(key) { openCoopRoom(COOP_TUTORIALS[key], ['Ana', 'Bruno']); }
-  function coopRestart() { openCoopRoom(coop.make, coop.room.names); }
+  function coopRestart() { var make = coop.make, names = coop.room.names, you = coop.you; withLoading(function () { openCoopRoom(make, names); if (you) { coop.you = you; coopSwitch(you); } }); }
+  // Building boards can take a moment, so a loading card shows first. Its spinner runs on the compositor, so it keeps turning.
+  var loadingSync = false;
+  function withLoading(fn, text) {
+    if (loadingSync) { fn(); return; }
+    var el = $('loading');
+    el.querySelector('p').textContent = text || 'Loading boards…';
+    el.hidden = false; el.classList.remove('out');
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () {
+      try { fn(); } finally { el.classList.add('out'); setTimeout(function () { if (el.classList.contains('out')) el.hidden = true; }, 320); }
+    }, 30); }); });
+  }
   function coopSyncLives() {
     if (!coop) return;
     coop.lives = state.lives;
@@ -871,14 +882,14 @@
       html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm">' + p.name + (you ? ' <em>(you)</em>' : '') + (isHost ? ' <i class="crown" title="Host">♛ Host</i>' : '') + '</span><span class="bd">Board ' + (lobby.seats.indexOf(p) + 1) + '</span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
-    html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards to swap their players.' : ' The host chooses who plays each board.') + '</p>';
+    html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
-    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives per player, and arrows with several effects at once' : '3 lives per player') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
+    html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '2 lives, no hints, and arrows with several effects at once' : '3 lives per player') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += sw('snipers', 'Sniper arrows', 'Optional bonus shots onto other boards');
     html += sw('twins', 'Twin-shared arrows', 'Arrows that leave together across boards');
-    html += sw('timed', 'Timed', '1 shared timer between all players');
+    html += sw('timed', 'Timed', 'Shared timer between all players');
     html += '<div class="lsum"><span>Shared lives<b>' + lives + '</b></span><span>Shared timer<b>' + (S.timed ? 'Yes' : 'No') + '</b></span><span>Win<b>All boards cleared</b></span></div>';
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
@@ -906,7 +917,30 @@
       lobbySheet(true);
     }; });
     card.querySelectorAll('[data-sw]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-sw'); S[k] = !S[k]; me.ready = false; lobbySheet(true); }; });
+    // Dragging a board onto another swaps their players too.
+    if (host) card.querySelectorAll('[data-seat]').forEach(function (b) {
+      b.onpointerdown = function (ev) {
+        var from = +b.getAttribute('data-seat'), r0 = b.getBoundingClientRect(), sx = ev.clientX, sy = ev.clientY, ghost = null;
+        var move = function (e) {
+          if (!ghost && Math.hypot(e.clientX - sx, e.clientY - sy) < 8) return;
+          if (!ghost) { ghost = b.cloneNode(true); ghost.className = 'seatghost'; ghost.style.width = r0.width + 'px'; ghost.style.height = r0.height + 'px'; document.body.appendChild(ghost); b.classList.add('dragging'); L.dragging = true; }
+          ghost.style.left = (e.clientX - r0.width / 2) + 'px'; ghost.style.top = (e.clientY - r0.height / 2) + 'px';
+          card.querySelectorAll('[data-seat]').forEach(function (o) { var q = o.getBoundingClientRect(); o.classList.toggle('over', o !== b && e.clientX > q.left && e.clientX < q.right && e.clientY > q.top && e.clientY < q.bottom); });
+        };
+        var up = function (e) {
+          window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+          if (!ghost) return;
+          ghost.remove(); b.classList.remove('dragging');
+          var over = card.querySelector('[data-seat].over');
+          setTimeout(function () { L.dragging = false; }, 0);
+          if (over) { var to = +over.getAttribute('data-seat'), t = L.seats[from]; L.seats[from] = L.seats[to]; L.seats[to] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
+          L.pick = -1; lobbySheet(true);
+        };
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+      };
+    });
     card.querySelectorAll('[data-seat]').forEach(function (b) { b.onclick = function () {
+      if (L.dragging) return;
       var i = +b.getAttribute('data-seat');
       if (L.pick < 0) { L.pick = i; lobbySheet(true); return; }
       if (L.pick !== i) { var t = L.seats[L.pick]; L.seats[L.pick] = L.seats[i]; L.seats[i] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
@@ -920,8 +954,8 @@
       var names = L.seats.map(function (p) { return p.name; }), you = L.seats.indexOf(me);
       var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: lives, noSnipers: !S.snipers, noTwins: !S.twins, names: names, combos: S.hard ? 2 : 0 });
       lobby.timers.forEach(clearTimeout); lobby = null;
+      spec.after = function () { coop.you = you; if (you > 0) coopSwitch(you); };
       openCoop(0, false, spec);
-      coop.you = you; if (you > 0) coopSwitch(you);
     };
   }
   function todayKey() { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
@@ -1343,7 +1377,7 @@
       if (state.removed[a.id] || offscreen(a)) return;
       var intro = introOf(a, now);
       if (intro <= 0) return;
-      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : 0, isReady = ready(a);
+      var f = ease(intro), shift = 0, b = bounces[a.id], amt = hinted[a.id] ? hintAmt : coop && coopFocus === a.id ? 0.75 + 0.25 * Math.sin(now / 200) : 0, isReady = ready(a);
       if (b) {
         var bt = (now - b.start) / 440;
         if (bt >= 1) delete bounces[a.id]; else shift = Math.sin(bt * Math.PI) * b.reach;
@@ -1355,7 +1389,7 @@
       // The body turns red while it burns, then fades back.
       // Glowing hot at first, then briefly charred, then back to normal.
       var baseColor = burning ? (burnT < 0.1 ? mixColor(arrowColor(a), '#e8321a', burnT / 0.1) : burnT < 0.72 ? '#e8321a' : mixColor('#e8321a', arrowColor(a), (burnT - 0.72) / 0.28)) : isFrozen ? '#3f9fd8' : arrowColor(a);
-      var color = amt ? mixColor(baseColor, colors.hint, amt) : baseColor;
+      var color = amt && hinted[a.id] ? mixColor(baseColor, colors.hint, amt) : baseColor;
       var width = w * glow * (1 + amt * 0.75);
       var head = cs * (0.24 + amt * 0.1);
       var ghostForm = E.isGhost(state, a), carded = E.isRedCarded(state, a);
@@ -2381,20 +2415,20 @@
   }
   // Twin-shared arrows carry a group letter and a plus: the plus says its twins are on other boards.
   function coopLabel(g) { return 'XYZWVU'.charAt(g % 6) + '+'; }
+  // Twin-shared arrows look like twins: the same round badge, with the group letter and a plus.
   function drawCoopTag(c, a, color) {
     if (!coop) return;
-    // Same lettering as the twin badges, in bold, with a smaller plus after the letter.
-    var letter = coopLabel(a.coopGroup).charAt(0), h = cs * 0.5, big = Math.round(h * 0.66), small = Math.round(h * 0.5);
-    ctx.save(); ctx.globalAlpha = 1;
-    ctx.font = '700 ' + big + 'px Figtree,system-ui,sans-serif'; var lw = ctx.measureText(letter).width;
-    ctx.font = '700 ' + small + 'px Figtree,system-ui,sans-serif'; var pw = ctx.measureText('+').width;
-    var w = Math.max(h, lw + pw + h * 0.42);
-    ctx.fillStyle = color; ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, cs * 0.035);
-    ctx.beginPath(); ctx.roundRect(c.x - w / 2, c.y - h / 2, w, h, h / 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = colors.card; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    var x0 = c.x - (lw + pw) / 2;
-    ctx.font = '700 ' + big + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
-    ctx.font = '700 ' + small + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - h * 0.08);
+    var r = cs * 0.29, letter = coopLabel(a.coopGroup).charAt(0);
+    ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
+    ctx.fillStyle = colors.card; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif';
+    var lw = ctx.measureText(letter).width;
+    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif';
+    var pw = ctx.measureText('+').width, x0 = c.x - (lw + pw) / 2;
+    ctx.textAlign = 'left';
+    ctx.font = '700 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.fillText(letter, x0, c.y + 1);
+    ctx.font = '700 ' + Math.round(r * 0.8) + 'px Figtree,system-ui,sans-serif'; ctx.fillText('+', x0 + lw, c.y - r * 0.12);
     ctx.restore();
   }
   function drawCrosshair(c, r, color) {
@@ -3313,16 +3347,19 @@
     if (goldAlive()) here.gold = 1;
     if ((current.level.mirrors || []).length) here.mirror = 1;
     E.effectsOf(current.level).forEach(function (k) { here[{ winter: 'ice', summer: 'fire', spring: 'flower', autumn: 'wind' }[k]] = 1; });
+    var row = function (it) {
+      return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p>' + (watchKey[it.key] ? '<button class="watch" data-watch="' + watchKey[it.key] + '">▶ Watch how it works</button>' : '') + '</div></div>';
+    };
+    var SEASONAL = { ice: 1, fire: 1, flower: 1, wind: 1 }, seasonHere = items.some(function (it) { return SEASONAL[it.key] && here[it.key]; });
     var html = '<div class="row"><h2>Arrow guide</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      items.map(function (it) {
-        return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p>' + (watchKey[it.key] ? '<button class="watch" data-watch="' + watchKey[it.key] + '">▶ Watch how it works</button>' : '') + '</div></div>';
-      }).join('');
+      '<details class="mpx" open><summary>Generic arrows</summary>' + items.filter(function (it) { return !SEASONAL[it.key]; }).map(row).join('') + '</details>' +
+      '<details class="mpx"' + (seasonHere ? ' open' : '') + '><summary>Seasonal arrows and effects</summary>' + items.filter(function (it) { return SEASONAL[it.key]; }).map(row).join('') + '</details>';
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
       { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
         art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' },
       { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.',
-        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<rect x="5" y="22" width="18" height="11" rx="5.5" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><rect x="38" y="22" width="18" height="11" rx="5.5" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' }
+        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' }
     ];
     var hereMp = {};
     if (current.coop && coop) { coop.boards.forEach(function (B) { B.level.arrows.forEach(function (a) { if (a.sniper && !B.state.removed[a.id]) hereMp.sniper = 1; if (a.coopGroup !== undefined) hereMp.twinshared = 1; }); }); }
@@ -3518,7 +3555,7 @@
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed, big) { openCoop(seed, big); }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobbySheet(); },
+    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobbySheet(); },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
