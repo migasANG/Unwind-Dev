@@ -323,13 +323,13 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .typesbox .obox{max-width:360px;max-height:calc(100% - 32px);overflow:auto;gap:10px}
 .typesbox .note{margin:0}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.tgrid button{display:flex;align-items:center;gap:8px;padding:0 10px;text-align:left;height:42px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);font-weight:600;font-size:.875rem;opacity:.6}
+.tgrid button{display:flex;align-items:center;gap:6px;padding:0 8px;text-align:left;height:42px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);font-weight:600;font-size:.875rem;opacity:.6}
 .tgrid button{position:relative;background:transparent;border-style:dashed}
 .tgrid button[aria-pressed="true"]{background:var(--card);color:var(--ink);border:2px solid var(--ink);opacity:1}
 .tgrid button[aria-pressed="true"]::after{content:'✓';position:absolute;right:8px;font-weight:800;font-size:.8rem}
 .tgrid button span{padding-right:12px}
 .tgrid button[disabled]{cursor:default}
-.tgrid svg{width:30px;height:26px;flex:none}
+.tgrid svg{width:39px;height:26px;flex:none}
 .tgrid button span{min-width:0;line-height:1.15}
 .tomenu{height:46px;border-radius:23px;border:1.5px solid currentColor;font-weight:700;flex:none}
 .typesbox .primary{height:46px;border-radius:23px}
@@ -2202,7 +2202,7 @@ window.UnwindI18n = (function () {
   // The next background is built out of sight first. Only once it is fully drawn does it fade in over the old one.
   var bgRequest = 0;
   function applyBackgroundNow() {
-    if (!current || current.mode !== 'endless') return;
+    if (!rotating()) return;
     var ask = ++bgRequest, choice = shownBackground(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
     if ((old.getAttribute('data-season') || null) === next && !old.hidden === !!next) { commitBackground(ask, null, next); return; }
     var fresh = document.createElement('div');
@@ -2212,7 +2212,7 @@ window.UnwindI18n = (function () {
     // Give the browser time to finish painting the new scene, so it never fades in half drawn.
     requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () { requestAnimationFrame(function () {
       // A newer choice replaced this one while it was getting ready.
-      if (ask !== bgRequest || !current || current.mode !== 'endless') { fresh.remove(); return; }
+      if (ask !== bgRequest || !rotating()) { fresh.remove(); return; }
       commitBackground(ask, fresh, next);
     }); }, next ? 90 : 0); }); });
   }
@@ -2294,7 +2294,7 @@ window.UnwindI18n = (function () {
   }
   function startEndless(plan, lvl) {
     // Arriving in Open Water starts the rotation at Dawn. Moving to the next board keeps it going.
-    if (!current || current.mode !== 'endless') resetCycle();
+    if (!rotating()) resetCycle();
     var o = plan.o, scale = plan.scale;
     lvl.lives = o.hard ? 2 : null;
     E.prepare(lvl);
@@ -4423,6 +4423,8 @@ window.UnwindI18n = (function () {
     if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.5); });
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
+      // On a short arrow a lone twin-shared ball sits a touch towards the head, the middle of what the eye sees.
+      if (items.length === 1 && a.coopGroup !== undefined && len <= 1.6) c = pointAlong(pts, shift + len / 2 + 0.14);
       scaled(c, pop, function () { draw(c); });
     });
   }
@@ -4468,6 +4470,8 @@ window.UnwindI18n = (function () {
     if (!coop) return;
     // The same ball as a twin, so short arrows stay readable, and a small plus bubble on its shoulder for "other boards".
     var r = cs * 0.29 * traitBoost, letter = coopLabel(a.coopGroup).charAt(0);
+    // Ball and bubble together are centred, so the ball shifts a little away from the bubble.
+    c = { x: c.x - r * 0.14, y: c.y + r * 0.14 };
     ctx.save(); ctx.globalAlpha = 1;
     badge(c, r, color, colors.card, letter);
     var br = r * 0.5, bx = c.x + r * 0.78, by = c.y - r * 0.78;
@@ -5028,22 +5032,24 @@ window.UnwindI18n = (function () {
   var MP_TYPES = [['twinshared', 'Twin-shared'], ['sniper', 'Sniper']];
   // Small pictures for the arrow type buttons. They use the text colour, so they follow the button's state.
   // Small pictures for the arrow type buttons, in the colours the arrows really have in the current scene.
+  // Small pictures for the arrow type buttons, in the colours the arrows really have in the current scene. All arrows share one length.
   function typeIcon(k) {
     var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4], ink = colors.ink, card = colors.card;
-    var line = function (col, extra) { return '<path d="M3 13H24" stroke="' + col + '"' + (extra || '') + '/><path d="M19 7.5L25 13L19 18.5" stroke="' + col + '"/>'; };
+    var line = function (col, extra) { return '<path d="M3 13H35" stroke="' + col + '"' + (extra || '') + '/><path d="M30 7.5L36 13L30 18.5" stroke="' + col + '"/>'; };
+    var ball = function (fill, stroke, text, tcol) { return '<circle cx="15" cy="13" r="6.5" fill="' + fill + '"' + (stroke ? ' stroke="' + stroke + '" stroke-width="1.8"' : ' stroke="none"') + '/>' + (text ? '<text x="15" y="16.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + tcol + '" stroke="none">' + text + '</text>' : ''); };
     var o = '';
-    if (k === 'twins') { var tc = colors.twins[0]; o = line(tc) + '<circle cx="12" cy="13" r="6.5" fill="' + tc + '" stroke="none"/><text x="12" y="16.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">A</text>'; }
-    else if (k === 'compass') o = '<circle cx="14" cy="13" r="10" stroke="' + colors.compass + '" stroke-width="2"/><path d="M14 18V7M10 11L14 6.5L18 11" stroke="' + colors.compass + '"/>';
-    else if (k === 'moon') o = line(ink, ' stroke-dasharray="2.5 3.5"') + '<circle cx="12" cy="13" r="6.5" fill="' + card + '" stroke="' + ink + '" stroke-width="1.6"/><path d="M13.4 9.2a4 4 0 1 0 0 7.6a3.1 3.1 0 1 1 0-7.6Z" fill="' + ink + '" stroke="none"/>';
-    else if (k === 'mirror') o = '<path d="M3 15H13V5" stroke="' + ink + '"/><path d="M9 9L13 4.5L17 9" stroke="' + ink + '"/><path d="M7 23L23 7" stroke="' + colors.mirror + '" stroke-width="3.4"/>';
-    else if (k === 'patient') o = line(ink) + '<circle cx="12" cy="13" r="6.5" fill="' + card + '" stroke="' + ink + '" stroke-width="1.8"/><text x="12" y="16.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + ink + '" stroke="none">3</text>';
-    else if (k === 'ghost') o = '<g opacity=".38">' + line(ink) + '</g><path d="M8 20V11a4.5 4.5 0 0 1 9 0v9l-1.5-1.5L14 20l-1.5-1.5L11 20l-1.5-1.5Z" fill="' + card + '" stroke="' + ink + '" stroke-width="1.5"/><circle cx="11" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/><circle cx="14" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/>';
-    else if (k === 'phase') { var pc = dark ? '#d7b4ff' : '#7a3fd0'; o = '<rect x="9" y="6" width="8" height="14" rx="2" fill="' + ink + '" fill-opacity=".22" stroke="none"/>' + '<path d="M3 13H9" stroke="' + pc + '"/><path d="M9 13H17" stroke="' + pc + '" stroke-dasharray="1.5 2.5" stroke-width="2"/><path d="M17 13H24" stroke="' + pc + '"/><path d="M19 7.5L25 13L19 18.5" stroke="' + pc + '"/>'; }
-    else if (k === 'red') o = line(ink) + '<rect x="8.5" y="6.5" width="8" height="12" rx="1.5" fill="#d4161f" stroke="' + card + '" stroke-width="1.4"/>';
-    else if (k === 'reverse') { var rc = dark ? '#ffc069' : '#c85a00'; o = '<path d="M7 13H23" stroke="' + rc + '"/><path d="M19 7.5L25 13L19 18.5" stroke="' + rc + '"/><path d="M11 7.5L5 13L11 18.5" stroke="' + rc + '"/>'; }
-    else if (k === 'twinshared') { var sc = colors.twins[colors.twins.length - 1]; o = line(sc) + '<circle cx="11" cy="14" r="6" fill="' + sc + '" stroke="none"/><text x="11" y="17.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="16" cy="8.5" r="3.6" fill="' + sc + '" stroke="' + card + '" stroke-width="1.2"/><path d="M14.6 8.5H17.4M16 7.1V9.9" stroke="' + card + '" stroke-width="1.2"/>'; }
-    else if (k === 'sniper') { var nc = dark ? '#ff6b6b' : '#b3122e'; o = line(nc) + '<circle cx="12" cy="13" r="5.5" fill="' + card + '" stroke="' + nc + '" stroke-width="1.8"/><circle cx="12" cy="13" r="1.8" fill="' + nc + '" stroke="none"/>'; }
-    return '<svg viewBox="0 0 28 26" aria-hidden="true" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
+    if (k === 'twins') { var tc = colors.twins[0]; o = line(tc) + ball(tc, null, 'A', card); }
+    else if (k === 'compass') o = '<circle cx="19" cy="13" r="10.5" stroke="' + colors.compass + '" stroke-width="2"/><path d="M19 19V7M14.5 11.5L19 6.5L23.5 11.5" stroke="' + colors.compass + '"/>';
+    else if (k === 'moon') o = line(ink, ' stroke-dasharray="3 4"') + ball(card, ink) + '<path d="M16.6 9.2a4 4 0 1 0 0 7.6a3.1 3.1 0 1 1 0-7.6Z" fill="' + ink + '" stroke="none"/>';
+    else if (k === 'mirror') o = '<path d="M3 16H17V5" stroke="' + ink + '"/><path d="M12.5 9.5L17 4.5L21.5 9.5" stroke="' + ink + '"/><path d="M9 24L27 6" stroke="' + colors.mirror + '" stroke-width="3.4"/>';
+    else if (k === 'patient') o = line(ink) + ball(card, ink, '3', ink);
+    else if (k === 'ghost') o = '<g opacity=".38">' + line(ink) + '</g><path d="M11 20.5V11a4.5 4.5 0 0 1 9 0v9.5l-1.5-1.5L17 20.5l-1.5-1.5L14 20.5l-1.5-1.5Z" fill="' + card + '" stroke="' + ink + '" stroke-width="1.5"/><circle cx="14" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/><circle cx="17" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/>';
+    else if (k === 'phase') { var pc = dark ? '#d7b4ff' : '#7a3fd0'; o = '<rect x="13" y="5.5" width="9" height="15" rx="2" fill="' + ink + '" fill-opacity=".22" stroke="none"/><path d="M3 13H13" stroke="' + pc + '"/><path d="M13 13H22" stroke="' + pc + '" stroke-dasharray="1.5 2.5" stroke-width="2"/><path d="M22 13H35" stroke="' + pc + '"/><path d="M30 7.5L36 13L30 18.5" stroke="' + pc + '"/>'; }
+    else if (k === 'red') o = line(ink) + '<rect x="11" y="6.5" width="8" height="12" rx="1.5" fill="#d4161f" stroke="' + card + '" stroke-width="1.4"/>';
+    else if (k === 'reverse') { var rc = dark ? '#ffc069' : '#c85a00'; o = '<path d="M5 13H35" stroke="' + rc + '"/><path d="M30 7.5L36 13L30 18.5" stroke="' + rc + '"/><path d="M10 7.5L4 13L10 18.5" stroke="' + rc + '"/>'; }
+    else if (k === 'twinshared') { var sc = colors.twins[colors.twins.length - 1]; o = line(sc) + '<circle cx="14" cy="14" r="6" fill="' + sc + '" stroke="none"/><text x="14" y="17.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="19" cy="8.5" r="3.6" fill="' + sc + '" stroke="' + card + '" stroke-width="1.2"/><path d="M17.6 8.5H20.4M19 7.1V9.9" stroke="' + card + '" stroke-width="1.2"/>'; }
+    else if (k === 'sniper') { var nc = dark ? '#ff6b6b' : '#b3122e'; o = line(nc) + '<circle cx="15" cy="13" r="5.5" fill="' + card + '" stroke="' + nc + '" stroke-width="1.8"/><circle cx="15" cy="13" r="1.8" fill="' + nc + '" stroke="none"/>'; }
+    return '<svg viewBox="0 0 39 26" aria-hidden="true" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
   }
   function typesLabel(off, mp) {
     var all = ARROW_TYPES.concat(mp ? MP_TYPES : []), on = all.filter(function (t) { return !off || !off[t[0]]; }).length;
