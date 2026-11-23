@@ -901,12 +901,14 @@
       html = '<div class="row"><h2>Play online</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
         (notice ? '<p class="lstatus">' + notice + '</p>' : '') +
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
+        (load('unwind.lastRoom', '') ? '<button class="obig orejoin" id="oRejoin" hidden><b>Back to your game</b><span>Room ' + load('unwind.lastRoom', '') + ' is still going. Jump back onto your board.</span></button>' : '') +
         '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
         '<div class="chapter">Join a room</div>' +
         '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
         '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
         '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mSimRoom"><b>Room preview (simulated)</b><span>The room screen with pretend players, no server needed.</span></button></div>' +
+        '<p class="note" style="text-align:center" id="oVer">Game build ' + BUILD + '</p>' +
         '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><div class="otp" id="oOtp" role="group" aria-label="Room code">' + [0, 1, 2, 3, 4, 5].map(function (i) { return (i === 3 ? '<span class="otpdash" aria-hidden="true">-</span>' : '') + '<input class="otpc" data-i="' + i + '" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Character ' + (i + 1) + '">'; }).join('') + '</div><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
     }
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
@@ -925,6 +927,13 @@
     nameIn.oninput = saveName;
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
     card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; hostOnline(this); };
+    fetch(netBase() + '/').then(function (r) { return r.text(); }).then(function (t) { var v = t.match(/Version (\d+)/), el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server ' + (v ? 'version ' + v[1] : 'version 1–5') ; }).catch(function () { var el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server not reachable'; });
+    var rj = card.querySelector('#oRejoin');
+    if (rj) {
+      var lr = load('unwind.lastRoom', '');
+      netFetch('/rooms/' + lr).then(function (info) { if (info.exists && info.started && rj.isConnected) rj.hidden = false; else save('unwind.lastRoom', ''); }).catch(function () {});
+      rj.onclick = function () { rj.disabled = true; joinOnline(lr, function (e) { if (e) { rj.hidden = true; save('unwind.lastRoom', ''); onlineSheet('home', 0, e); } }); };
+    }
     card.querySelector('#mSimRoom').onclick = function () { lobby = null; lobbySheet(); };
     card.querySelector('#oPublic').onclick = function () { saveName(); publicRooms = null; onlineSheet('public'); };
     card.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
@@ -963,6 +972,8 @@
   }
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
+  // Shown in the main menu, to check that a phone has the newest page and not a cached one.
+  var BUILD = '2026.11.23-d';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -978,6 +989,7 @@
   // Closing or leaving the page: the server gives a short grace time instead of the usual 90 seconds.
   window.addEventListener('pagehide', function () { if (coop && coop.online && !ended) netSend({ t: 'away' }); });
   function netClose() {
+    if (coop && coop.online) save('unwind.lastRoom', '');
     net.leaving = true; clearTimeout(net.timer); clearInterval(net.ping);
     if (net.ws) { try { net.ws.close(1000, 'bye'); } catch (e) {} }
     net.ws = null; net.code = '';
@@ -991,7 +1003,7 @@
     var ws;
     try { ws = new WebSocket(url); } catch (e) { onlineError('Could not reach the online server.'); return; }
     net.ws = ws;
-    ws.onopen = function () { net.retries = 0; net.ping = setInterval(function () { netSend({ t: 'ping' }); }, 25000); if (lobby && lobby.online) { lobby.status = ''; if ($('lobbyCard')) lobbySheet(true); } };
+    ws.onopen = function () { net.retries = 0; net.ping = setInterval(function () { netSend({ t: 'ping' }); }, 15000); if (lobby && lobby.online) { lobby.status = ''; if ($('lobbyCard')) lobbySheet(true); } };
     ws.onmessage = function (ev) {
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.t === 'room') onServerRoom(m.room);
@@ -1039,7 +1051,7 @@
     if (lobby) lobby.timers.forEach(clearTimeout);
     lobby = null;
     spec.after = function () {
-      coop.you = you; coop.online = { code: net.code, seed: m.seed, applied: 0 }; coop.room.title = 'Online room ' + net.code;
+      coop.you = you; coop.online = { code: net.code, seed: m.seed, applied: 0 }; save('unwind.lastRoom', net.code); coop.room.title = 'Online room ' + net.code;
       if (you > 0) coopSwitch(you);
       $('where').textContent = coopWhere(coop.idx);
       var others = names.filter(function (n, i) { return i !== you && n; });
@@ -1054,7 +1066,7 @@
     openCoop(m.seed, false, spec);
   }
   /* ---------- Online game: every phone applies the server's events in the same order ---------- */
-  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1 };
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1 };
   var netApplying = false;
   function netGame(m) {
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
@@ -1066,6 +1078,8 @@
       return;
     }
     if (m.t === 'paused') { onlinePaused(m); return; }
+    if (m.t === 'offline') { if (m.b !== coop.you) showToast(m.name + ' lost connection. Waiting for them to come back…'); return; }
+    if (m.t === 'back') { if (m.b !== coop.you) showToast(m.name + ' is back.'); return; }
     if (m.t === 'nope') { onlineNope(m); return; }
     applyEvent(m, false);
   }
@@ -1151,6 +1165,7 @@
       }
       boardLayer = null;
     } else if (ev.t === 'end') {
+      save('unwind.lastRoom', '');
       if (!ended) finish(ev.result === 'win', ev.result === 'win' ? undefined : 'lives');
     }
     if (!quiet) { coopNav(); refresh(); }
@@ -1192,7 +1207,7 @@
   function joinOnline(code, done) {
     netFetch('/rooms/' + code).then(function (info) {
       if (!info.exists) return done('There is no room with that code.');
-      if (info.players >= info.max) return done('That room is full.');
+      // A full or started room is still worth asking: you may already have a seat there. The server says no otherwise.
       netConnect(code); done('');
     }).catch(function () { done('Could not reach the online server.'); });
   }
@@ -3262,7 +3277,7 @@
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
       (current && current.coop && coop && coop.online && !ended ? '<button class="lleave smleave" data-go="leave">Leave online game</button>' : '') +
       '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
-      languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
+      languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.<br>Build ' + BUILD + '</p>';
     var s = sheet(html, 'start');
     s.classList.add('startsheet');
     wireLanguage(s);
@@ -4047,7 +4062,7 @@
     pops: function () { return popCount; },
     coop: function () { return coop; },
     coopSwitch: function (i) { coopSwitch(i); },
-    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); }, netDrop: function () { if (net.ws) net.ws.close(); }, netState: function () { return { ready: net.ws && net.ws.readyState, retries: net.retries, leaving: net.leaving, code: net.code, gameReady: net.ready, pending: (net.pending || []).length }; },
+    openCoop: function (seed, big) { loadingSync = true; try { openCoop(seed, big); } finally { loadingSync = false; } }, openCoopTutorial: openCoopTutorial, lobby: function () { return lobby; }, openLobby: function () { lobby = null; lobbySheet(); }, openOnline: function (sc) { onlineSheet(sc || 'home'); }, netDrop: function () { if (net.ws) net.ws.close(); }, netSilence: function () { clearInterval(net.ping); net.leaving = true; }, netState: function () { return { ready: net.ws && net.ws.readyState, retries: net.retries, leaving: net.leaving, code: net.code, gameReady: net.ready, pending: (net.pending || []).length }; },
     cycle: function () { return { i: bgCycle.i, gap: bgCycle.gapUntil, on: cycleOn(), bar: musicBar, playing: playingTheme, want: wantedTheme(), bg: shownBackground(), season: $('seasonBg').getAttribute('data-season'), color: colors.name }; },
     cycleFinishSong: function () { if (ac) { musicBar = 1e6; nextBarAt = 0; } bgCycle.endAt = 0; },
     levels: function () { return audioPrefs; },
