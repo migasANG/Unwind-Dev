@@ -180,7 +180,7 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 body.bigmap header.ui{background:var(--sky-a);padding-bottom:8px}
 body.bigmap nav.ui{background:var(--sky-b);padding-top:6px}
 body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:max-content;max-width:44vw;padding:4px 14px;border-radius:14px;background:var(--card);font:600 .8125rem/1.3 var(--body)}
-.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:color-mix(in srgb,currentColor 9%,transparent)}
 .tabs button{height:38px;border-radius:12px;font-weight:600;font-size:.78rem;padding:0 2px;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--card)}
 .note{font-size:.8125rem;opacity:.85;margin-top:-6px}
@@ -355,6 +355,11 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .smenu button{height:48px;border-radius:16px;border:1.5px solid currentColor;font-weight:600}
 .chapter.strong{font-weight:800;opacity:1}
 .lstatus{margin:0;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,#e85d04 14%,transparent);font-weight:600;font-size:.875rem}
+/* While a menu is open the scene behind it holds still, so the blur is drawn once instead of every frame. */
+body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast),body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast) *{animation-play-state:paused!important}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;max-width:calc(100% - 32px);padding:12px 18px;border-radius:16px;background:var(--ink);color:var(--card);font-weight:600;font-size:.9375rem;text-align:center;box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 35%,transparent);animation:pop .3s cubic-bezier(.3,1.4,.5,1) both;transition:opacity .4s ease}
+.toast.out{opacity:0}
+.tabs button[data-tab="extra"],.tabs button[data-tab="online"]{grid-column:span 2}
 @keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes slideout{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes fadeout{from{opacity:1}to{opacity:0}}
@@ -406,12 +411,12 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
 <div id="caption" class="ui"></div>
 <nav class="ui">
+  <button id="bMenu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button>
   <button id="bRewind"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></svg>Rewind</button>
   <button id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7h6c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 3Z"/></svg><span id="hintLabel">Hint</span></button>
   <button id="bRestart"><svg viewBox="0 0 24 24"><path d="M5 12h14M5 12l4-4M5 12l4 4M19 6v12"/></svg>Restart</button>
   <button id="bGuide"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button>
   <button id="bNextTheme" hidden><svg viewBox="0 0 24 24"><path d="M5 5v14l9-7ZM14 5v14l5.500-7Z"/></svg>Next Theme</button>
-  <button id="bMenu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Menu</button>
   <button id="bLevels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button>
 </nav>
 <div id="sheetHost"></div>
