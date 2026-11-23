@@ -324,9 +324,12 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .typesbox .note{margin:0}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .tgrid button{display:flex;align-items:center;gap:8px;padding:0 10px;text-align:left;height:42px;border-radius:12px;border:1.5px solid color-mix(in srgb,currentColor 30%,transparent);font-weight:600;font-size:.875rem;opacity:.6}
-.tgrid button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink);opacity:1}
+.tgrid button{position:relative;background:transparent;border-style:dashed}
+.tgrid button[aria-pressed="true"]{background:var(--card);color:var(--ink);border:2px solid var(--ink);opacity:1}
+.tgrid button[aria-pressed="true"]::after{content:'✓';position:absolute;right:8px;font-weight:800;font-size:.8rem}
+.tgrid button span{padding-right:12px}
 .tgrid button[disabled]{cursor:default}
-.tgrid svg{width:28px;height:24px;flex:none}
+.tgrid svg{width:30px;height:26px;flex:none}
 .tgrid button span{min-width:0;line-height:1.15}
 .tomenu{height:46px;border-radius:23px;border:1.5px solid currentColor;font-weight:700;flex:none}
 .typesbox .primary{height:46px;border-radius:23px}
@@ -2043,7 +2046,8 @@ window.UnwindI18n = (function () {
   /* ---------- Open Water's default background: each song plays once, then the scene fades to the next ---------- */
   var CYCLE = ['0', '1', '2', '3', '4', 'winter', 'spring', 'summer', 'autumn'], CYCLE_GAP = 2000;
   var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
-  function cycleOn() { return !!current && current.mode === 'endless' && backgroundChoice() === 'default'; }
+  function rotating() { return !!current && (current.mode === 'endless' || !!current.coop); }
+  function cycleOn() { return rotating() && backgroundChoice() === 'default'; }
   function shownBackground() { var b = backgroundChoice(); return b === 'default' ? CYCLE[bgCycle.i] : b; }
   function cycleSeconds() { return M.patternSeconds(colors.music); }
   function startCycleSection() {
@@ -2369,7 +2373,8 @@ window.UnwindI18n = (function () {
       E.resetBoard(B.level);
       B.state = E.newState(B.level); B.state.safe = !room.tutorial;
     });
-    begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: coopWhere(0), chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    if (!rotating()) resetCycle();
+    begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: coopWhere(0), chapter: backgroundPalette(), sunY: 34, background: true });
     state.safe = !room.tutorial;
     coop.boards[0].state = state;
     coopSyncLives();
@@ -3032,7 +3037,7 @@ window.UnwindI18n = (function () {
     $('timer').classList.remove('low');
     applyChapter(c.chapter, c.sunY);
     applySeason(c.background ? (SEASONS[shownBackground()] ? shownBackground() : null) : c.level.season);
-    $('where').textContent = c.mode === 'endless' || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
+    $('where').textContent = c.mode === 'endless' || c.coop || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
     var rec = progress.records && progress.records[bestKey(c)];
     if (rec) $('where').textContent += ' · Best ' + recordText(rec);
@@ -3177,7 +3182,7 @@ window.UnwindI18n = (function () {
   /* ---------- Board geometry ---------- */
   var canvas = $('board'), ctx = canvas.getContext('2d'), vw = 0, vh = 0, cs = 40, ox = 0, oy = 0;
   var cam = null, fitCs = 40, viewTop = 0, viewBottom = 0, MIN_TAP = 38, MAX_ZOOM = 64;
-  function l0season() { return current && (E.effectsOf(current.level).length || current.mode === 'endless'); }
+  function l0season() { return current && (E.effectsOf(current.level).length || current.mode === 'endless' || current.coop); }
   function layout() {
     // Big boards draw at a lower resolution, which keeps them smooth on phones.
     var bigBoard = current && current.level.big, area = current ? current.level.w * current.level.h : 0;
@@ -3190,7 +3195,7 @@ window.UnwindI18n = (function () {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!current) return;
     viewTop = document.querySelector('header.ui').getBoundingClientRect().bottom + 10;
-    $('bgButton').hidden = !(current && current.mode === 'endless');
+    $('bgButton').hidden = !rotating();
     if (l0season()) { $('seasonBadge').style.top = viewTop + 'px'; $('bgButton').style.top = viewTop + 'px'; viewTop += E.effectsOf(current.level).length > 3 && vw < 340 ? 76 : 44; }
     viewBottom = document.querySelector('nav.ui').getBoundingClientRect().top - 54;
     var l = current.level, sideW = vw - 32 - (current.coop ? 92 : 0), padY = current.coop ? 84 : 0;
@@ -4461,17 +4466,16 @@ window.UnwindI18n = (function () {
   // Twin-shared arrows look like twins: the same round badge, with the group letter and a plus.
   function drawCoopTag(c, a, color) {
     if (!coop) return;
-    // The rounded game font for the letter, and a drawn plus sitting at the middle of the badge.
-    var r = cs * 0.35 * traitBoost, letter = coopLabel(a.coopGroup).charAt(0), ps = r * 0.22, gap = r * 0.07;
-    ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, 7); ctx.fill();
-    ctx.font = '600 ' + Math.round(r * 0.98) + 'px Fredoka,Figtree,system-ui,sans-serif';
-    var lw = ctx.measureText(letter).width, total = lw + gap + ps * 2, x0 = c.x - total / 2;
-    ctx.fillStyle = colors.card; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(letter, x0, c.y + r * 0.06);
-    var px0 = x0 + lw + gap + ps;
-    ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1.2, r * 0.15); ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(px0 - ps, c.y); ctx.lineTo(px0 + ps, c.y); ctx.moveTo(px0, c.y - ps); ctx.lineTo(px0, c.y + ps); ctx.stroke();
+    // The same ball as a twin, so short arrows stay readable, and a small plus bubble on its shoulder for "other boards".
+    var r = cs * 0.29 * traitBoost, letter = coopLabel(a.coopGroup).charAt(0);
+    ctx.save(); ctx.globalAlpha = 1;
+    badge(c, r, color, colors.card, letter);
+    var br = r * 0.5, bx = c.x + r * 0.78, by = c.y - r * 0.78;
+    ctx.fillStyle = colors.card; ctx.beginPath(); ctx.arc(bx, by, br + Math.max(1, cs * 0.025), 0, 7); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fill();
+    var ps = br * 0.5;
+    ctx.strokeStyle = colors.card; ctx.lineWidth = Math.max(1, br * 0.32); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx - ps, by); ctx.lineTo(bx + ps, by); ctx.moveTo(bx, by - ps); ctx.lineTo(bx, by + ps); ctx.stroke();
     ctx.restore();
   }
   function drawCrosshair(c, r, color) {
@@ -5023,20 +5027,23 @@ window.UnwindI18n = (function () {
   var ARROW_TYPES = [['twins', 'Twins'], ['compass', 'Compass'], ['moon', 'Moon and star'], ['mirror', 'Mirror'], ['patient', 'Patient'], ['ghost', 'Ghost'], ['phase', 'Phase'], ['red', 'Red card'], ['reverse', 'Reverse']];
   var MP_TYPES = [['twinshared', 'Twin-shared'], ['sniper', 'Sniper']];
   // Small pictures for the arrow type buttons. They use the text colour, so they follow the button's state.
+  // Small pictures for the arrow type buttons, in the colours the arrows really have in the current scene.
   function typeIcon(k) {
-    var base = '<path d="M3 13H27"/><path d="M22 8L28 13L22 18"/>', o = '';
-    if (k === 'twins') o = base + '<circle cx="13" cy="13" r="5.5" fill="currentColor" stroke="none"/>';
-    else if (k === 'compass') o = '<circle cx="15" cy="13" r="9"/><path d="M15 17V7M11 11L15 6.5L19 11"/>';
-    else if (k === 'moon') o = base + '<path d="M15 6.5a6.5 6.5 0 1 0 0 13a5 5 0 1 1 0-13Z" fill="currentColor" stroke="none"/>';
-    else if (k === 'mirror') o = '<path d="M3 13H14L14 4"/><path d="M10 8L14 3.5L18 8"/><path d="M8 21L22 7" stroke-width="3.2"/>';
-    else if (k === 'patient') o = base + '<circle cx="13" cy="13" r="6" fill="var(--card)"/><path d="M13 9.5V13L15.5 14.5" stroke-width="1.8"/>';
-    else if (k === 'ghost') o = '<path d="M3 13H27" stroke-dasharray="3 3.5"/><path d="M22 8L28 13L22 18"/>';
-    else if (k === 'phase') o = base + '<rect x="10" y="7" width="8" height="12" rx="2" stroke-width="1.6" stroke-dasharray="2 2"/>';
-    else if (k === 'red') o = base + '<rect x="9" y="6.5" width="8" height="12" rx="1.5" fill="#d4161f" stroke="var(--card)" stroke-width="1.4"/>';
-    else if (k === 'reverse') o = '<path d="M5 13H25"/><path d="M20 8L26 13L20 18"/><path d="M10 8L4 13L10 18" stroke-width="1.6" stroke-dasharray="2 2"/>';
-    else if (k === 'twinshared') o = base + '<circle cx="13" cy="13" r="6.5" fill="currentColor" stroke="none"/><path d="M11.5 13H16.5M14 10.5V15.5" stroke="var(--card)" stroke-width="1.6"/>';
-    else if (k === 'sniper') o = '<path d="M3 13H27" stroke="#c8202f"/><path d="M22 8L28 13L22 18" stroke="#c8202f"/><circle cx="14" cy="13" r="5.5" fill="var(--card)" stroke="#c8202f" stroke-width="1.8"/><circle cx="14" cy="13" r="1.8" fill="#c8202f" stroke="none"/>';
-    return '<svg viewBox="0 0 30 26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
+    var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4], ink = colors.ink, card = colors.card;
+    var line = function (col, extra) { return '<path d="M3 13H24" stroke="' + col + '"' + (extra || '') + '/><path d="M19 7.5L25 13L19 18.5" stroke="' + col + '"/>'; };
+    var o = '';
+    if (k === 'twins') { var tc = colors.twins[0]; o = line(tc) + '<circle cx="12" cy="13" r="6.5" fill="' + tc + '" stroke="none"/><text x="12" y="16.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">A</text>'; }
+    else if (k === 'compass') o = '<circle cx="14" cy="13" r="10" stroke="' + colors.compass + '" stroke-width="2"/><path d="M14 18V7M10 11L14 6.5L18 11" stroke="' + colors.compass + '"/>';
+    else if (k === 'moon') o = line(ink, ' stroke-dasharray="2.5 3.5"') + '<circle cx="12" cy="13" r="6.5" fill="' + card + '" stroke="' + ink + '" stroke-width="1.6"/><path d="M13.4 9.2a4 4 0 1 0 0 7.6a3.1 3.1 0 1 1 0-7.6Z" fill="' + ink + '" stroke="none"/>';
+    else if (k === 'mirror') o = '<path d="M3 15H13V5" stroke="' + ink + '"/><path d="M9 9L13 4.5L17 9" stroke="' + ink + '"/><path d="M7 23L23 7" stroke="' + colors.mirror + '" stroke-width="3.4"/>';
+    else if (k === 'patient') o = line(ink) + '<circle cx="12" cy="13" r="6.5" fill="' + card + '" stroke="' + ink + '" stroke-width="1.8"/><text x="12" y="16.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + ink + '" stroke="none">3</text>';
+    else if (k === 'ghost') o = '<g opacity=".38">' + line(ink) + '</g><path d="M8 20V11a4.5 4.5 0 0 1 9 0v9l-1.5-1.5L14 20l-1.5-1.5L11 20l-1.5-1.5Z" fill="' + card + '" stroke="' + ink + '" stroke-width="1.5"/><circle cx="11" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/><circle cx="14" cy="11.5" r=".9" fill="' + ink + '" stroke="none"/>';
+    else if (k === 'phase') { var pc = dark ? '#d7b4ff' : '#7a3fd0'; o = '<rect x="9" y="6" width="8" height="14" rx="2" fill="' + ink + '" fill-opacity=".22" stroke="none"/>' + '<path d="M3 13H9" stroke="' + pc + '"/><path d="M9 13H17" stroke="' + pc + '" stroke-dasharray="1.5 2.5" stroke-width="2"/><path d="M17 13H24" stroke="' + pc + '"/><path d="M19 7.5L25 13L19 18.5" stroke="' + pc + '"/>'; }
+    else if (k === 'red') o = line(ink) + '<rect x="8.5" y="6.5" width="8" height="12" rx="1.5" fill="#d4161f" stroke="' + card + '" stroke-width="1.4"/>';
+    else if (k === 'reverse') { var rc = dark ? '#ffc069' : '#c85a00'; o = '<path d="M7 13H23" stroke="' + rc + '"/><path d="M19 7.5L25 13L19 18.5" stroke="' + rc + '"/><path d="M11 7.5L5 13L11 18.5" stroke="' + rc + '"/>'; }
+    else if (k === 'twinshared') { var sc = colors.twins[colors.twins.length - 1]; o = line(sc) + '<circle cx="11" cy="14" r="6" fill="' + sc + '" stroke="none"/><text x="11" y="17.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="16" cy="8.5" r="3.6" fill="' + sc + '" stroke="' + card + '" stroke-width="1.2"/><path d="M14.6 8.5H17.4M16 7.1V9.9" stroke="' + card + '" stroke-width="1.2"/>'; }
+    else if (k === 'sniper') { var nc = dark ? '#ff6b6b' : '#b3122e'; o = line(nc) + '<circle cx="12" cy="13" r="5.5" fill="' + card + '" stroke="' + nc + '" stroke-width="1.8"/><circle cx="12" cy="13" r="1.8" fill="' + nc + '" stroke="none"/>'; }
+    return '<svg viewBox="0 0 28 26" aria-hidden="true" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
   }
   function typesLabel(off, mp) {
     var all = ARROW_TYPES.concat(mp ? MP_TYPES : []), on = all.filter(function (t) { return !off || !off[t[0]]; }).length;
@@ -5482,7 +5489,7 @@ window.UnwindI18n = (function () {
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
       { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.',
-        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="8" fill="' + tw + '"/><text x="14" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text><circle cx="47" cy="27" r="8" fill="' + tw + '"/><text x="47" y="30.5" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X+</text>' },
+        art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="7" fill="' + tw + '"/><text x="14" y="30.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="19.5" cy="21.5" r="3.6" fill="' + tw + '" stroke="' + card + '" stroke-width="1.2"/><path d="M18.1 21.5H20.9M19.5 20.1V22.9" stroke="' + card + '" stroke-width="1.2"/>' + '<circle cx="47" cy="27" r="7" fill="' + tw + '"/><text x="47" y="30.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="52.5" cy="21.5" r="3.6" fill="' + tw + '" stroke="' + card + '" stroke-width="1.2"/><path d="M51.1 21.5H53.9M52.5 20.1V22.9" stroke="' + card + '" stroke-width="1.2"/>' },
       { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
         art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' }
     ];
