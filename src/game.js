@@ -2896,6 +2896,7 @@
       if (!btn) return;
       box.querySelectorAll(':scope > .close').forEach(function (old) { old.remove(); });
       box.appendChild(btn);
+      box.classList.add('hasclose');
     });
   }
   new MutationObserver(liftClose).observe($('sheetHost'), { childList: true, subtree: true });
