@@ -16,7 +16,8 @@ function fresh(base, ch) {
 const goals = {
   golden: (l, s) => !!(s.freed && Object.keys(s.freed).length),
   thaw: (l, s) => Object.keys(s.frozen).length === 0,
-  red: (l, s) => { const reds = l.arrows.filter((a) => a.red !== undefined); return reds.length > 0 && reds.every((a) => !s.removed[a.id] && E.isRedCarded(s, a)); },
+  // Sent off: every red card arrow has left the board.
+  red: (l, s) => { const reds = l.arrows.filter((a) => a.red !== undefined); return reds.length > 0 && reds.every((a) => s.removed[a.id]); },
 };
 // Taps that move the game on without costing a life: launches, and for Thaw, hits that crack ice.
 function movesOf(l, s, ch) {
@@ -37,9 +38,11 @@ function rollout(base, ch, r, smart) {
     if (goals[ch.goal](l, s)) return seq;
     if (E.isWon(s)) return null;
     if (ch.goal !== 'golden' && s.freed && Object.keys(s.freed).length) return null;
+    // A red card that runs out while its arrow is still on the board loses Sent off.
+    if (ch.goal === 'red' && l.arrows.some((a) => a.red !== undefined && !s.removed[a.id] && E.hasRedCard(s, a))) return null;
     let m = movesOf(l, s, ch);
-    // The smart player for Sent off holds the red cards back and launches everything else.
-    if (smart) { const calm = m.filter((id) => l.arrows[id].red === undefined); if (calm.length) m = calm; }
+    // The smart player for Sent off plays the red card arrow closest to running out whenever it can.
+    if (smart) { const reds = m.filter((id) => l.arrows[id].red !== undefined).sort((a, b) => l.arrows[a].red - l.arrows[b].red); if (reds.length && r() < 0.8) m = [reds[0]]; }
     if (!m.length) return null;
     const id = m[Math.floor(r() * m.length)];
     E.tap(l, s, id); seq.push(id);
@@ -48,7 +51,11 @@ function rollout(base, ch, r, smart) {
 }
 function replay(base, ch, seq) {
   const { l, s } = fresh(base, ch);
-  for (const id of seq) { const res = E.tap(l, s, id); if (!res.ok && !res.thawed) return false; }
+  for (const id of seq) {
+    const res = E.tap(l, s, id); if (!res.ok && !res.thawed) return false;
+    if (goals[ch.goal](l, s)) return true;
+    if (ch.goal === 'red' && l.arrows.some((a) => a.red !== undefined && !s.removed[a.id] && E.hasRedCard(s, a))) return false;
+  }
   return goals[ch.goal](l, s);
 }
 const out = [];
@@ -81,16 +88,7 @@ function find(goal, extra, picks, runs) {
       if (pool.length < p.frozen + 4) continue;
       ch.frozen = pool.slice(0, p.frozen);
     }
-    if (goal === 'red') {
-      const reds = base.arrows.filter((a) => a.red !== undefined);
-      if (reds.length < p.reds) continue;
-      // Every card must be able to show while every red arrow is still on the board, so the counts stay below
-      // the number of other arrows (one must be left). Spread from 3 up to that limit.
-      const top = base.arrows.length - reds.length - 2;
-      if (top < 4) continue;
-      const rr = E.rng32(seed * 53);
-      reds.forEach((a) => { a.red = 3 + Math.floor(rr() * (top - 2)); });
-    }
+    if (goal === 'red' && base.arrows.filter((a) => a.red !== undefined).length < p.reds) continue;
     const r = E.rng32(seed * 31 + 5);
     let wins = 0, best = null;
     for (let i = 0; i < runs; i++) {
@@ -116,7 +114,7 @@ if (require.main === module) {
   // Thaw 1 is a gentle start: random play should manage it now and then.
   if (want('thaw')) find('thaw', {}, [{ frozen: 3, min: 0.15, max: 0.5 }, { frozen: 4, min: 0.05, max: 0.25 }, { frozen: 6, min: 0.02, max: 0.15 }], 40); else out.push(...keep.filter((c) => c.goal === 'thaw'));
   // Sent off: twice the red cards of before, and rarer by chance.
-  if (want('red')) find('red', {}, [{ reds: 4, max: 0.15, spec: { reds: 4 } }, { reds: 6, max: 0.08, spec: { reds: 6 } }, { reds: 8, max: 0.05, spec: { reds: 8 } }], 60); else out.push(...keep.filter((c) => c.goal === 'red'));
+  if (want('red')) find('red', {}, [{ reds: 4, max: 0.3, spec: { reds: 4, redSlack: 0 } }, { reds: 6, max: 0.15, spec: { reds: 6, redSlack: 0 } }, { reds: 8, max: 0.08, spec: { reds: 8, redSlack: 0 } }], 60); else out.push(...keep.filter((c) => c.goal === 'red'));
   const order = { golden: 0, thaw: 1, red: 2 };
   console.log(JSON.stringify(out.sort((a, b) => order[a.goal] - order[b.goal])));
 }

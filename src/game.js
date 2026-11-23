@@ -484,7 +484,7 @@
   var CHALLENGE_GROUPS = [
     { goal: 'golden', name: 'Golden ticket', note: 'Get the board truly stuck, with no arrow able to leave, so the safety net hands you a golden arrow. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: make a golden arrow appear. Get the board stuck on purpose.' },
     { goal: 'thaw', name: 'Thaw', note: 'Free every frozen arrow. Hit a frozen arrow with another arrow to thaw it. The ice never melts by itself here. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: thaw every frozen arrow. Hit them with other arrows.' },
-    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off before they expire. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: get every red card arrow sent off at once.' }
+    { goal: 'red', name: 'Sent off', note: 'Send off all the red card arrows before they expire', caption: 'Send off all the red card arrows before they expire' }
   ];
   function challengeGroup(c) { return CHALLENGE_GROUPS.filter(function (g) { return g.goal === c.goal; })[0]; }
   function openChallenge(i) {
@@ -502,12 +502,15 @@
     var g = current.goal, l = current.level;
     if (g === 'golden') return !!(state.freed && Object.keys(state.freed).length);
     if (g === 'thaw') return Object.keys(state.frozen).length === 0;
-    if (g === 'red') { var reds = l.arrows.filter(function (a) { return a.red !== undefined; }); return reds.length > 0 && reds.every(function (a) { return !state.removed[a.id] && E.isRedCarded(state, a); }); }
+    // Sent off: won the moment the last red card arrow leaves the board.
+    if (g === 'red') { var reds = l.arrows.filter(function (a) { return a.red !== undefined; }); return reds.length > 0 && reds.every(function (a) { return state.removed[a.id]; }); }
     return false;
   }
   function challengeCheck() {
     if (ended || !current || current.mode !== 'challenge') return;
     if (challengeMet()) { setTimeout(function () { if (!ended) finish(true); }, 500); return; }
+    // Sent off is lost as soon as any red card runs out while its arrow is still on the board.
+    if (current.goal === 'red' && current.level.arrows.some(function (a) { return a.red !== undefined && !state.removed[a.id] && E.hasRedCard(state, a); })) { setTimeout(function () { if (!ended) finish(false, 'expired'); }, 700); return; }
     if (E.isWon(state)) finish(false, 'goal');
   }
 
@@ -1060,7 +1063,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-h';
+  var BUILD = '2026.11.23-i';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3451,6 +3454,12 @@
   }
   function failSheet(c, st, why) {
     if (c.coop && coop && coop.online) { onlineEndSheet(c, false, why); return; }
+    if (why === 'expired') {
+      var es = sheet('<h2>A red card expired</h2><p>A red card arrow ran out of launches before it left. Send off the red cards first.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
+      es.querySelector('#again').onclick = function () { openChallenge(c.index); };
+      es.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+      return;
+    }
     if (why === 'goal') {
       var gs = sheet('<h2>Not quite</h2><p>The board is clear, but the challenge was not met. Try another order.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Challenges</button>');
       gs.querySelector('#again').onclick = function () { openChallenge(c.index); };
@@ -4079,9 +4088,10 @@
     var row = function (it) {
       return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (here[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p>' + (watchKey[it.key] ? '<button class="watch" data-watch="' + watchKey[it.key] + '">▶ Watch how it works</button>' : '') + '</div></div>';
     };
-    var SEASONAL = { ice: 1, fire: 1, flower: 1, wind: 1 }, seasonHere = items.some(function (it) { return SEASONAL[it.key] && here[it.key]; });
+    var SEASONAL = { ice: 1, fire: 1, flower: 1, wind: 1 }, SPECIAL = { gold: 1 }, seasonHere = items.some(function (it) { return SEASONAL[it.key] && here[it.key]; });
     var html = '<div class="row"><h2>Arrow guide</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<details class="mpx" open><summary>Generic arrows</summary>' + items.filter(function (it) { return !SEASONAL[it.key]; }).map(row).join('') + '</details>' +
+      '<details class="mpx"' + (here.gold ? ' open' : '') + '><summary>Special arrows</summary>' + items.filter(function (it) { return SPECIAL[it.key]; }).map(row).join('') + '</details>' +
+      '<details class="mpx" open><summary>Generic arrows</summary>' + items.filter(function (it) { return !SEASONAL[it.key] && !SPECIAL[it.key]; }).map(row).join('') + '</details>' +
       '<details class="mpx"' + (seasonHere ? ' open' : '') + '><summary>Seasonal arrows and effects</summary>' + items.filter(function (it) { return SEASONAL[it.key]; }).map(row).join('') + '</details>';
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
