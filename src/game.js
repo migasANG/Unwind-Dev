@@ -2470,8 +2470,8 @@
     if (a.red && left >= a.red && !(state.redLift && state.redLift[a.id])) items.push(function (c) { drawMiniCard(c, cs * 0.5); });
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
-      // On a short arrow a lone twin-shared ball sits a touch towards the head, the middle of what the eye sees.
-      if (items.length === 1 && a.coopGroup !== undefined && len <= 1.6) c = pointAlong(pts, shift + len / 2 + 0.14);
+      // On a short arrow a lone twin-shared ball is pulled back towards the tail, clear of the arrow's tip.
+      if (items.length === 1 && a.coopGroup !== undefined && len <= 1.6) c = pointAlong(pts, shift + Math.max(0.12, len / 2 - 0.22));
       scaled(c, pop, function () { draw(c); });
     });
   }
@@ -2517,8 +2517,6 @@
     if (!coop) return;
     // The same ball as a twin, so short arrows stay readable, and a small plus bubble on its shoulder for "other boards".
     var r = cs * 0.29 * traitBoost, letter = coopLabel(a.coopGroup).charAt(0);
-    // Ball and bubble together are centred, so the ball shifts a little away from the bubble.
-    c = { x: c.x - r * 0.14, y: c.y + r * 0.14 };
     ctx.save(); ctx.globalAlpha = 1;
     badge(c, r, color, colors.card, letter);
     var br = r * 0.5, bx = c.x + r * 0.78, by = c.y - r * 0.78;
