@@ -41,8 +41,10 @@ function rollout(base, ch, r, smart) {
     // A red card that runs out while its arrow is still on the board loses Sent off.
     if (ch.goal === 'red' && l.arrows.some((a) => a.red !== undefined && !s.removed[a.id] && E.hasRedCard(s, a))) return null;
     let m = movesOf(l, s, ch);
-    // The smart player for Sent off plays the red card arrow closest to running out whenever it can.
-    if (smart) { const reds = m.filter((id) => l.arrows[id].red !== undefined).sort((a, b) => l.arrows[a].red - l.arrows[b].red); if (reds.length && r() < 0.8) m = [reds[0]]; }
+    // The smart player plays like a person would: for Sent off it sends the red card closest to running out
+    // whenever it can, for Thaw it cracks ice whenever it can.
+    if (smart && ch.goal === 'red') { const reds = m.filter((id) => l.arrows[id].red !== undefined).sort((a, b) => l.arrows[a].red - l.arrows[b].red); if (reds.length && r() < 0.85) m = [reds[0]]; }
+    if (smart && ch.goal === 'thaw') { const ice = m.filter((id) => !E.check(l, s, l.arrows[id]).clear); if (ice.length && r() < 0.85) m = ice; }
     if (!m.length) return null;
     const id = m[Math.floor(r() * m.length)];
     E.tap(l, s, id); seq.push(id);
@@ -72,7 +74,7 @@ function specFor(goal, level, seed, extra) {
 }
 function find(goal, extra, picks, runs) {
   let seed = 1, got = 0;
-  while (got < picks.length && seed < 600) {
+  while (got < picks.length && seed < 2000) {
     const p = picks[got];
     const made = specFor(goal, got, seed, Object.assign({}, extra, p.spec || {}));
     const lvl = E.generate(made.spec, seed * 131 + goal.length * 7, made.spec.big ? 6 : 20);
@@ -87,8 +89,20 @@ function find(goal, extra, picks, runs) {
       for (let i = pool.length - 1; i > 0; i--) { const k = Math.floor(r() * (i + 1)); const t = pool[i]; pool[i] = pool[k]; pool[k] = t; }
       if (pool.length < p.frozen + 4) continue;
       ch.frozen = pool.slice(0, p.frozen);
+      // Harder: no ice can be cracked at the start, so every crack needs setting up first.
+      const g0 = fresh(base, ch);
+      if (E.iceHits(g0.l, g0.s).length) continue;
     }
-    if (goal === 'red' && base.arrows.filter((a) => a.red !== undefined).length < p.reds) continue;
+    if (goal === 'red') {
+      // Red cards go on arrows that are blocked at the start, so each one needs a way cleared first.
+      // Each card gives only the launches the known solution needs, plus at most one.
+      const at = {}; lvl.solution.forEach((id, i) => { at[id] = i; });
+      const g0 = fresh(base, ch), rr = E.rng32(seed * 53);
+      const pool = base.arrows.filter((a) => a.kind === 'plain' && !E.traitCount(a) && at[a.id] !== undefined && at[a.id] >= 2 && !E.canLaunch(g0.l, g0.s, a.id));
+      if (pool.length < p.reds) continue;
+      for (let i = pool.length - 1; i > 0; i--) { const q = Math.floor(rr() * (i + 1)); const t = pool[i]; pool[i] = pool[q]; pool[q] = t; }
+      pool.slice(0, p.reds).forEach((a) => { a.red = at[a.id] + 1 + (rr() < p.slack ? 1 : 0); });
+    }
     const r = E.rng32(seed * 31 + 5);
     let wins = 0, best = null;
     for (let i = 0; i < runs; i++) {
@@ -96,8 +110,14 @@ function find(goal, extra, picks, runs) {
       if (seq) { wins++; if (!best || seq.length > best.length) best = seq; }
       if (wins / runs > p.max) break;
     }
-    const rate = wins / runs;
-    if (!best && goal === 'red' && rate <= p.max) for (let i = 0; i < 300 && !best; i++) best = rollout(base, ch, r, true);
+    let rate = wins / runs;
+    // The smart player must also mostly fail, or the board is easy for a person.
+    if (goal !== 'golden' && rate <= p.max) {
+      let sw = 0;
+      for (let i = 0; i < runs; i++) { const seq = rollout(base, ch, r, true); if (seq) { sw++; if (!best || seq.length > best.length) best = seq; } if (sw / runs > p.max) break; }
+      rate = Math.max(rate, sw / runs);
+      for (let i = 0; i < 400 && !best && rate <= p.max; i++) best = rollout(base, ch, r, true) || rollout(base, ch, r);
+    }
     process.stderr.write(`${goal} L${got + 1} seed ${seed} arrows ${base.arrows.length} [${made.picked}] rate ${rate.toFixed(2)}\n`);
     if (!best || rate > p.max || rate < (p.min === undefined ? (goal === 'red' ? 0 : 0.01) : p.min) || !replay(base, ch, best)) continue;
     out.push(Object.assign({ goal, frozen: ch.frozen, extras: made.picked, moves: best.length, rate, solution: best }, base));
@@ -112,9 +132,9 @@ if (require.main === module) {
   const keep = only.length ? require('../src/challenges.json') : [];
   if (want('golden')) find('golden', { compass: 3 }, [{ max: 0.35 }, { max: 0.25 }, { max: 0.15 }], 40); else out.push(...keep.filter((c) => c.goal === 'golden'));
   // Thaw 1 is a gentle start: random play should manage it now and then.
-  if (want('thaw')) find('thaw', {}, [{ frozen: 3, min: 0.15, max: 0.5 }, { frozen: 4, min: 0.05, max: 0.25 }, { frozen: 6, min: 0.02, max: 0.15 }], 40); else out.push(...keep.filter((c) => c.goal === 'thaw'));
+  if (want('thaw')) find('thaw', {}, [{ frozen: 4, min: 0, max: 0.2 }, { frozen: 6, min: 0, max: 0.1 }, { frozen: 8, min: 0, max: 0.05 }], 60); else out.push(...keep.filter((c) => c.goal === 'thaw'));
   // Sent off: twice the red cards of before, and rarer by chance.
-  if (want('red')) find('red', {}, [{ reds: 4, max: 0.3, spec: { reds: 4, redSlack: 0 } }, { reds: 6, max: 0.15, spec: { reds: 6, redSlack: 0 } }, { reds: 8, max: 0.08, spec: { reds: 8, redSlack: 0 } }], 60); else out.push(...keep.filter((c) => c.goal === 'red'));
+  if (want('red')) find('red', {}, [{ reds: 4, slack: 0.5, max: 0.2, spec: { reds: 0 } }, { reds: 6, slack: 0.3, max: 0.1, spec: { reds: 0 } }, { reds: 8, slack: 0.15, max: 0.05, spec: { reds: 0 } }], 60); else out.push(...keep.filter((c) => c.goal === 'red'));
   const order = { golden: 0, thaw: 1, red: 2 };
   console.log(JSON.stringify(out.sort((a, b) => order[a.goal] - order[b.goal])));
 }
