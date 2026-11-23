@@ -858,7 +858,7 @@
     L.seats.length = Math.min(L.seats.length, L.settings.players);
   }
   function lobbyClose() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; closeSheet(); }
-  function lobbyLeave() { if (lobby) lobby.timers.forEach(clearTimeout); lobby = null; onlineSheet('home'); }
+  function lobbyLeave() { if (lobby) { lobby.timers.forEach(clearTimeout); if (lobby.online) { netSend({ t: 'leave' }); netClose(); } } lobby = null; onlineSheet('home'); }
   /* Play online: host a room, browse public rooms, or join a private one with its code. */
   var publicRooms = null;
   function makePublicRooms() {
@@ -869,29 +869,36 @@
     }
     return out;
   }
-  function onlineSheet(screen, filter) {
+  function onlineSheet(screen, filter, notice) {
     var mine = load('unwind.onlineName', '') || '', html;
+    if (screen === 'public' && !publicRooms) {
+      // Fetch the real list first, then draw it.
+      if (!filter) filter = 0;
+      publicRooms = 'loading';
+      netFetch('/rooms/public').then(function (list) {
+        publicRooms = list.map(function (r) { return { code: r.code, host: r.host, players: r.players, count: r.count, size: r.size, hard: r.hard, timed: r.timed, snipers: !(r.off && r.off.sniper), twins: !(r.off && r.off.twinshared) }; });
+        if ($('sheetHost').querySelector('.card.online')) onlineSheet('public', filter);
+      }).catch(function () { publicRooms = 'error'; if ($('sheetHost').querySelector('.card.online')) onlineSheet('public', filter); });
+    }
     if (screen === 'public') {
-      publicRooms = publicRooms || makePublicRooms();
       filter = filter || 0;
-      var list = publicRooms.filter(function (r) { return !filter || r.players === filter; });
+      var list = Array.isArray(publicRooms) ? publicRooms.filter(function (r) { return !filter || r.players === filter; }) : [];
       html = '<div class="orow"><button class="oback" id="oBack">‹ Back</button><button class="close" id="x" aria-label="Close">×</button></div><h2>Public rooms</h2>' +
         '<div class="ofilter"><div class="sizes lseg o3" role="group" aria-label="Players">' + [[0, 'All'], [2, '2 players'], [4, '4 players']].map(function (f) { return '<button data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div><button id="oRefresh" aria-label="Refresh" title="Refresh">&#x21bb;</button></div>' +
         (list.length ? '<ul class="orooms">' + list.map(function (r) {
           var full = r.count >= r.players, i = publicRooms.indexOf(r);
           return '<li><div class="oinfo"><b>' + r.host + '\'s room</b><span>' + r.count + ' / ' + r.players + ' players · ' + r.size + 'x boards · ' + (r.hard ? 'Hard' : 'Normal') + '</span><span class="otags">' + (r.snipers ? '<i>Snipers</i>' : '') + (r.twins ? '<i>Twin-shared</i>' : '') + (r.timed ? '<i>Timed</i>' : '') + '</span></div><button class="ojoin" data-room="' + i + '"' + (full ? ' disabled' : '') + '>' + (full ? 'Full' : 'Join') + '</button></li>';
-        }).join('') + '</ul>' : '<p class="note">No public rooms right now. Try again soon, or host one.</p>') +
-        '<p class="note" style="text-align:center">Preview: these rooms are simulated.</p>';
+        }).join('') + '</ul>' : '<p class="note">' + (publicRooms === 'loading' ? 'Looking for rooms…' : publicRooms === 'error' ? 'Could not reach the online server. Check your connection and refresh.' : 'No public rooms right now. Try again soon, or host one.') + '</p>');
     } else {
       html = '<div class="row"><h2>Play online</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+        (notice ? '<p class="lstatus">' + notice + '</p>' : '') +
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
         '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
         '<div class="chapter">Join a room</div>' +
         '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
         '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
-        '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button></div>' +
-        '<p class="note" style="text-align:center">Preview: other players and rooms are simulated.</p>' +
+        '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mSimRoom"><b>Room preview (simulated)</b><span>The room screen with pretend players, no server needed.</span></button></div>' +
         '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><input id="oCodeIn" maxlength="7" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC-123" aria-label="Room code"><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
     }
     var host = $('sheetHost').firstChild, card = host && host.querySelector('.card.online');
@@ -901,16 +908,17 @@
     var saveName = function () { var n = card.querySelector('#oName'); if (n && n.value.trim()) save('unwind.onlineName', n.value.trim()); };
     if (screen === 'public') {
       card.querySelector('#oBack').onclick = function () { onlineSheet('home'); };
-      card.querySelector('#oRefresh').onclick = function () { publicRooms = makePublicRooms(); onlineSheet('public', filter); };
+      card.querySelector('#oRefresh').onclick = function () { publicRooms = null; onlineSheet('public', filter); };
       card.querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { onlineSheet('public', +b.getAttribute('data-filter')); }; });
-      card.querySelectorAll('[data-room]').forEach(function (b) { b.onclick = function () { var r = publicRooms[+b.getAttribute('data-room')]; publicRooms = null; lobby = null; lobbySheet(false, r); }; });
+      card.querySelectorAll('[data-room]').forEach(function (b) { b.onclick = function () { var r = publicRooms[+b.getAttribute('data-room')]; b.disabled = true; joinOnline(r.code, function (err) { if (err) { publicRooms = null; onlineSheet('public', filter); } else publicRooms = null; }); }; });
       return;
     }
     var nameIn = card.querySelector('#oName');
     nameIn.oninput = saveName;
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
-    card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; lobbySheet(); };
-    card.querySelector('#oPublic').onclick = function () { saveName(); onlineSheet('public'); };
+    card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; hostOnline(this); };
+    card.querySelector('#mSimRoom').onclick = function () { lobby = null; lobbySheet(); };
+    card.querySelector('#oPublic').onclick = function () { saveName(); publicRooms = null; onlineSheet('public'); };
     card.querySelector('#mTutTwins').onclick = function () { openCoopTutorial('twins'); };
     card.querySelector('#mTutSniper').onclick = function () { openCoopTutorial('sniper'); };
     card.querySelector('#mCoop').onclick = function () { openCoop(); };
@@ -926,13 +934,95 @@
       var c = clean();
       if (c.length !== 6) { err.textContent = 'Room codes have 6 letters and numbers.'; return; }
       join.disabled = true; join.textContent = 'Looking…';
-      setTimeout(function () {
-        if (!card.isConnected) return;
-        var players = Math.random() < 0.6 ? 4 : 2;
-        lobby = null;
-        lobbySheet(false, { code: c.slice(0, 3) + '-' + c.slice(3), host: lobbyName(), players: players, count: 1 + Math.floor(Math.random() * (players - 1)), size: 1, hard: false, snipers: true, twins: true, timed: false });
-      }, 700);
+      joinOnline(c.slice(0, 3) + '-' + c.slice(3), function (e) { if (e && card.isConnected) { err.textContent = e; join.disabled = false; join.textContent = 'Join'; } });
     };
+  }
+  /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
+  var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
+  var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
+  function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
+  function netPid() {
+    var id = load('unwind.pid', '');
+    if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); save('unwind.pid', id); }
+    return id;
+  }
+  function netName() { return load('unwind.onlineName', '') || lobbyName(); }
+  function netFetch(path, opts) {
+    return fetch(netBase() + path, opts).then(function (r) { return r.json(); });
+  }
+  function netSend(msg) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(msg)); }
+  function netClose() {
+    net.leaving = true; clearTimeout(net.timer); clearInterval(net.ping);
+    if (net.ws) { try { net.ws.close(1000, 'bye'); } catch (e) {} }
+    net.ws = null; net.code = '';
+  }
+  function netConnect(code) {
+    clearTimeout(net.timer); clearInterval(net.ping);
+    if (net.ws) { try { net.ws.onclose = null; net.ws.close(); } catch (e) {} }
+    net.code = code; net.leaving = false;
+    var url = netBase().replace(/^http/, 'ws') + '/rooms/' + code + '/ws?pid=' + encodeURIComponent(netPid()) + '&name=' + encodeURIComponent(netName());
+    var ws;
+    try { ws = new WebSocket(url); } catch (e) { onlineError('Could not reach the online server.'); return; }
+    net.ws = ws;
+    ws.onopen = function () { net.retries = 0; net.ping = setInterval(function () { netSend({ t: 'ping' }); }, 25000); if (lobby && lobby.online) { lobby.status = ''; if ($('lobbyCard')) lobbySheet(true); } };
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'room') onServerRoom(m.room);
+      else if (m.t === 'start') onServerStart(m);
+      else if (m.t === 'kicked') { netClose(); lobby = null; onlineSheet('home', 0, 'The host removed you from the room.'); }
+      else if (m.t === 'error') {
+        if (m.code === 'full' || m.code === 'started') { netClose(); lobby = null; onlineSheet('home', 0, m.message); }
+        else if (lobby && lobby.online) { lobby.status = m.message; if ($('lobbyCard')) lobbySheet(true); }
+      }
+    };
+    ws.onclose = function () {
+      clearInterval(net.ping);
+      if (net.leaving || ws !== net.ws) return;
+      // Dropped connection: try again a few times. The server keeps your seat.
+      if (net.retries++ < 6) {
+        if (lobby && lobby.online && $('lobbyCard')) { lobby.status = 'Connection lost. Reconnecting…'; lobbySheet(true); }
+        net.timer = setTimeout(function () { netConnect(code); }, 1200 * net.retries);
+      } else if (lobby && lobby.online) { lobby = null; onlineSheet('home', 0, 'Lost the connection to the room.'); }
+    };
+  }
+  function onlineError(msg) { lobby = null; onlineSheet('home', 0, msg); }
+  // The server's room becomes the lobby screen: you first, then the others; seats say who plays which board.
+  function onServerRoom(room) {
+    var me = netPid(), fresh = !lobby || !lobby.online;
+    if (fresh) lobby = { online: true, timers: [], pick: -1, status: '', askName: !load('unwind.onlineName', '') };
+    var L = lobby, mine = null;
+    L.code = room.code; L.settings = room.settings; L.started = room.started;
+    L.players = room.players.map(function (p) { var o = { pid: p.pid, name: p.name, ready: p.ready, seat: p.seat, online: p.online, host: p.pid === room.host, you: p.pid === me }; if (o.you) mine = o; return o; });
+    if (mine) { L.players.splice(L.players.indexOf(mine), 1); L.players.unshift(mine); }
+    L.seats = []; L.players.forEach(function (p) { if (p.seat >= 0) L.seats[p.seat] = p; });
+    L.amHost = room.host === me; L.view = L.amHost ? 'host' : 'guest'; L.joined = !L.amHost;
+    if (room.started) return;
+    if (fresh || !$('lobbyCard')) sheet('<div id="lobbyCard"></div>', 'tall lobby');
+    lobbySheet(true);
+  }
+  function onServerStart(m) {
+    var S = m.settings, me = netPid(), names = [], you = 0;
+    m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
+    var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
+    if (lobby) lobby.timers.forEach(clearTimeout);
+    lobby = null;
+    spec.after = function () { coop.you = you; coop.online = { code: net.code }; coop.room.title = 'Online room ' + net.code; if (you > 0) coopSwitch(you); $('where').textContent = coopWhere(coop.idx); setCaption('Online room ' + net.code + ': you are on board ' + (you + 1) + '. Moves are not shared yet: that comes in the next step.'); };
+    // Every phone builds the same boards from the server's seed.
+    openCoop(m.seed, false, spec);
+  }
+  function hostOnline(btn) {
+    if (btn) { btn.disabled = true; btn.querySelector('b').textContent = 'Creating room…'; }
+    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 4 } }) })
+      .then(function (r) { if (!r.code) throw new Error('no code'); netConnect(r.code); })
+      .catch(function () { onlineError('Could not reach the online server. Check your connection and try again.'); });
+  }
+  function joinOnline(code, done) {
+    netFetch('/rooms/' + code).then(function (info) {
+      if (!info.exists) return done('There is no room with that code.');
+      if (info.started) return done('That game has already started.');
+      if (info.players >= info.max) return done('That room is full.');
+      netConnect(code); done('');
+    }).catch(function () { done('Could not reach the online server.'); });
   }
   // Joining someone else's room (from the public list or a code) puts you in as a guest, next to the host.
   function lobbyCreate(join) {
@@ -950,16 +1040,17 @@
   }
   function lobbySheet(inPlace, join) {
     if (!lobby) lobbyCreate(join);
-    var L = lobby, S = L.settings, host = L.view === 'host' && !L.joined, me = L.players[0], card = $('sheetHost').querySelector('.card');
+    var L = lobby, S = L.settings, host = L.online ? L.amHost : L.view === 'host' && !L.joined, me = L.players[0], card = $('sheetHost').querySelector('.card');
     if (!card) return;
-    lobbySeats();
+    if (!L.online) lobbySeats();
     var perLife = S.hard ? 1 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
     var waitingFor = S.players - L.players.length, notReady = L.players.filter(function (p) { return !p.ready; }).length;
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
     var html = '<div class="row"><h2>Co-op room</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
-    if (!L.joined) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
-    html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
+    if (L.status) html += '<p class="lstatus">' + L.status + '</p>';
+    if (!L.joined && !L.online) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
+    html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.online ? (L.players.filter(function (q) { return q.host; })[0] || me).name : L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
       : '<div class="lcode"><small>Room code</small><b id="lCode">' + L.code + '</b><button id="lCopy">Copy</button><p>' + (host ? 'Share this code with your friends so they can join.' : 'You joined with this code.') + '</p></div>';
     html += '<div class="chapter">Your online name</div><div class="lname"><input id="lName" maxlength="16" value="' + me.name.replace(/"/g, '&quot;') + '" aria-label="Your online name"><button id="lNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">' + (L.askName ? 'First online room: pick the name your friends will see. You can change it in Settings later.' : 'You can change it until the game starts.') + '</p>';
     html += '<div class="chapter">Players ' + L.players.length + ' / ' + S.players + '</div><ul class="lplayers">';
@@ -982,9 +1073,9 @@
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
     else html += '<p class="lwait">' + (all ? 'Everyone is ready. Waiting for the host to start…' : 'The game starts when everyone is ready and the host starts it.') + '</p>';
-    if (L.joined && all && !L.starting) { L.starting = true; lobbyLater(lobbyStart, 2200); }
+    if (L.joined && !L.online && all && !L.starting) { L.starting = true; lobbyLater(lobbyStart, 2200); }
     if (!all) L.starting = false;
-    html += '<button class="lleave" id="lLeave">Leave room</button><p class="note" style="text-align:center">Preview only: the other players are simulated.</p>';
+    html += '<button class="lleave" id="lLeave">Leave room</button>' + (L.online ? '' : '<p class="note" style="text-align:center">Preview only: the other players are simulated.</p>');
     var top = card.scrollTop;
     card.innerHTML = '<div id="lobbyCard"></div>' + html; card.scrollTop = top;
     $('sheetHost').querySelector('#x').onclick = lobbyLeave; card.querySelector('#lLeave').onclick = lobbyLeave;
@@ -995,10 +1086,11 @@
     };
     var nameIn = card.querySelector('#lName');
     nameIn.oninput = function () { var v = nameIn.value.replace(/\s+/g, ' ').trimStart(); me.name = v || me.name; if (v.trim()) save('unwind.onlineName', v.trim()); };
-    nameIn.onchange = function () { if (!nameIn.value.trim()) nameIn.value = me.name; L.askName = false; lobbySheet(true); };
-    card.querySelector('#lNameRnd').onclick = function () { me.name = lobbyName(); save('unwind.onlineName', me.name); L.askName = false; lobbySheet(true); };
+    nameIn.onchange = function () { if (!nameIn.value.trim()) nameIn.value = me.name; L.askName = false; if (L.online) netSend({ t: 'name', name: me.name }); lobbySheet(true); };
+    card.querySelector('#lNameRnd').onclick = function () { me.name = lobbyName(); save('unwind.onlineName', me.name); L.askName = false; if (L.online) netSend({ t: 'name', name: me.name }); lobbySheet(true); };
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
+      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' ? +v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
       if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
@@ -1007,7 +1099,7 @@
       me.ready = false;
       lobbySheet(true);
     }; });
-    card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { S.off = off; me.ready = false; lobbySheet(true); }, !host); };
+    card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { if (L.online) { netSend({ t: 'settings', settings: { off: off } }); return; } S.off = off; me.ready = false; lobbySheet(true); }, !host); };
     card.querySelectorAll('[data-sw]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-sw'); S[k] = !S[k]; me.ready = false; lobbySheet(true); }; });
     // Dragging a board onto another swaps their players too.
     if (host) card.querySelectorAll('[data-seat]').forEach(function (b) {
@@ -1025,7 +1117,8 @@
           ghost.remove(); b.classList.remove('dragging');
           var over = card.querySelector('[data-seat].over');
           setTimeout(function () { L.dragging = false; }, 0);
-          if (over) { var to = +over.getAttribute('data-seat'), t = L.seats[from]; L.seats[from] = L.seats[to]; L.seats[to] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
+          if (over && L.online) { netSend({ t: 'swap', a: from, b: +over.getAttribute('data-seat') }); pluck(587.3, 0, 0.06, 0.3); }
+          else if (over) { var to = +over.getAttribute('data-seat'), t = L.seats[from]; L.seats[from] = L.seats[to]; L.seats[to] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
           L.pick = -1; lobbySheet(true);
         };
         window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
@@ -1035,13 +1128,14 @@
       if (L.dragging) return;
       var i = +b.getAttribute('data-seat');
       if (L.pick < 0) { L.pick = i; lobbySheet(true); return; }
-      if (L.pick !== i) { var t = L.seats[L.pick]; L.seats[L.pick] = L.seats[i]; L.seats[i] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
+      if (L.pick !== i && L.online) { netSend({ t: 'swap', a: L.pick, b: i }); pluck(587.3, 0, 0.06, 0.3); }
+      else if (L.pick !== i) { var t = L.seats[L.pick]; L.seats[L.pick] = L.seats[i]; L.seats[i] = t; L.seats = L.seats.filter(function (x) { return x; }); pluck(587.3, 0, 0.06, 0.3); }
       L.pick = -1; lobbySheet(true);
     }; });
-    card.querySelectorAll('[data-kick]').forEach(function (b) { b.onclick = function () { L.players.splice(+b.getAttribute('data-kick'), 1); lobbySheet(true); lobbyJoin(2500); }; });
-    card.querySelector('#lReady').onclick = function () { me.ready = !me.ready; pluck(me.ready ? 784 : 392, 0, 0.06, 0.3); lobbySheet(true); };
+    card.querySelectorAll('[data-kick]').forEach(function (b) { b.onclick = function () { if (L.online) { netSend({ t: 'kick', pid: L.players[+b.getAttribute('data-kick')].pid }); return; } L.players.splice(+b.getAttribute('data-kick'), 1); lobbySheet(true); lobbyJoin(2500); }; });
+    card.querySelector('#lReady').onclick = function () { if (L.online) { netSend({ t: 'ready', ready: !me.ready }); pluck(!me.ready ? 784 : 392, 0, 0.06, 0.3); return; } me.ready = !me.ready; pluck(me.ready ? 784 : 392, 0, 0.06, 0.3); lobbySheet(true); };
     var st = card.querySelector('#lStart');
-    if (st) st.onclick = function () { if (all) lobbyStart(); };
+    if (st) st.onclick = function () { if (!all) return; if (L.online) netSend({ t: 'start' }); else lobbyStart(); };
   }
   function lobbyStart() {
     var L = lobby;
