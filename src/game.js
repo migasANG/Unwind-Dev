@@ -1063,7 +1063,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-k';
+  var BUILD = '2026.11.23-l';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3730,9 +3730,11 @@
   }
   /* Multiplayer demos: two small boards side by side, each played by the real rules, with the cross-board parts added. */
   var COOP_DEMOS = {
-    boards: { title: 'Playing several boards', text: 'In Boarding Up and multi-board Open Waters you play every board yourself. Switch boards with the arrows at the board edges. Lives are shared, and you win when every board is clear.', w: 4, h: 3, gap: 1.3, labels: ['Board 1', 'Board 2'],
-      boards: [[[[[0, 1], [1, 1]]], [[[3, 2], [3, 1]]]], [[[[0, 0], [1, 0], [2, 0]]], [[[1, 2], [1, 1]]]]],
-      steps: [{ b: 0, tap: 0, say: 'Every board is yours to play' }, { b: 1, tap: 0, say: 'Switch boards with the edge arrows' }, { b: 1, tap: 1, say: 'Lives are shared by all boards' }, { b: 0, tap: 1, say: 'Clear every board to win' }] },
+    // One board on screen at a time, like the game: the edge button slides over to the other board and back.
+    boards: { title: 'Playing several boards', text: 'In Boarding Up and multi-board Open Waters you play every board yourself. Tap the arrow button at the edge of the screen to move to the next board, and again to come back. Lives are shared, and you win when every board is clear.', w: 4, h: 3, gap: 1.3, labels: ['Board 1 of 2', 'Board 2 of 2'], single: true,
+      boards: [[[[[0, 1], [1, 1]]], [[[0, 2], [1, 2], [2, 2]]]], [[[[0, 0], [1, 0], [2, 0]]], [[[1, 2], [1, 1]]]]],
+      steps: [{ b: 0, tap: 0, say: 'Play the arrows on this board' }, { nav: 1, say: 'Tap the edge button to move to board 2' }, { b: 1, tap: 0, say: 'Board 2 is yours to play too' }, { b: 1, tap: 1, say: 'Lives are shared by all boards' },
+        { nav: 0, say: 'Tap it again to go back' }, { b: 0, tap: 1, say: 'Clear every board to win' }] },
     sniper: { title: 'Sniper arrow', text: 'Multiple boards only. When a sniper arrow leaves its board, it flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move.', w: 4, h: 3, gap: 1.3,
       boards: [[[[[1, 1], [2, 1], [3, 1]], { sniper: true }], [[[0, 0], [1, 0]]]], [[[[0, 1], [1, 1]]], [[[3, 1], [2, 1]]]]],
       steps: [{ b: 1, tap: 1, say: 'These two arrows block each other' }, { b: 0, tap: 0, say: 'A sniper flies on to the next board' }, { b: 1, tap: 1, say: 'It destroyed the first arrow it hit' }, { b: 0, tap: 1, say: '' }] },
@@ -3750,6 +3752,12 @@
         var l = E.prepare({ w: d.w, h: d.h, lives: 99, mirrors: [], flowers: [], arrows: arrs.map(function (a, i) { return coopArrow(i, a[0], a[1]); }) });
         return { level: l, state: E.newState(l), bounces: {} };
       }) };
+      run.view = 0; run.slide = null;
+      if (d.single) {
+        size = Math.min((W - 120) / d.w, (H - 30) / (d.h + 0.6), 46);
+        offX = [(W - d.w * size) / 2, (W - d.w * size) / 2 + W]; offY = 24 + (H - 24 - d.h * size) / 2;
+        return;
+      }
       size = Math.min(W / (2 * d.w + d.gap + 0.6), (H - 26) / (d.h + 0.6));
       var total = (2 * d.w + d.gap) * size;
       offX = [(W - total) / 2, (W - total) / 2 + (d.w + d.gap) * size]; offY = 22 + (H - 22 - d.h * size) / 2;
@@ -3760,8 +3768,17 @@
       var pts = trackOf(m, r.check), len = lengthOf(m), travel = m.cells.length - 1 + r.check.dist + 8 + len;
       run.flights.push({ b: b, pts: pts, len: len, travel: travel, start: now, duration: Math.min(1400, 480 + travel * 42), color: arrowColor(m) });
     };
+    // Where the edge button sits on screen: on the right of board 1, on the left of board 2.
+    var navAt = function () { return { x: run.view === 0 ? W - 30 : 30, y: offY + d.h * size / 2, dir: run.view === 0 ? 1 : -1 }; };
     var act = function (now) {
-      var st = d.steps[run.at], B = run.boards[st.b], l = B.level, a = l.arrows[st.tap];
+      var st = d.steps[run.at];
+      if (st.nav !== undefined) {
+        run.pending = false; run.tapping = false; run.phaseEnd = now + 1300;
+        run.slide = { from: run.view, to: st.nav, start: now }; run.view = st.nav;
+        run.press = now;
+        return;
+      }
+      var B = run.boards[st.b], l = B.level, a = l.arrows[st.tap];
       run.pending = false; run.tapping = false; run.phaseEnd = now + 1350;
       if (a.coopGroup !== undefined) {
         var P = partnerOf(st.b, a), ca = E.check(l, B.state, a), cp = E.check(P.B.level, P.B.state, P.a);
@@ -3809,6 +3826,12 @@
         if (run.finished && now > run.finished) { restart(); cs = size; oy = offY; nextStep(now); }
         if (!run.finished && now > run.phaseEnd) { if (run.pending) act(now); else nextStep(now); }
         var w = Math.max(3, cs * 0.17);
+        if (d.single) {
+          // The boards slide sideways, so only the one being played is on screen.
+          var sp = run.view;
+          if (run.slide) { var stt = Math.min(1, (now - run.slide.start) / 520); sp = run.slide.from + (run.slide.to - run.slide.from) * ease(stt); if (stt >= 1) run.slide = null; }
+          offX = [0, 1].map(function (bi) { return (W - d.w * size) / 2 + (bi - sp) * W; });
+        }
         run.boards.forEach(function (B, bi) {
           ox = offX[bi]; state = B.state; current = { level: B.level };
           ctx.globalAlpha = 1; ctx.fillStyle = mixColor(colors.card, colors.ink, 0.07); ctx.strokeStyle = mixColor(colors.card, colors.ink, 0.25); ctx.lineWidth = 1.2;
@@ -3859,7 +3882,22 @@
           for (var k = 0; k < 8; k++) { var a4 = k * 0.79 + 0.3, d4 = cs * (0.2 + t * 1.1); ctx.fillStyle = k % 2 ? '#d4161f' : colors.ink; ctx.fillRect(f.p.x + Math.cos(a4) * d4 - cs * 0.05, f.p.y + Math.sin(a4) * d4 - cs * 0.03, cs * 0.1, cs * 0.06); }
           return true;
         });
-        if (run.tapping && run.pending) {
+        if (d.single && !run.slide) {
+          var nb = navAt(), pressK = run.press && now - run.press < 260 ? 0.86 : 1, rr = 15 * pressK;
+          ctx.globalAlpha = 1; ctx.fillStyle = colors.card; ctx.strokeStyle = mixColor(colors.card, colors.ink, 0.25); ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.arc(nb.x, nb.y, rr, 0, 7); ctx.fill(); ctx.stroke();
+          setStroke(colors.ink, 2.2, 1);
+          ctx.beginPath(); ctx.moveTo(nb.x - 6 * nb.dir * pressK, nb.y); ctx.lineTo(nb.x + 6 * nb.dir * pressK, nb.y); ctx.moveTo(nb.x + 1 * nb.dir * pressK, nb.y - 5 * pressK); ctx.lineTo(nb.x + 6 * nb.dir * pressK, nb.y); ctx.lineTo(nb.x + 1 * nb.dir * pressK, nb.y + 5 * pressK); ctx.stroke();
+          ctx.fillStyle = colors.ink; ctx.beginPath(); ctx.arc(nb.x + 11, nb.y + 11, 7, 0, 7); ctx.fill();
+          ctx.fillStyle = colors.card; ctx.font = '700 9px Figtree,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(run.view === 0 ? 2 : 1), nb.x + 11, nb.y + 11.5);
+        }
+        if (run.tapping && run.pending && d.steps[run.at].nav !== undefined) {
+          var nb2 = navAt(), left2 = Math.max(0, (run.phaseEnd - now) / 950);
+          ctx.globalAlpha = 0.9 * (1 - left2 * 0.5); ctx.strokeStyle = colors.hint; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(nb2.x, nb2.y, 19 + left2 * 16, 0, 7); ctx.stroke();
+          ctx.globalAlpha = 0.25 * (1 - left2); ctx.fillStyle = colors.hint; ctx.beginPath(); ctx.arc(nb2.x, nb2.y, 19, 0, 7); ctx.fill();
+        }
+        if (run.tapping && run.pending && d.steps[run.at].nav === undefined) {
           var st = d.steps[run.at], B = run.boards[st.b], aim = B.level.arrows[st.tap];
           if (aim && !B.state.removed[aim.id]) {
             ox = offX[st.b];
