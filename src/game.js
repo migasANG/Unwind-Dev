@@ -369,7 +369,7 @@
         // Each board rolls its own season effects, from its own seed.
         room.boards.forEach(function (l) { l.effects = o.effects.slice(); l.big = spec.big; total += E.timeLimitFor(l.solution.length) * (plan.scale > 1 ? 1.3 : 1); });
         // One clock for the whole room: the time of every board added up.
-        if (o.timed) room.boards.forEach(function (l) { l.timeLimit = Math.round((total + 10 * (spec.n - 1)) / 5) * 5; });
+        if (o.timed) room.boards.forEach(function (l) { l.timeLimit = Math.round((total + 10 * (spec.n - 1)) * 2 / 5) * 5; });
         return room;
       }, BOARD_NAMES);
     });
@@ -484,7 +484,7 @@
   var CHALLENGE_GROUPS = [
     { goal: 'golden', name: 'Golden ticket', note: 'Get the board truly stuck, with no arrow able to leave, so the safety net hands you a golden arrow. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: make a golden arrow appear. Get the board stuck on purpose.' },
     { goal: 'thaw', name: 'Thaw', note: 'Free every frozen arrow. Hit a frozen arrow with another arrow to thaw it. The ice never melts by itself here. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: thaw every frozen arrow. Hit them with other arrows.' },
-    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off at the same time, without losing both lives. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: get every red card arrow sent off at once.' }
+    { goal: 'red', name: 'Sent off', note: 'Get every red card arrow sent off before they expire. Two lives and no hints. Each level adds more arrow types.', caption: 'Challenge: get every red card arrow sent off at once.' }
   ];
   function challengeGroup(c) { return CHALLENGE_GROUPS.filter(function (g) { return g.goal === c.goal; })[0]; }
   function openChallenge(i) {
@@ -1060,7 +1060,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-g';
+  var BUILD = '2026.11.23-h';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3548,7 +3548,7 @@
       html += '<div class="modes"><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
       '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and combo arrows that mix up to 3 effects' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
       '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + !endlessOpts().timed + '">No timer</button><button data-otimed="1" aria-pressed="' + !!endlessOpts().timed + '">Timed</button></div>' +
-      '<div class="setting"><span>Boards<small>' + ((endlessOpts().boards || 1) > 1 ? 'You play every board, up to 5x each. The timer adds up every board, plus time to switch.' : 'One board, or several linked boards to play alone') + '</small></span></div><div class="sizes lseg o3" role="group" aria-label="Boards">' + [1, 2, 4].map(function (x) { return '<button data-oboards="' + x + '" aria-pressed="' + ((endlessOpts().boards || 1) === x) + '">' + (x === 1 ? '1 board' : x + ' boards') + '</button>'; }).join('') + '</div>' +
+      '<div class="setting"><span>Boards<small>' + ((endlessOpts().boards || 1) > 1 ? 'You play every board, up to 5x each. The timer adds up every board and doubles it.' : 'One board, or several linked boards to play alone') + '</small></span></div><div class="sizes lseg o3" role="group" aria-label="Boards">' + [1, 2, 4].map(function (x) { return '<button data-oboards="' + x + '" aria-pressed="' + ((endlessOpts().boards || 1) === x) + '">' + (x === 1 ? '1 board' : x + ' boards') + '</button>'; }).join('') + '</div>' +
       '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off, (endlessOpts().boards || 1) > 1) + '</small></span><b>›</b></button>' +
       '<div class="setting"><span>Season effects<small>' + ((endlessOpts().boards || 1) > 1 ? 'Each board gets its own season effects.' : 'Pick any number, or All for every effect at once.') + '</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'All']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.list.length === 4 : x[0] === 'none' ? !c.list.length : c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +

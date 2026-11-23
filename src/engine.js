@@ -459,8 +459,8 @@
   }
   // The ways an arrow can pivot fully around its tail: quarter turns that fit in free space.
   function pivotOptions(level, state, a) {
-    // Compasses, snipers and twin-shared arrows keep their one effect: ice and wind leave them alone.
-    if (a.kind === 'compass' || a.sniper || a.coopGroup !== undefined) return [];
+    // Compasses and twin-shared arrows keep their one effect: ice and wind leave them alone. Snipers take anything.
+    if (a.kind === 'compass' || a.coopGroup !== undefined) return [];
     var t = a.cells[0], out = [];
     [1, 2, 3].forEach(function (q) {
       var cells = [], ok = true;
@@ -494,7 +494,7 @@
     var rollWinter = r(), rollSummer = r(), rollAutumn = r();
     if (hasEffect(level, 'winter') && (rollWinter < 0.2 || forced)) {
       ev.triggered = true;
-      var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && !a.sniper && a.coopGroup === undefined && state.frozen[a.id] === undefined; }), r);
+      var want = 1 + Math.floor(r() * 5), pool = shuffle(live.filter(function (a) { return a.kind !== 'compass' && a.coopGroup === undefined && state.frozen[a.id] === undefined; }), r);
       pool.some(function (a) {
         if (ev.freeze.length >= want) return true;
         if (a.kind === 'twin') return false;
@@ -919,13 +919,14 @@
       boards.push(lvl);
     }
     var empty = function (lvl) { return { removed: lvl.arrows.map(function () { return true; }), launches: 0, frozen: {}, burning: {} }; };
-    // Snipers and cross-board twins never carry another effect, the same as twins in single player.
+    // Cross-board twins never carry another effect, the same as twins in single player. Snipers can carry any effect.
     var plain = function (a) { return a.kind === 'plain' && !traitCount(a) && !a.sniper && a.coopGroup === undefined; };
+    var sniperOk = function (a) { return a.kind === 'plain' && !a.sniper && a.coopGroup === undefined; };
     // Snipers: between 1 in 25 and 1 in 10 of each board's arrows, aimed so they reach a neighbouring board.
     if (!spec.noSnipers) boards.forEach(function (lvl, b) {
       var n = lvl.arrows.length, want = Math.max(1, Math.min(Math.floor(n / 10), Math.max(Math.ceil(n / 25), Math.round(n / 13))));
       shuffle(lvl.arrows.slice(), r).forEach(function (a) {
-        if (want <= 0 || !plain(a)) return;
+        if (want <= 0 || !sniperOk(a)) return;
         var c = check(lvl, empty(lvl), a);
         if (coopNeighbour(b, c.endDir, boards.length) < 0) return;
         a.sniper = true; want--;

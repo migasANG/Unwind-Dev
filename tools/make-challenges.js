@@ -31,13 +31,15 @@ function movesOf(l, s, ch) {
   return out;
 }
 // One random playthrough. Returns the moves if the goal was reached.
-function rollout(base, ch, r) {
+function rollout(base, ch, r, smart) {
   const { l, s } = fresh(base, ch), seq = [];
   for (let guard = 0; guard < 400; guard++) {
     if (goals[ch.goal](l, s)) return seq;
     if (E.isWon(s)) return null;
     if (ch.goal !== 'golden' && s.freed && Object.keys(s.freed).length) return null;
-    const m = movesOf(l, s, ch);
+    let m = movesOf(l, s, ch);
+    // The smart player for Sent off holds the red cards back and launches everything else.
+    if (smart) { const calm = m.filter((id) => l.arrows[id].red === undefined); if (calm.length) m = calm; }
     if (!m.length) return null;
     const id = m[Math.floor(r() * m.length)];
     E.tap(l, s, id); seq.push(id);
@@ -79,7 +81,16 @@ function find(goal, extra, picks, runs) {
       if (pool.length < p.frozen + 4) continue;
       ch.frozen = pool.slice(0, p.frozen);
     }
-    if (goal === 'red' && base.arrows.filter((a) => a.red !== undefined).length < p.reds) continue;
+    if (goal === 'red') {
+      const reds = base.arrows.filter((a) => a.red !== undefined);
+      if (reds.length < p.reds) continue;
+      // Every card must be able to show while every red arrow is still on the board, so the counts stay below
+      // the number of other arrows (one must be left). Spread from 3 up to that limit.
+      const top = base.arrows.length - reds.length - 2;
+      if (top < 4) continue;
+      const rr = E.rng32(seed * 53);
+      reds.forEach((a) => { a.red = 3 + Math.floor(rr() * (top - 2)); });
+    }
     const r = E.rng32(seed * 31 + 5);
     let wins = 0, best = null;
     for (let i = 0; i < runs; i++) {
@@ -88,16 +99,24 @@ function find(goal, extra, picks, runs) {
       if (wins / runs > p.max) break;
     }
     const rate = wins / runs;
+    if (!best && goal === 'red' && rate <= p.max) for (let i = 0; i < 300 && !best; i++) best = rollout(base, ch, r, true);
     process.stderr.write(`${goal} L${got + 1} seed ${seed} arrows ${base.arrows.length} [${made.picked}] rate ${rate.toFixed(2)}\n`);
-    if (!best || rate > p.max || rate < (p.min || 0.01) || !replay(base, ch, best)) continue;
+    if (!best || rate > p.max || rate < (p.min === undefined ? (goal === 'red' ? 0 : 0.01) : p.min) || !replay(base, ch, best)) continue;
     out.push(Object.assign({ goal, frozen: ch.frozen, extras: made.picked, moves: best.length, rate, solution: best }, base));
     got++;
   }
 }
 module.exports = { strip, fresh, goals, movesOf, replay, E };
 if (require.main === module) {
-  find('golden', { compass: 3 }, [{ max: 0.35 }, { max: 0.25 }, { max: 0.15 }], 40);
-  find('thaw', {}, [{ frozen: 3, max: 0.35 }, { frozen: 4, max: 0.25 }, { frozen: 6, max: 0.15 }], 40);
-  find('red', {}, [{ reds: 2, max: 0.35, spec: { reds: 2 } }, { reds: 3, max: 0.25, spec: { reds: 3 } }, { reds: 4, max: 0.15, spec: { reds: 4 } }], 40);
-  console.log(JSON.stringify(out));
+  // node tools/make-challenges.js thaw red  -> rebuilds only those groups and keeps the others from src/challenges.json
+  const only = process.argv.slice(2);
+  const want = (g) => !only.length || only.includes(g);
+  const keep = only.length ? require('../src/challenges.json') : [];
+  if (want('golden')) find('golden', { compass: 3 }, [{ max: 0.35 }, { max: 0.25 }, { max: 0.15 }], 40); else out.push(...keep.filter((c) => c.goal === 'golden'));
+  // Thaw 1 is a gentle start: random play should manage it now and then.
+  if (want('thaw')) find('thaw', {}, [{ frozen: 3, min: 0.15, max: 0.5 }, { frozen: 4, min: 0.05, max: 0.25 }, { frozen: 6, min: 0.02, max: 0.15 }], 40); else out.push(...keep.filter((c) => c.goal === 'thaw'));
+  // Sent off: twice the red cards of before, and rarer by chance.
+  if (want('red')) find('red', {}, [{ reds: 4, max: 0.15, spec: { reds: 4 } }, { reds: 6, max: 0.08, spec: { reds: 6 } }, { reds: 8, max: 0.05, spec: { reds: 8 } }], 60); else out.push(...keep.filter((c) => c.goal === 'red'));
+  const order = { golden: 0, thaw: 1, red: 2 };
+  console.log(JSON.stringify(out.sort((a, b) => order[a.goal] - order[b.goal])));
 }
