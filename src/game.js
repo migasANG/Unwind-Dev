@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-g';
+  var BUILD = '2026.11.24-h';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4433,9 +4433,10 @@
         }
         g.globalAlpha = 1;
       }
-      // A fish leaps out of the water during the last tilt, with a splash going in and out and rings after.
-      var FISH_AT = 16200, FISH_LEN = 1250, fx0 = W * (W < H ? 0.22 : 0.27), fWorld = H * 1.98, fs = S * 0.038;
-      var fishT = (t - FISH_AT) / FISH_LEN, fyS = near(fWorld), jumpW = S * 0.2, jumpH = S * 0.16;
+      // Far out behind the boat, while the camera rests on the coast, a fish leaps: a small black silhouette
+      // against the water, with a splash going in and out and rings after.
+      var FISH_AT = 11600, FISH_LEN = 1100, fx0 = W * (W < H ? 0.74 : 0.7), fWorld = horizon + H * 0.11, fs = S * 0.02;
+      var fishT = (t - FISH_AT) / FISH_LEN, fyS = near(fWorld), jumpW = S * 0.11, jumpH = S * 0.085;
       if (fishT > -0.1 && fishT < 3 && fyS > -jumpH && fyS < H + 40) {
         var ringAt = function (cx, age) {
           for (var rg = 0; rg < 3; rg++) {
@@ -4462,13 +4463,10 @@
           var fx = exitX + jumpW * fishT, fy = fyS - jumpH * 4 * fishT * (1 - fishT);
           var ang2 = Math.atan2(-jumpH * 4 * (1 - 2 * fishT), jumpW);
           g.save(); g.translate(fx, fy); g.rotate(ang2);
-          // A small silvery fish with a dark back, a tail and an eye; the moon catches its belly.
-          var body3 = g.createLinearGradient(0, -fs * 0.5, 0, fs * 0.5);
-          body3.addColorStop(0, '#3a4a8c'); body3.addColorStop(0.55, '#9fb0e8'); body3.addColorStop(1, '#e4e9ff');
-          g.fillStyle = body3; g.beginPath(); g.ellipse(0, 0, fs * 1.25, fs * 0.45, 0, 0, 7); g.fill();
-          g.beginPath(); g.moveTo(-fs * 1.05, 0); g.lineTo(-fs * 1.85, -fs * 0.48); g.lineTo(-fs * 1.7, 0); g.lineTo(-fs * 1.85, fs * 0.48); g.closePath(); g.fillStyle = '#6f80c4'; g.fill();
+          // A plain black silhouette, like the boat.
+          g.fillStyle = '#05081c'; g.beginPath(); g.ellipse(0, 0, fs * 1.25, fs * 0.45, 0, 0, 7); g.fill();
+          g.beginPath(); g.moveTo(-fs * 1.05, 0); g.lineTo(-fs * 1.85, -fs * 0.48); g.lineTo(-fs * 1.7, 0); g.lineTo(-fs * 1.85, fs * 0.48); g.closePath(); g.fill();
           g.beginPath(); g.moveTo(-fs * 0.1, -fs * 0.4); g.lineTo(fs * 0.35, -fs * 0.72); g.lineTo(fs * 0.5, -fs * 0.38); g.closePath(); g.fill();
-          g.fillStyle = '#0c1030'; g.beginPath(); g.arc(fs * 0.82, -fs * 0.08, fs * 0.09, 0, 7); g.fill();
           g.restore();
           // Water trailing off it
           g.globalAlpha = 0.5; g.fillStyle = '#dfe6ff';
@@ -4538,7 +4536,7 @@
       words(HOPE2, H * 0.8, body2, F, fadeWin(5750, 10000) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
-      words(CARE, H * 0.88, body2 * 0.88, F, fadeWin(10800, 14000) * 0.85);
+      words(CARE, H * 0.88, body2 * 0.88, F, fadeWin(11300, 15300) * 0.85);
       // Down to the reflection, then the title above it
       var titleSize = Math.max(54, Math.min(110, W * 0.15)), titleY = H * 0.56 - moonR * 2.6;
       words(PRESENT, titleY - titleSize * 0.95, body2, F, fadeWin(15750, 99999) * 0.95);
