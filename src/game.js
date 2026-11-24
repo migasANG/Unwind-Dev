@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-m';
+  var BUILD = '2026.11.24-n';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4376,7 +4376,8 @@
         });
         // Lighthouse and its slow beam
         var lx = W * 0.88, lb = hy - S * 0.105, lh = S * 0.15, lw = S * 0.032;
-        var ang = Math.sin(sec * 0.55) * 0.9 + Math.PI;
+        // The beam sweeps gently over the water and the horizon, never far up into the sky.
+        var ang = Math.PI - 0.07 + Math.sin(sec * 0.55) * 0.19;
         var beam = g.createRadialGradient(lx, lb - lh, 0, lx, lb - lh, S * 0.8);
         beam.addColorStop(0, 'rgba(255,226,150,.38)'); beam.addColorStop(1, 'rgba(255,226,150,0)');
         g.fillStyle = beam; g.beginPath(); g.moveTo(lx, lb - lh);
@@ -4406,7 +4407,7 @@
         var tipX = -u2 * 13, tipY = -u2 * 10;
         g.strokeStyle = 'rgba(231,236,255,.55)'; g.lineWidth = 1;
         g.beginPath(); g.moveTo(tipX, tipY); g.quadraticCurveTo(tipX - u2 * 2, tipY + u2 * 6, tipX - u2 * 2.5, u2 * 0.6); g.stroke();
-        g.fillStyle = '#ff6b6b'; g.beginPath(); g.arc(tipX - u2 * 2.5, u2 * 0.4 + Math.sin(sec * 2.4) * u2 * 0.3, u2 * 0.45, 0, 7); g.fill();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(tipX - u2 * 2.5, u2 * 0.4 + Math.sin(sec * 2.4) * u2 * 0.3, u2 * 0.45, 0, 7); g.fill();
         // Hull
         g.fillStyle = '#0c1030';
         g.beginPath(); g.moveTo(-u2 * 9.5, -u2 * 1.6); g.lineTo(u2 * 9.5, -u2 * 1.6); g.quadraticCurveTo(u2 * 8, u2 * 2.4, u2 * 5.5, u2 * 2.6); g.lineTo(-u2 * 5.5, u2 * 2.6); g.quadraticCurveTo(-u2 * 8, u2 * 2.4, -u2 * 9.5, -u2 * 1.6); g.closePath(); g.fill();
