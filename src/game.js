@@ -528,7 +528,7 @@
         tutorial: 'sniper', title: 'Sniper arrows', seed: 0, lives: 6, groups: [],
         boards: [
           coopBoard([[[[2, 2], [3, 2], [4, 2]], { sniper: true }], [[[0, 0], [1, 0]]], [[[1, 4], [1, 3]]]],
-            'The red arrow with a sight is a sniper. When it leaves, it flies on to the next board and destroys the first arrow it hits.'),
+            'The red arrow with a sight is a sniper. When it leaves, it flies on to the next board and destroys the first arrow it hits. Hold it to see where it would land.'),
           coopBoard([[[[0, 2], [1, 2]]], [[[4, 2], [3, 2]]], [[[2, 4], [2, 3]]], [[[4, 0], [4, 1]]]],
             'The two middle arrows block each other. Only Ana\'s sniper arrow can break them free.')
         ]
@@ -541,7 +541,7 @@
           coopBoard([[[[2, 4], [2, 3]], { coopGroup: 0 }], [[[1, 1], [2, 1], [3, 1]]], [[[0, 3], [1, 3]]], [[[4, 4], [3, 4]]]],
             'The X+ arrow has a twin on Bruno\'s board. They leave together, so both paths must be clear.'),
           coopBoard([[[[2, 0], [2, 1]], { coopGroup: 0 }], [[[0, 3], [1, 3], [2, 3], [3, 3]]], [[[4, 1], [3, 1]]]],
-            'Clear the way for X+ here too. Hold an X+ arrow to see its twin.')
+            'Clear the way for X+ here too. Hold an X+ arrow to see its twin on the other board.')
         ]
       };
     }
@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-p';
+  var BUILD = '2026.11.24-q';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3773,10 +3773,10 @@
       boards: [[[[[0, 1], [1, 1]]], [[[0, 2], [1, 2], [2, 2]]]], [[[[0, 0], [1, 0], [2, 0]]], [[[1, 2], [1, 1]]]]],
       steps: [{ b: 0, tap: 0, say: 'Play the arrows on this board' }, { nav: 1, say: 'Tap the edge button to move to board 2' }, { b: 1, tap: 0, say: 'Board 2 is yours to play too' }, { b: 1, tap: 1, say: 'Lives are shared by all boards' },
         { nav: 0, say: 'Tap it again to go back' }, { b: 0, tap: 1, say: 'Clear every board to win' }] },
-    sniper: { title: 'Sniper arrow', text: 'Multiple boards only. When a sniper arrow leaves its board, it flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move.', w: 4, h: 3, gap: 1.3,
+    sniper: { title: 'Sniper arrow', text: 'Multiple boards only. When a sniper arrow leaves its board, it flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move. Hold it to see that board and where it would hit.', w: 4, h: 3, gap: 1.3,
       boards: [[[[[1, 1], [2, 1], [3, 1]], { sniper: true }], [[[0, 0], [1, 0]]]], [[[[0, 1], [1, 1]]], [[[3, 1], [2, 1]]]]],
       steps: [{ b: 1, tap: 1, say: 'These two arrows block each other' }, { b: 0, tap: 0, say: 'A sniper flies on to the next board' }, { b: 1, tap: 1, say: 'It destroyed the first arrow it hit' }, { b: 0, tap: 1, say: '' }] },
-    twinshared: { title: 'Twin-shared arrows', text: 'Multiple boards only. Same colour, letter and a plus. They leave together with their twins on other boards, so every path must be clear. Hold one to see its twins.', w: 4, h: 4, gap: 1.3,
+    twinshared: { title: 'Twin-shared arrows', text: 'Multiple boards only. Same colour, letter and a plus. They leave together with their twins on other boards, so every path must be clear. Hold one to see its twins on the other boards.', w: 4, h: 4, gap: 1.3,
       boards: [[[[[1, 3], [1, 2]], { coopGroup: 0 }], [[[0, 1], [1, 1], [2, 1]]]], [[[[2, 3], [2, 2]], { coopGroup: 0 }], [[[0, 0], [0, 1]]]]],
       steps: [{ b: 1, tap: 0, say: 'Its twin on the other board is blocked' }, { b: 0, tap: 1, say: 'Clear the way on that board first' }, { b: 1, tap: 0, say: 'Now both leave together' }, { b: 1, tap: 1, say: '' }] }
   };
@@ -4171,9 +4171,9 @@
       '<details class="mpx"' + (seasonHere ? ' open' : '') + '><summary>Seasonal arrows and effects</summary>' + items.filter(function (it) { return SEASONAL[it.key]; }).map(row).join('') + '</details>';
     var sn = '#c8202f', tw = colors.twins[colors.twins.length - 1];
     var mp = [
-      { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on other players\' boards, so every path must be clear. Hold one to see its twins.',
+      { key: 'twinshared', title: 'Twin-shared arrows', text: 'Same colour, letter and a plus. They leave together with their twins on the other boards, so every path must be clear. Hold one to see its twins on the other boards.',
         art: '<rect x="1" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/><rect x="34" y="3" width="27" height="40" rx="5" stroke="' + ink + '" stroke-opacity=".3" stroke-width="1.5"/>' + line('M14 38V14', tw) + '<path d="M8 20L14 13L20 20" stroke="' + tw + '" stroke-width="4"/>' + line('M47 38V14', tw) + '<path d="M41 20L47 13L53 20" stroke="' + tw + '" stroke-width="4"/>' + '<circle cx="14" cy="27" r="7" fill="' + tw + '"/><text x="14" y="30.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="19.5" cy="21.5" r="3.6" fill="' + tw + '"/><path d="M18.1 21.5H20.9M19.5 20.1V22.9" stroke="' + card + '" stroke-width="1.2"/>' + '<circle cx="47" cy="27" r="7" fill="' + tw + '"/><text x="47" y="30.3" text-anchor="middle" font-size="9" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="52.5" cy="21.5" r="3.6" fill="' + tw + '"/><path d="M51.1 21.5H53.9M52.5 20.1V22.9" stroke="' + card + '" stroke-width="1.2"/>' },
-      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next player\'s board and destroys the first arrow it hits there. The hit does not count as a move.',
+      { key: 'sniper', title: 'Sniper arrow', text: 'Flies on to the next board and destroys the first arrow it hits there. The hit does not count as a move. Hold it to see that board and where it would hit.',
         art: line('M4 23H50', sn) + head(56, 23, sn) + '<circle cx="26" cy="23" r="9" fill="' + card + '" stroke="' + sn + '" stroke-width="2.5"/><circle cx="26" cy="23" r="3.5" stroke="' + sn + '" stroke-width="2"/>' }
     ];
     var hereMp = {};
