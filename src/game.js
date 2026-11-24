@@ -1106,7 +1106,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-v';
+  var BUILD = '2026.11.24-y';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -1595,6 +1595,7 @@
     var cap = $('caption'), lvl = current && current.level, watch = !style && !!text && !!lvl && (text === lvl.caption || text === HARD_FIRST) && levelDemos().length > 0;
     cap.removeAttribute('data-goto'); cap.classList.remove('goto');
     cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
+    if (watch) captionTipSoon(); else hideCaptionTip();
     cap.classList.toggle('icewarn', style === 'ice'); cap.classList.toggle('goldwarn', style === 'gold');
     if (style) for (var i = 0; i < 10; i++) {
       var f = document.createElement('i');
@@ -1620,6 +1621,9 @@
     r.setProperty('--sun-y', sunY + '%');
     r.setProperty('color-scheme', 'light');
     r.setProperty('--gold-ink', ch === CHAPTERS[3] || ch === CHAPTERS[4] ? '#ffd23f' : '#a86a00');
+    // Level marks: the pale moon only reads on dark cards, so light themes get a deeper blue and a deeper gold.
+    var darkCard = ch === CHAPTERS[3] || ch === CHAPTERS[4];
+    r.setProperty('--mark-moon', darkCard ? '#9fd8ff' : '#2f86d6'); r.setProperty('--mark-star', darkCard ? '#ffc21f' : '#f0a000');
     // Crossfade two gradient layers, since gradients themselves cannot transition.
     var show = $('sky2').style.opacity === '1' ? $('sky') : $('sky2'), hide = show.id === 'sky' ? $('sky2') : $('sky');
     show.style.background = 'linear-gradient(180deg,' + ch.a + ',' + ch.b + ')';
@@ -2085,7 +2089,8 @@
         if (flowersInLayer) { drawFlowers(now, l); }
         l.arrows.forEach(function (a, i) { if (staticArrow(a, now)) { paintArrow(a, i); painted[a.id] = a.cells; } });
         leave();
-        boardLayer = { canvas: cv, key: layerKey, cs: cs, res: res, painted: painted, flowerMark: state.launches };
+        var looks = {}; l.arrows.forEach(function (a) { if (a.kind === 'twin' || a.coopGroup !== undefined) looks[a.id] = stillLinked(a); });
+        boardLayer = { canvas: cv, key: layerKey, cs: cs, res: res, painted: painted, flowerMark: state.launches, looks: looks };
         window.unwindLayerBuilds = (window.unwindLayerBuilds || 0) + 1;
       } else {
         // Patch only the tiles of arrows that left, returned or started moving.
@@ -2096,6 +2101,11 @@
         }
         l.arrows.forEach(function (a) {
           var want = staticArrow(a, now), had = lay.painted[a.id];
+          // A twin that has just lost its partners looks different without moving: repaint it.
+          if ((a.kind === 'twin' || a.coopGroup !== undefined) && had && lay.looks) {
+            var lk = stillLinked(a);
+            if (lay.looks[a.id] !== lk) { lay.looks[a.id] = lk; markCells(a.cells); }
+          }
           if (want === !!had && (!had || had === a.cells)) return;
           if (had) markCells(had);
           if (want) markCells(a.cells);
@@ -3569,7 +3579,7 @@
       }
       return out + '</div>';
     };
-    if (tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
+    if (tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'style="fill:var(--mark-moon,#2f86d6)"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'style="fill:var(--mark-star,#f0a000)"') + 'Perfect, no lives lost</span></div>';
     if (tab === 'extra' || tab === 'online' || tab === 'endless') {}
     else if (tab === 'boarding') {
       html += '<p class="note">Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.</p><div class="modes"><button id="mTutBoards"><b>How several boards work</b><span>A quick look before you start.</span></button></div><div class="lv">' + BOARDING.map(function (b, i) {
@@ -4117,8 +4127,40 @@
     requestAnimationFrame(loop);
     return function () { alive = false; };
   }
+  // A one-time pointer to the level's explanation: tapping it plays the video again. Shown the first time a
+  // level with a video is played, once no card is open, and never again after it is dismissed.
+  var capTipTimer = null;
+  function captionTipSoon() {
+    clearTimeout(capTipTimer);
+    if (progress.tutorials && progress.tutorials.captionTip) return;
+    capTipTimer = setTimeout(function tryTip() {
+      var cap = $('caption');
+      if (!cap.classList.contains('watchable') || ended || !current) return;
+      if ($('sheetHost').firstChild || !$('intro').hidden || !$('loading').hidden) { capTipTimer = setTimeout(tryTip, 700); return; }
+      showCaptionTip();
+    }, 1400);
+  }
+  function showCaptionTip() {
+    var tip = $('capTip');
+    if (!tip) {
+      tip = document.createElement('div'); tip.id = 'capTip'; tip.setAttribute('role', 'status');
+      tip.innerHTML = '<p><b>Tip</b> Tap this message any time to watch the video again.</p><button type="button">Got it</button>';
+      document.body.appendChild(tip);
+      tip.querySelector('button').onclick = function (ev) { ev.stopPropagation(); dismissCaptionTip(); };
+      window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
+    }
+    var r = $('caption').getBoundingClientRect();
+    tip.style.bottom = (window.innerHeight - r.top + 12) + 'px';
+    tip.hidden = false; $('caption').classList.add('tipglow');
+  }
+  function hideCaptionTip() { clearTimeout(capTipTimer); if ($('capTip')) $('capTip').hidden = true; $('caption').classList.remove('tipglow'); }
+  function dismissCaptionTip() {
+    progress.tutorials = progress.tutorials || {}; progress.tutorials.captionTip = 1; save('unwind.progress2', progress);
+    hideCaptionTip();
+  }
   // Tapping a level's explanation plays its demo again.
   $('caption').addEventListener('click', function () {
+    if ($('capTip') && !$('capTip').hidden) dismissCaptionTip();
     var go = $('caption').getAttribute('data-goto');
     if (go !== null && current && current.coop) { coopSwitch(+go); return; }
     if (!$('caption').classList.contains('watchable') || ended || !current) return;
@@ -4717,6 +4759,7 @@
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     tap: function (id) { onTap(id); },
+    linked: function (id) { return stillLinked(current.level.arrows[id]); },
     point: function (id) {
       var c = current.level.arrows[id].cells[0];
       if (cam) { cam.anim = null; cam.zoom = null; cam.settling = false; cam.free = false; cam.cx = c[0] + 0.5; cam.cy = c[1] + 0.5; applyCam(); }
