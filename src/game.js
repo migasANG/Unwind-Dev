@@ -1063,7 +1063,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-c';
+  var BUILD = '2026.11.24-e';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4181,28 +4181,50 @@
 
   // ── Intro ────────────────────────────────────────────────────────────────
   // A night scene in the game's flat style: the camera starts on the moon, tilts down past the coast and a
-  // fisherman in his boat, and comes to rest on the sea where the moon is reflected. Plays on first launch.
+  // fisherman in his boat, and comes to rest on the sea where the moon is reflected. Plays every time the game starts.
   function playIntro(done) {
     var box = $('intro'), cv = box.querySelector('canvas'), g = cv.getContext('2d'), alive = true, t0 = 0;
-    // Camera keyframes (ms, and how far down it looks in screen heights): the moon, the coast, a slow drift, the water.
-    // Three pauses: the moon, one view with both the coast and the boat, and the moon's reflection at the end.
-    var KEYS = [[0, 0], [1900, 0], [5300, 1.05, 'io'], [8100, 1.05], [11300, 2, 'io'], [14300, 2]], FADE = 900, TOTAL = 14300;
+    // Camera keyframes (ms, and how far down it looks in screen heights). Three pauses: the moon, one view with both
+    // the coast and the boat, and the moon's reflection at the end, joined by two slow tilts.
+    var KEYS = [[0, 0], [3900, 0], [9600, 1.05, 'io'], [14400, 1.05], [20100, 2, 'io'], [25300, 2]], FADE = 900, TOTAL = 25300;
     var T = function (str) { return window.UnwindI18n ? window.UnwindI18n.t(str) : str; };
-    var LINE1 = T('A cozy and relaxing puzzle game with arrows'), LINE2 = T('Created by Miguel Lima');
+    var LINE1 = T('A cozy and relaxing puzzle game with arrows'), LINE2 = T('Created by Hearthbound Games');
+    var HOPE1 = T('We hope you can enjoy...'), HOPE2 = T('and relax with our game'), PRESENT = T('We present to you:');
     // The moon, drawn once to its own small canvas, so its reflection is the very same moon, upside down.
-    var moonArt = null, moonArtR = 0;
+    var moonArt = null, moonArtR = 0, reflBuf = null;
+    // A soft, glowing moon: a gentle light-to-cool shading, quiet grey-blue seas and a bright rim.
     var paintMoon = function (c, cx, cy, r) {
-      c.fillStyle = '#eef0ff'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fill();
-      c.fillStyle = 'rgba(160,170,220,.28)';
-      [[-0.35, -0.2, 0.22], [0.3, 0.25, 0.16], [0.05, 0.45, 0.1], [0.42, -0.35, 0.09]].forEach(function (k) { c.beginPath(); c.arc(cx + k[0] * r, cy + k[1] * r, k[2] * r, 0, 7); c.fill(); });
+      var body = c.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+      body.addColorStop(0, '#fbfbff'); body.addColorStop(0.65, '#e9ecfb'); body.addColorStop(1, '#ccd3f2');
+      c.fillStyle = body; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fill();
+      c.save(); c.beginPath(); c.arc(cx, cy, r, 0, 7); c.clip();
+      [[-0.32, -0.18, 0.36, 0.26, -0.4, 0.13], [0.22, 0.12, 0.3, 0.22, 0.5, 0.11], [-0.05, 0.45, 0.22, 0.14, 0.2, 0.09], [0.38, -0.38, 0.16, 0.12, 0.9, 0.09], [-0.52, 0.28, 0.14, 0.1, 0.1, 0.07]].forEach(function (k) {
+        c.fillStyle = 'rgba(122,134,190,' + k[5] + ')'; c.beginPath(); c.ellipse(cx + k[0] * r, cy + k[1] * r, k[2] * r, k[3] * r, k[4], 0, 7); c.fill();
+      });
+      [[0.1, -0.5, 0.05], [-0.15, 0.2, 0.04], [0.55, 0.3, 0.035]].forEach(function (k) {
+        c.strokeStyle = 'rgba(122,134,190,.18)'; c.lineWidth = Math.max(1, r * 0.02); c.beginPath(); c.arc(cx + k[0] * r, cy + k[1] * r, k[2] * r, 0, 7); c.stroke();
+      });
+      c.restore();
+      c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = Math.max(1, r * 0.03); c.beginPath(); c.arc(cx, cy, r - c.lineWidth / 2, 0, 7); c.stroke();
+    };
+    // Glow around the moon or its reflection: a wide faint halo and a tighter bright one.
+    var moonGlow = function (x, y, r, k) {
+      [[4.2, 0.16], [1.9, 0.3]].forEach(function (h) {
+        var gr = g.createRadialGradient(x, y, r * 0.9, x, y, r * h[0]);
+        gr.addColorStop(0, 'rgba(214,222,255,' + (h[1] * k) + ')'); gr.addColorStop(1, 'rgba(214,222,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * h[0], 0, 7); g.fill();
+      });
     };
     var rnd = E.rng32(20261124), stars = [], waves = [], i;
     for (i = 0; i < 170; i++) stars.push({ x: rnd(), y: rnd(), r: 0.5 + rnd() * 1.3, p: rnd() * 6.28, s: 0.6 + rnd() * 1.6 });
     for (i = 0; i < 260; i++) waves.push({ x: rnd(), y: rnd(), l: 0.4 + rnd() * 0.9, p: rnd() * 6.28 });
+    // The glitter of the moon's path: rows of small light flecks, more and longer the closer they are.
+    var glints = [];
+    for (i = 0; i < 74; i++) { var u0 = i / 73, n0 = 1 + Math.floor(u0 * 3.2 + rnd() * 0.8); for (var gj = 0; gj < n0; gj++) glints.push({ u: u0, x: rnd() * 2 - 1, l: 0.45 + rnd() * 0.75, p: rnd() * 6.28, s: 0.8 + rnd() * 1.8, d: rnd() * 6.28 }); }
     box.hidden = false; box.classList.remove('out');
     var finish = function () {
       if (!alive) return;
-      alive = false; save('unwind.intro', true);
+      alive = false;
       box.classList.add('out');
       setTimeout(function () { box.hidden = true; box.classList.remove('out'); if (done) done(); }, FADE);
       window.removeEventListener('keydown', onKey);
@@ -4244,9 +4266,7 @@
       // Moon, with a soft halo
       var my = sky(moonY);
       if (my > -moonR * 4) {
-        var halo = g.createRadialGradient(moonX, my, moonR * 0.8, moonX, my, moonR * 4);
-        halo.addColorStop(0, 'rgba(223,230,255,.28)'); halo.addColorStop(1, 'rgba(223,230,255,0)');
-        g.fillStyle = halo; g.beginPath(); g.arc(moonX, my, moonR * 4, 0, 7); g.fill();
+        moonGlow(moonX, my, moonR, 1);
         paintMoon(g, moonX, my, moonR);
       }
       // Slow clouds
@@ -4261,28 +4281,32 @@
       var gw = g.createLinearGradient(0, hy, 0, near(depth));
       gw.addColorStop(0, '#25336b'); gw.addColorStop(0.35, '#16214f'); gw.addColorStop(1, '#0a0f2c');
       g.fillStyle = gw; g.fillRect(0, Math.max(0, hy), W, H);
-      // The moon's path on the water: soft strokes that fade at both ends, thin and close together far away,
-      // longer and further apart as they come closer, ending at the moon's reflection.
-      var reflY = H * 2.56, pathEnd = reflY - moonR * 1.15, sparkle = [];
-      for (var li = 0; li < 64; li++) {
-        var u = li / 63, yy = horizon + 2 + (pathEnd - horizon - 2) * Math.pow(u, 1.55), sy = near(yy);
-        if (sy < -10 || sy > H + 10) continue;
-        var breathe = 0.62 + 0.38 * Math.sin(sec * (1.1 + (li % 5) * 0.23) + li * 1.7);
-        var half = moonR * (0.22 + 0.85 * Math.pow(u, 0.9)) * breathe, drift = Math.sin(sec * 0.9 + li * 0.8) * moonR * 0.12 * (0.3 + u);
-        var cx2 = moonX + drift, alpha = (0.42 + 0.5 * u) * (0.75 + 0.25 * Math.sin(sec * 2.1 + li));
-        var lg2 = g.createLinearGradient(cx2 - half, 0, cx2 + half, 0);
-        lg2.addColorStop(0, 'rgba(228,232,255,0)'); lg2.addColorStop(0.5, 'rgba(228,232,255,' + alpha.toFixed(3) + ')'); lg2.addColorStop(1, 'rgba(228,232,255,0)');
-        g.strokeStyle = lg2; g.lineCap = 'round'; g.lineWidth = 1.4 + u * 3.4;
-        g.beginPath(); g.moveTo(cx2 - half, sy); g.quadraticCurveTo(cx2, sy - (1 + u * 2.5), cx2 + half, sy); g.stroke();
-        if (li % 3 === 0) sparkle.push([cx2 + Math.sin(li * 7.3 + sec * 0.5) * half * 0.6, sy, u, li]);
+      // The moon's path on the water: a soft column of light, then small glinting flecks that twinkle on and off,
+      // narrow and fine near the horizon, wider and bolder closer in, ending at the moon's reflection.
+      var reflY = H * 2.56, pathEnd = reflY - moonR * 1.05;
+      var pathY = function (u) { return horizon + 2 + (pathEnd - horizon - 2) * Math.pow(u, 1.6); };
+      var spread = function (u) { return moonR * (0.25 + 1.05 * Math.pow(u, 0.85)); };
+      for (var band = 0; band < 40; band++) {
+        var ua = band / 40, ub = (band + 1) / 40, ya = near(pathY(ua)), yb = near(pathY(ub));
+        if (yb < 0 || ya > H) continue;
+        var wid = spread((ua + ub) / 2) * 1.2, bgr = g.createLinearGradient(moonX - wid, 0, moonX + wid, 0), ba = 0.05 + 0.1 * ua;
+        bgr.addColorStop(0, 'rgba(214,222,255,0)'); bgr.addColorStop(0.5, 'rgba(214,222,255,' + ba.toFixed(3) + ')'); bgr.addColorStop(1, 'rgba(214,222,255,0)');
+        var yA = Math.round(ya), yB = Math.round(yb);
+        if (yB > yA) { g.fillStyle = bgr; g.fillRect(moonX - wid, yA, wid * 2, yB - yA); }
       }
-      // A few glints that twinkle on the path
-      sparkle.forEach(function (sp) {
-        var tw = Math.max(0, Math.sin(sec * 3 + sp[3] * 2.1));
-        g.globalAlpha = tw * (0.5 + sp[2] * 0.5); g.fillStyle = '#ffffff';
-        g.beginPath(); g.arc(sp[0], sp[1], 0.8 + sp[2] * 1.6, 0, 7); g.fill();
+      g.lineCap = 'round';
+      glints.forEach(function (gl) {
+        var sy = near(pathY(gl.u)); if (sy < -6 || sy > H + 6) return;
+        var tw = Math.pow(Math.max(0, Math.sin(sec * gl.s + gl.p)), 1.5);
+        if (tw < 0.03) return;
+        var x = moonX + gl.x * spread(gl.u) * 0.85 + Math.sin(sec * 0.7 + gl.d) * moonR * 0.06 * (0.4 + gl.u);
+        var len = moonR * (0.05 + 0.34 * gl.u) * gl.l * (0.7 + 0.3 * tw), edge = 1 - Math.abs(gl.x) * 0.55;
+        var al = (0.35 + 0.6 * gl.u) * tw * edge;
+        var lgr = g.createLinearGradient(x - len, 0, x + len, 0);
+        lgr.addColorStop(0, 'rgba(236,240,255,0)'); lgr.addColorStop(0.5, 'rgba(244,247,255,' + al.toFixed(3) + ')'); lgr.addColorStop(1, 'rgba(236,240,255,0)');
+        g.strokeStyle = lgr; g.lineWidth = 1 + gl.u * 2.4;
+        g.beginPath(); g.moveTo(x - len, sy); g.lineTo(x + len, sy); g.stroke();
       });
-      g.globalAlpha = 1;
       // Little waves everywhere
       waves.forEach(function (wv) {
         var yy = horizon + wv.y * (depth - horizon), sy = near(yy); if (sy < -4 || sy > H + 4) return;
@@ -4379,34 +4403,55 @@
           var mc = moonArt.getContext('2d'); mc.setTransform(dpr, 0, 0, -dpr, 0, size2 * dpr);
           paintMoon(mc, size2 / 2, size2 / 2, moonR);
         }
-        var halo2 = g.createRadialGradient(moonX, ry0, moonR * 0.8, moonX, ry0, moonR * 4);
-        halo2.addColorStop(0, 'rgba(223,230,255,.2)'); halo2.addColorStop(1, 'rgba(223,230,255,0)');
-        g.fillStyle = halo2; g.beginPath(); g.arc(moonX, ry0, moonR * 4, 0, 7); g.fill();
-        var strip = 2, top = ry0 - size2 / 2;
-        g.globalAlpha = 0.92;
-        for (var sy2 = 0; sy2 < size2; sy2 += strip) {
-          var wob2 = Math.sin(sec * 1.6 + sy2 * 0.11) * moonR * 0.025 + Math.sin(sec * 0.7 + sy2 * 0.035) * moonR * 0.015;
-          g.drawImage(moonArt, 0, sy2 * dpr, moonArt.width, strip * dpr, moonX - size2 / 2 + wob2, top + sy2, size2, strip + 0.6);
+        moonGlow(moonX, ry0, moonR, 0.75);
+        // The same moon, upside down and a touch softer, swaying slowly in thin slices like light on calm water.
+        // Slices are painted at full strength on their own layer first, so where they meet there are no seams.
+        if (!reflBuf || reflBuf.width !== moonArt.width) { reflBuf = document.createElement('canvas'); reflBuf.width = moonArt.width; reflBuf.height = moonArt.height; }
+        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.035 * dpr;
+        rb.setTransform(1, 0, 0, 1, 0, 0); rb.clearRect(0, 0, reflBuf.width, reflBuf.height);
+        for (var sy2 = 0; sy2 < rows; sy2 += 1) {
+          var yy3 = sy2 / dpr, wob2 = (Math.sin(sec * 1.2 + yy3 * 0.09) * 0.6 + Math.sin(sec * 0.55 + yy3 * 0.028) * 0.4) * wobPx;
+          rb.drawImage(moonArt, 0, sy2, moonArt.width, 1, wob2, sy2, moonArt.width, 1);
         }
+        g.globalAlpha = 0.9;
+        g.drawImage(reflBuf, moonX - size2 / 2, ry0 - size2 / 2, size2, size2);
         g.globalAlpha = 1;
+        // A few bright glints sliding across it, in the same style as the path.
+        g.lineCap = 'round';
+        for (var gk = 0; gk < 6; gk++) {
+          var gy = ry0 + (gk / 5 - 0.5) * moonR * 1.7 + Math.sin(sec * 0.6 + gk) * moonR * 0.05, tw2 = Math.pow(Math.max(0, Math.sin(sec * (0.9 + gk * 0.21) + gk * 1.9)), 1.5);
+          var gx = moonX + Math.sin(sec * 0.45 + gk * 2.3) * moonR * 0.5, glen = moonR * (0.35 + 0.25 * Math.sin(gk * 3.1)) * (0.6 + 0.4 * tw2);
+          var gg = g.createLinearGradient(gx - glen, 0, gx + glen, 0);
+          gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,255,255,' + (0.55 * tw2).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,255,255,0)');
+          g.strokeStyle = gg; g.lineWidth = 2; g.beginPath(); g.moveTo(gx - glen, gy); g.lineTo(gx + glen, gy); g.stroke();
+        }
       }
       // Words: what the game is over the moon, who made it over the coast, the title over the reflection.
       var fadeWin = function (from, to) { return Math.max(0, Math.min(1, (t - from) / 700, (to - t) / 700)); };
-      var words = function (text, y, size, font, alpha, glow) {
+      var words = function (text, y, size, font, alpha, glow, align, xAt) {
         if (alpha <= 0) return;
-        g.save(); g.globalAlpha = alpha; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.save(); g.globalAlpha = alpha; g.textAlign = align || 'center'; g.textBaseline = 'middle';
         g.font = font.replace('SIZE', Math.round(size) + 'px'); g.fillStyle = '#eef0ff';
         g.shadowColor = 'rgba(11,16,48,.8)'; g.shadowBlur = 12;
         if (glow) { g.shadowColor = 'rgba(223,230,255,.55)'; g.shadowBlur = size * 0.5; }
         var maxW = W - 40, lines = [text];
         if (g.measureText(text).width > maxW) { var ws = text.split(' '), mid = Math.ceil(ws.length / 2); lines = [ws.slice(0, mid).join(' '), ws.slice(mid).join(' ')]; }
-        lines.forEach(function (ln, n) { g.fillText(ln, W / 2, y + (n - (lines.length - 1) / 2) * size * 1.25); });
+        lines.forEach(function (ln, n) { g.fillText(ln, xAt === undefined ? W / 2 : xAt, y + (n - (lines.length - 1) / 2) * size * 1.25); });
         g.restore();
       };
       var body2 = Math.max(17, Math.min(26, W * 0.05));
-      words(LINE1, H * 0.74, body2, '600 SIZE Figtree,system-ui,sans-serif', fadeWin(500, 2900) * 0.95);
-      words(LINE2, H * 0.15, body2, '600 SIZE Figtree,system-ui,sans-serif', fadeWin(4900, 8400) * 0.95);
-      words('Unwind', near(reflY) - moonR * 2.6, Math.max(54, Math.min(110, W * 0.15)), '600 SIZE Fredoka,Figtree,system-ui,sans-serif', fadeWin(10700, 99999), true);
+      var F = '600 SIZE Figtree,system-ui,sans-serif', side = Math.max(24, W * 0.07);
+      // On the moon
+      words(LINE1, H * 0.74, body2, F, fadeWin(700, 3700) * 0.95);
+      // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
+      words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8300) * 0.95, false, 'left', side);
+      words(HOPE2, H * 0.8, body2, F, fadeWin(5500, 9500) * 0.95, false, 'right', W - side);
+      // Over the coast and the boat
+      words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
+      // Down to the reflection, then the title above it
+      var titleSize = Math.max(54, Math.min(110, W * 0.15)), titleY = H * 0.56 - moonR * 2.6;
+      words(PRESENT, titleY - titleSize * 0.95, body2, F, fadeWin(15000, 99999) * 0.95);
+      words('Unwind', titleY, titleSize, '600 SIZE Fredoka,Figtree,system-ui,sans-serif', fadeWin(19400, 99999), true);
       // Fade in from black at the start
       if (t < 1200) { g.fillStyle = 'rgba(7,11,36,' + (1 - t / 1200) + ')'; g.fillRect(0, 0, W, H); }
       if (alive && t >= TOTAL) finish();
@@ -4611,8 +4656,8 @@
   // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
   (function () {
     startMenu();
-    // The intro plays once, the first time the game is opened.
-    if (!load('unwind.intro', false) && !/[?&]nointro=1/.test(location.search)) playIntro();
+    // The intro plays every time the game starts.
+    if (!window.UNWIND_NO_INTRO && !/[?&]nointro=1/.test(location.search)) playIntro();
   })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);
