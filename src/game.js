@@ -661,13 +661,18 @@
     }
     coopNav();
   }
+  // Every sniper on its way to a board warns and flies in on its own, so several can come in at the same time.
   function coopMaybeStart(b) {
-    var B = coop.boards[b], q = B.queue[0];
-    if (!q || q.flying || q.waiting || b !== coop.idx) return;
+    var B = coop.boards[b];
+    if (b !== coop.idx) return;
+    B.queue.forEach(function (q) { coopStartOne(B, b, q); });
+  }
+  function coopStartOne(B, b, q) {
+    if (!q || q.flying || q.waiting) return;
     q.waiting = true;
     setTimeout(function () {
       q.waiting = false;
-      if (!coop || ended || coop.idx !== b || B.queue[0] !== q) return;
+      if (!coop || ended || coop.idx !== b || B.queue.indexOf(q) < 0) return;
       var hit = coopWalk(B.level, B.state, q.entry, q.dir), dist = 0;
       for (var i = 1; i < hit.pts.length; i++) dist += Math.abs(hit.pts[i][0] - hit.pts[i - 1][0]) + Math.abs(hit.pts[i][1] - hit.pts[i - 1][1]);
       if (hit.kind !== 'none') dist -= 0.55;
@@ -680,7 +685,7 @@
   }
   function coopResolve(B, q, now) {
     var L = B.level, S = B.state, hit = q.flying.hit, b = coop.boards.indexOf(B);
-    B.queue.shift();
+    B.queue = B.queue.filter(function (x) { return x !== q; });
     if (coop.online) {
       // The server applies the hit for everyone once this board's player has watched it arrive.
       if (b === coop.you) netSend({ t: 'hit', b: b, qid: q.qid });
@@ -716,21 +721,21 @@
     coopMaybeStart(b); coopNav();
   }
   function drawCoop(now, w) {
-    var B = coop.boards[coop.idx], q = B.queue[0];
+    var B = coop.boards[coop.idx];
     // Danger symbols where snipers will come in.
     B.queue.forEach(function (item, i) {
-      if (item.pass || (item.flying && i === 0)) return;
+      if (item.pass || item.flying) return;
       var p = px(item.entry), pulse = reduced ? 1 : 0.85 + 0.15 * Math.sin(now / 120), r = cs * 0.42 * pulse;
       ctx.save(); ctx.translate(p.x, p.y); ctx.globalAlpha = 1;
       ctx.fillStyle = '#d4161f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.5, cs * 0.05); ctx.lineJoin = 'round';
       ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.72); ctx.lineTo(-r * 0.95, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 1.05) + 'px Figtree,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('!', 0, r * 0.18);
-      if (i === 0 && item.waiting && item.waitStart) { var cd = Math.min(1, (now - item.waitStart) / 2000); ctx.strokeStyle = '#d4161f'; ctx.lineWidth = Math.max(2, cs * 0.06); ctx.beginPath(); ctx.arc(0, r * 0.1, r * 1.45, -Math.PI / 2, -Math.PI / 2 + cd * Math.PI * 2); ctx.stroke(); }
+      if (item.waiting && item.waitStart) { var cd = Math.min(1, (now - item.waitStart) / 2000); ctx.strokeStyle = '#d4161f'; ctx.lineWidth = Math.max(2, cs * 0.06); ctx.beginPath(); ctx.arc(0, r * 0.1, r * 1.45, -Math.PI / 2, -Math.PI / 2 + cd * Math.PI * 2); ctx.stroke(); }
       ctx.restore();
     });
-    // A sniper flying in.
-    if (q && q.flying) {
+    // Snipers flying in, all at once.
+    B.queue.filter(function (q) { return q.flying; }).forEach(function (q) {
       var f = q.flying, t = Math.max(0, Math.min(1, (now - f.start) / f.duration)), travel = f.dist * t, len = 1.2;
       var col = arrowColor({ sniper: true });
       if (now >= f.start) {
@@ -744,7 +749,7 @@
       }
       if (t >= 1 && f.hit.kind !== 'none') coopEffect('impact', coop.idx, px(f.hit.pts[f.hit.pts.length - 1]), q.dir, now);
       if (t >= 1) coopResolve(B, q, now);
-    }
+    });
     drawCoopEffects(now);
     // The forecast of a held sniper: its path in, dashed, and a sight on what it would hit.
     if (coop.preview && coop.preview.b === coop.idx) {
@@ -870,7 +875,7 @@
   var coopZoomK = 1;
   function coopZoomTick() {
     if (!coop || cam) return;
-    var q = coop.boards[coop.idx].queue[0], want = q && !q.pass && (q.waiting || q.flying) ? 0.82 : 1;
+    var want = coop.boards[coop.idx].queue.some(function (q) { return !q.pass && (q.waiting || q.flying); }) ? 0.82 : 1;
     if (Math.abs(coopZoomK - want) < 0.002) { if (coopZoomK !== want) { coopZoomK = want; coopNav(); } return; }
     coopZoomK += (want - coopZoomK) * (reduced ? 1 : 0.12);
     var l = current.level;
@@ -1102,7 +1107,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-s';
+  var BUILD = '2026.11.24-t';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
