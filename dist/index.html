@@ -3111,7 +3111,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-k';
+  var BUILD = '2026.11.24-l';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6500,7 +6500,7 @@ window.UnwindI18n = (function () {
         if (!reflBuf || reflBuf.width !== moonArt.width) { reflBuf = document.createElement('canvas'); reflBuf.width = moonArt.width; reflBuf.height = moonArt.height; }
         // The reflection stays put. Several gentle waves of different lengths and speeds pass through it: each row of
         // light is nudged sideways and sampled from a little above or below, which is how a moon looks on calm water.
-        var rb = reflBuf.getContext('2d'), rows = moonArt.height, ampX = moonR * 0.034 * dpr, ampY = moonR * 0.025 * dpr;
+        var rb = reflBuf.getContext('2d'), rows = moonArt.height, ampX = moonR * 0.014 * dpr, ampY = moonR * 0.012 * dpr;
         var swell = 0.8 + 0.2 * Math.sin(sec * 0.45);
         rb.setTransform(1, 0, 0, 1, 0, 0); rb.clearRect(0, 0, reflBuf.width, reflBuf.height);
         for (var sy2 = 0; sy2 < rows; sy2 += 1) {
@@ -6541,7 +6541,7 @@ window.UnwindI18n = (function () {
       // On the moon
       words(LINE1, H * 0.74, body2, F, fadeWin(700, 4700) * 0.95);
       // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
-      words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8800) * 0.95, false, 'left', side);
+      words(HOPE1, H * 0.2, body2, F, fadeWin(4800, 8800) * 0.95, false, 'left', side);
       words(HOPE2, H * 0.8, body2, F, fadeWin(6250, 10500) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
