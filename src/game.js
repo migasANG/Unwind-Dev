@@ -808,7 +808,8 @@
       var m = partners[coopHold.step % partners.length];
       coopHold.peeking = true; coopHold.step++;
       coopSwitch(m[0], m[1]);
-      if (partners.length > 1) coopHold.timer = setTimeout(peek, 4000);
+      // With several twins, each one is shown for 3 seconds before moving to the next.
+      if (partners.length > 1) coopHold.timer = setTimeout(peek, 3000);
     }, 420);
   }
   function coopHoldEnd(released) {
@@ -1101,7 +1102,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-r';
+  var BUILD = '2026.11.24-s';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
