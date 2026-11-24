@@ -634,16 +634,18 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     if (isGhost(state, a) || isRedCarded(state, a)) return false;
     return true;
   }
-  function group(level, a) {
-    return a.kind === 'twin' ? [a, level.arrows[a.twin]] : [a];
+  // A twin whose partner is already gone plays like a normal arrow.
+  function paired(state, a) { return a.kind === 'twin' && !(state && state.removed[a.twin]); }
+  function group(level, a, state) {
+    return paired(state, a) ? [a, level.arrows[a.twin]] : [a];
   }
   function canLaunch(level, state, id) {
-    return group(level, level.arrows[id]).every(function (m) { return isReady(state, m) && check(level, state, m).clear; });
+    return group(level, level.arrows[id], state).every(function (m) { return isReady(state, m) && check(level, state, m).clear; });
   }
 
   // A tap: launches the arrow when clear, otherwise reports the collision and costs a life.
   function tap(level, state, id) {
-    var members = group(level, level.arrows[id]);
+    var members = group(level, level.arrows[id], state);
     // Tapping an arrow that is not ready yet is free: nothing moves and no life is lost.
     if (!members.every(function (m) { return isReady(state, m); })) return { ok: false, notReady: true, results: [], failed: false };
     var results = members.map(function (m) { var c = check(level, state, m); c.fromTail = tipAtTail(state, m); return { id: m.id, check: c }; });
@@ -743,7 +745,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     var out = [];
     level.arrows.forEach(function (a) {
       if (state.removed[a.id]) return;
-      if (a.kind === 'twin' && a.twin < a.id) return;
+      if (paired(state, a) && a.twin < a.id) return;
       if (canLaunch(level, state, a.id)) out.push(a.id);
     });
     return out;
@@ -755,7 +757,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     level.arrows.forEach(function (a) {
       if (state.removed[a.id]) return;
       // Counts only if a tap would really crack the ice. Twins must both be ready, with only ice in their way.
-      var members = group(level, a);
+      var members = group(level, a, state);
       if (!members.every(function (m) { return isReady(state, m); })) return;
       var blocked = members.map(function (m) { return check(level, state, m); }).filter(function (c) { return !c.clear; });
       if (blocked.length && blocked.every(function (c) { return c.frozen; })) out.push(a.id);
@@ -770,7 +772,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     for (var guard = 0; guard < 400 && !found; guard++) {
       var hits = iceHits(level, state), cracked = false;
       hits.forEach(function (id) {
-        group(level, level.arrows[id]).forEach(function (m) {
+        group(level, level.arrows[id], state).forEach(function (m) {
           var c = check(level, state, m);
           if (c.frozen && state.frozen[c.blocker] !== undefined) { delete state.frozen[c.blocker]; cracked = true; }
         });
@@ -816,12 +818,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   // only if arrows truly block one another, one arrow is freed to fly through anything.
   function rescueStep(level, state) {
     state.rescued = state.rescued || { fire: [], ice: [], freed: [] };
-    var live = level.arrows.filter(function (a) { return !state.removed[a.id] && !(a.kind === 'twin' && a.twin < a.id); });
+    var live = level.arrows.filter(function (a) { return !state.removed[a.id] && !(paired(state, a) && a.twin < a.id); });
     var withoutIce = { frozen: {}, launches: state.launches, ghostFlip: state.ghostFlip, removed: state.removed, arrowsRef: state.arrowsRef, redLift: state.redLift, freed: state.freed };
     var soft = [];
     live.forEach(function (a) {
       var fire = {}, flowers = {}, solid = 0, ice = [], ready = true;
-      group(level, a).forEach(function (m) {
+      group(level, a, state).forEach(function (m) {
         var o = obstaclesOf(level, state, m);
         solid += o.solid; o.fire.forEach(function (k) { fire[k] = 1; }); o.flowers.forEach(function (k) { flowers[k] = 1; });
         if (state.frozen[m.id] !== undefined) ice.push(m.id);
@@ -854,8 +856,8 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     if (legalMoves(level, state).length || iceOpensPlay(level, state)) return false;
     // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
     // A compass keeps its own rule, so it is only ever freed if nothing else can be.
-    var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
-    var free = function (a) { group(level, a).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
+    var order = live.map(function (a) { var s = 0; group(level, a, state).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
+    var free = function (a) { group(level, a, state).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
     for (i = 0; i < order.length && i < 10; i++) {
       var f = order[i].a;
       if (tryRescue(level, state, function () { free(f); })) { state.rescued.freed.push(f.id); return true; }
@@ -1007,9 +1009,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       var tried = 0, arrows = level.arrows;
       for (var i = 0; i < arrows.length; i++) {
         var cand = arrows[i];
-        if (state.removed[cand.id] || (cand.kind === 'twin' && cand.twin < cand.id) || !canLaunch(level, state, cand.id)) continue;
+        if (state.removed[cand.id] || (paired(state, cand) && cand.twin < cand.id) || !canLaunch(level, state, cand.id)) continue;
         tried++;
-        var members = group(level, cand);
+        var members = group(level, cand, state);
         members.forEach(function (m) { state.removed[m.id] = true; });
         state.launches++; path.push(cand.id);
         if (dfs()) return true;
@@ -1524,7 +1526,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, paired: paired, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
@@ -2705,7 +2707,6 @@ window.UnwindI18n = (function () {
     if (hit.kind === 'arrow' && S.removed[hit.id]) hit = coopWalk(L, S, q.entry, q.dir);
     if (hit.kind === 'arrow') {
       var a = L.arrows[hit.id], ids = [a.id];
-      if (a.kind === 'twin') ids.push(a.twin);
       ids.forEach(function (id) {
         var m = L.arrows[id];
         S.removed[id] = true; delete S.frozen[id];
@@ -2816,7 +2817,7 @@ window.UnwindI18n = (function () {
       }, 420);
       return;
     }
-    var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from; });
+    var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from && !coop.boards[m[0]].state.removed[m[1]]; });
     coopHold = { id: id, from: from, partners: partners, peeking: false, step: 0 };
     coopHold.timer = setTimeout(function peek() {
       if (!coopHold || !partners.length) return;
@@ -3117,7 +3118,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-t';
+  var BUILD = '2026.11.24-v';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3843,13 +3844,21 @@ window.UnwindI18n = (function () {
   }
   function ready(a) { return E.isReady(state, a); }
   // An arrow with several effects shows the most important one: frozen, then phase, twins, reverse.
+  // Is this twin or twin-shared arrow still part of a set? Once every partner is gone it is a normal arrow.
+  function stillLinked(a) {
+    if (a.kind === 'twin') return !(state && state.removed[a.twin]);
+    if (a.coopGroup === undefined) return false;
+    var grp = coop && coop.room && coop.room.groups && coop.room.groups[a.coopGroup];
+    if (!grp || !coop.boards) return true;
+    return grp.members.some(function (m) { var B = coop.boards[m[0]]; return B && B.level.arrows[m[1]] !== a && !(B.state && B.state.removed[m[1]]); });
+  }
   function arrowColor(a) {
     var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4];
     if (a.sniper && !(state && state.frozen && state.frozen[a.id] !== undefined)) return dark ? '#ff6b6b' : '#b3122e';
-    if (a.coopGroup !== undefined) return colors.twins[colors.twins.length - 1 - a.coopGroup % colors.twins.length];
+    if (a.coopGroup !== undefined && stillLinked(a)) return colors.twins[colors.twins.length - 1 - a.coopGroup % colors.twins.length];
     if (state && state.frozen && state.frozen[a.id] !== undefined) return dark ? '#8fd3ff' : '#2f8fd0';
     if (a.phase) return dark ? '#d7b4ff' : '#7a3fd0';
-    if (a.kind === 'twin') return colors.twins[(a.pair || 0) % colors.twins.length];
+    if (a.kind === 'twin' && stillLinked(a)) return colors.twins[(a.pair || 0) % colors.twins.length];
     if (a.uno !== undefined) return dark ? '#ffc069' : '#c85a00';
     return a.kind === 'compass' ? colors.compass : colors.ink;
   }
@@ -4159,7 +4168,7 @@ window.UnwindI18n = (function () {
 
     // Links between twins, each pair in its own colour.
     l.arrows.forEach(function (a) {
-      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id]) return;
+      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id] || state.removed[a.twin]) return;
       var m1 = pointAlong(a.cells, lengthOf(a) / 2), other = l.arrows[a.twin], m2 = pointAlong(other.cells, lengthOf(other) / 2);
       setStroke(arrowColor(a), Math.max(1.5, cs * 0.05), 0.55 * ease(Math.min(introOf(a, now), introOf(other, now))));
       ctx.setLineDash([cs * 0.06, cs * 0.17]);
@@ -4946,8 +4955,9 @@ window.UnwindI18n = (function () {
   var traitBoost = 1;
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
-    if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29 * traitBoost, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
-    if (a.coopGroup !== undefined) items.push(function (c) { drawCoopTag(c, a, color); });
+    var linked = (a.kind === 'twin' || a.coopGroup !== undefined) && stillLinked(a);
+    if (a.kind === 'twin' && linked) items.push(function (c) { badge(c, cs * 0.29 * traitBoost, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+    if (a.coopGroup !== undefined && linked) items.push(function (c) { drawCoopTag(c, a, color); });
     if (a.sniper) items.push(function (c) { drawCrosshair(c, cs * 0.27, color); });
     if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
@@ -4960,7 +4970,7 @@ window.UnwindI18n = (function () {
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       // A lone twin ball sits in the middle of the body, from the tail to where the arrowhead begins, not counting the tip.
-      if (items.length === 1 && (a.coopGroup !== undefined || a.kind === 'twin')) c = pointAlong(pts, shift + Math.max(0, (len - 0.24) / 2));
+      if (items.length === 1 && linked) c = pointAlong(pts, shift + Math.max(0, (len - 0.24) / 2));
       scaled(c, pop * fit, function () { draw(c); });
     });
   }
@@ -5262,7 +5272,7 @@ window.UnwindI18n = (function () {
     if (!current || $('sheetHost').firstChild) return;
     audio();
     if (!cam) {
-      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && (current.level.arrows[hitId].coopGroup !== undefined || current.level.arrows[hitId].sniper) && !ended && !current.level.arrows[hitId].wait;
+      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && ((current.level.arrows[hitId].coopGroup !== undefined && stillLinked(current.level.arrows[hitId])) || current.level.arrows[hitId].sniper) && !ended && !current.level.arrows[hitId].wait;
       if (ev.pointerType === 'touch') {
         // Touch waits a moment before playing, so a second finger (a pinch to zoom) cancels the tap instead of costing a life.
         if (touchMulti) return;
@@ -5368,7 +5378,7 @@ window.UnwindI18n = (function () {
         progress.done[c.id] = true;
         if (perfect) progress.perfect[c.id] = true;
       } else if (c.mode === 'endless') progress.endlessBy[c.endlessKey] = (progress.endlessBy[c.endlessKey] || 0) + 1;
-      else if (c.mode === 'challenge') progress.done[c.id] = true;
+      else if (c.mode === 'challenge') { progress.done[c.id] = true; if (perfect) progress.perfect[c.id] = true; }
       else if (c.coop) {
         if (coop && coop.room.boarding !== undefined) { progress.done['bu-' + (coop.room.boarding + 1)] = true; if (perfect) progress.perfect['bu-' + (coop.room.boarding + 1)] = true; }
         if (coop && coop.room.endless) progress.endlessBy[coop.room.endless] = (progress.endlessBy[coop.room.endless] || 0) + 1;
@@ -5571,12 +5581,12 @@ window.UnwindI18n = (function () {
       }
       return out + '</div>';
     };
-    if (tab !== 'extra' && tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
+    if (tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
     if (tab === 'extra' || tab === 'online' || tab === 'endless') {}
     else if (tab === 'boarding') {
       html += '<p class="note">Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.</p><div class="modes"><button id="mTutBoards"><b>How several boards work</b><span>A quick look before you start.</span></button></div><div class="lv">' + BOARDING.map(function (b, i) {
         var id = 'bu-' + (i + 1);
-        return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Boarding Up ' + (i + 1) + '">' + (i + 1) + (progress.done[id] ? (progress.perfect[id] ? STAR_MARK : MOON_MARK) : '') + '</button>';
+        return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Boarding Up ' + (i + 1) + '">' + (i + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
       }).join('') + '</div>';
     }
     else if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
@@ -5602,7 +5612,7 @@ window.UnwindI18n = (function () {
         CHALLENGES.forEach(function (c, i) {
           if (c.goal !== g.goal) return;
           var id = 'ch-' + (i + 1), n = CHALLENGES.slice(0, i + 1).filter(function (x) { return x.goal === g.goal; }).length;
-          html += '<button data-ch="' + i + '" class="' + (progress.done[id] ? 'done' : '') + '" aria-label="' + g.name + ' ' + n + '">' + n + (progress.done[id] ? STAR_MARK : '') + '</button>';
+          html += '<button data-ch="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="' + g.name + ' ' + n + '">' + n + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
         });
         html += '</div>';
       });

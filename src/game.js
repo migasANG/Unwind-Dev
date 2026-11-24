@@ -695,7 +695,6 @@
     if (hit.kind === 'arrow' && S.removed[hit.id]) hit = coopWalk(L, S, q.entry, q.dir);
     if (hit.kind === 'arrow') {
       var a = L.arrows[hit.id], ids = [a.id];
-      if (a.kind === 'twin') ids.push(a.twin);
       ids.forEach(function (id) {
         var m = L.arrows[id];
         S.removed[id] = true; delete S.frozen[id];
@@ -806,7 +805,7 @@
       }, 420);
       return;
     }
-    var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from; });
+    var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from && !coop.boards[m[0]].state.removed[m[1]]; });
     coopHold = { id: id, from: from, partners: partners, peeking: false, step: 0 };
     coopHold.timer = setTimeout(function peek() {
       if (!coopHold || !partners.length) return;
@@ -1107,7 +1106,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-t';
+  var BUILD = '2026.11.24-v';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -1833,13 +1832,21 @@
   }
   function ready(a) { return E.isReady(state, a); }
   // An arrow with several effects shows the most important one: frozen, then phase, twins, reverse.
+  // Is this twin or twin-shared arrow still part of a set? Once every partner is gone it is a normal arrow.
+  function stillLinked(a) {
+    if (a.kind === 'twin') return !(state && state.removed[a.twin]);
+    if (a.coopGroup === undefined) return false;
+    var grp = coop && coop.room && coop.room.groups && coop.room.groups[a.coopGroup];
+    if (!grp || !coop.boards) return true;
+    return grp.members.some(function (m) { var B = coop.boards[m[0]]; return B && B.level.arrows[m[1]] !== a && !(B.state && B.state.removed[m[1]]); });
+  }
   function arrowColor(a) {
     var dark = colors === CHAPTERS[3] || colors === CHAPTERS[4];
     if (a.sniper && !(state && state.frozen && state.frozen[a.id] !== undefined)) return dark ? '#ff6b6b' : '#b3122e';
-    if (a.coopGroup !== undefined) return colors.twins[colors.twins.length - 1 - a.coopGroup % colors.twins.length];
+    if (a.coopGroup !== undefined && stillLinked(a)) return colors.twins[colors.twins.length - 1 - a.coopGroup % colors.twins.length];
     if (state && state.frozen && state.frozen[a.id] !== undefined) return dark ? '#8fd3ff' : '#2f8fd0';
     if (a.phase) return dark ? '#d7b4ff' : '#7a3fd0';
-    if (a.kind === 'twin') return colors.twins[(a.pair || 0) % colors.twins.length];
+    if (a.kind === 'twin' && stillLinked(a)) return colors.twins[(a.pair || 0) % colors.twins.length];
     if (a.uno !== undefined) return dark ? '#ffc069' : '#c85a00';
     return a.kind === 'compass' ? colors.compass : colors.ink;
   }
@@ -2149,7 +2156,7 @@
 
     // Links between twins, each pair in its own colour.
     l.arrows.forEach(function (a) {
-      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id]) return;
+      if (a.kind !== 'twin' || a.twin < a.id || state.removed[a.id] || state.removed[a.twin]) return;
       var m1 = pointAlong(a.cells, lengthOf(a) / 2), other = l.arrows[a.twin], m2 = pointAlong(other.cells, lengthOf(other) / 2);
       setStroke(arrowColor(a), Math.max(1.5, cs * 0.05), 0.55 * ease(Math.min(introOf(a, now), introOf(other, now))));
       ctx.setLineDash([cs * 0.06, cs * 0.17]);
@@ -2936,8 +2943,9 @@
   var traitBoost = 1;
   function drawTraits(a, pts, shift, len, color, ghostForm, pop, now) {
     var items = [], left = state.launches;
-    if (a.kind === 'twin') items.push(function (c) { badge(c, cs * 0.29 * traitBoost, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
-    if (a.coopGroup !== undefined) items.push(function (c) { drawCoopTag(c, a, color); });
+    var linked = (a.kind === 'twin' || a.coopGroup !== undefined) && stillLinked(a);
+    if (a.kind === 'twin' && linked) items.push(function (c) { badge(c, cs * 0.29 * traitBoost, color, colors.card, String.fromCharCode(65 + (a.pair || 0))); });
+    if (a.coopGroup !== undefined && linked) items.push(function (c) { drawCoopTag(c, a, color); });
     if (a.sniper) items.push(function (c) { drawCrosshair(c, cs * 0.27, color); });
     if (a.wait && left < a.wait) items.push(function (c) { badge(c, cs * 0.29, colors.card, colors.ink, String(a.wait - left), color); });
     if (a.ghostPhase !== undefined) items.push(function (c) { drawGhostIcon(c, cs * 0.3, ghostForm, now); });
@@ -2950,7 +2958,7 @@
     items.forEach(function (draw, i) {
       var c = pointAlong(pts, shift + len * (i + 1) / (items.length + 1));
       // A lone twin ball sits in the middle of the body, from the tail to where the arrowhead begins, not counting the tip.
-      if (items.length === 1 && (a.coopGroup !== undefined || a.kind === 'twin')) c = pointAlong(pts, shift + Math.max(0, (len - 0.24) / 2));
+      if (items.length === 1 && linked) c = pointAlong(pts, shift + Math.max(0, (len - 0.24) / 2));
       scaled(c, pop * fit, function () { draw(c); });
     });
   }
@@ -3252,7 +3260,7 @@
     if (!current || $('sheetHost').firstChild) return;
     audio();
     if (!cam) {
-      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && (current.level.arrows[hitId].coopGroup !== undefined || current.level.arrows[hitId].sniper) && !ended && !current.level.arrows[hitId].wait;
+      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && ((current.level.arrows[hitId].coopGroup !== undefined && stillLinked(current.level.arrows[hitId])) || current.level.arrows[hitId].sniper) && !ended && !current.level.arrows[hitId].wait;
       if (ev.pointerType === 'touch') {
         // Touch waits a moment before playing, so a second finger (a pinch to zoom) cancels the tap instead of costing a life.
         if (touchMulti) return;
@@ -3358,7 +3366,7 @@
         progress.done[c.id] = true;
         if (perfect) progress.perfect[c.id] = true;
       } else if (c.mode === 'endless') progress.endlessBy[c.endlessKey] = (progress.endlessBy[c.endlessKey] || 0) + 1;
-      else if (c.mode === 'challenge') progress.done[c.id] = true;
+      else if (c.mode === 'challenge') { progress.done[c.id] = true; if (perfect) progress.perfect[c.id] = true; }
       else if (c.coop) {
         if (coop && coop.room.boarding !== undefined) { progress.done['bu-' + (coop.room.boarding + 1)] = true; if (perfect) progress.perfect['bu-' + (coop.room.boarding + 1)] = true; }
         if (coop && coop.room.endless) progress.endlessBy[coop.room.endless] = (progress.endlessBy[coop.room.endless] || 0) + 1;
@@ -3561,12 +3569,12 @@
       }
       return out + '</div>';
     };
-    if (tab !== 'extra' && tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
+    if (tab !== 'online' && tab !== 'endless') html += '<div class="legend"><span>' + MOON_MARK.replace('class="mk m"', 'fill="#9fd8ff"') + 'Completed</span><span>' + STAR_MARK.replace('class="mk s"', 'fill="#ffc21f"') + 'Perfect, no lives lost</span></div>';
     if (tab === 'extra' || tab === 'online' || tab === 'endless') {}
     else if (tab === 'boarding') {
       html += '<p class="note">Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.</p><div class="modes"><button id="mTutBoards"><b>How several boards work</b><span>A quick look before you start.</span></button></div><div class="lv">' + BOARDING.map(function (b, i) {
         var id = 'bu-' + (i + 1);
-        return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Boarding Up ' + (i + 1) + '">' + (i + 1) + (progress.done[id] ? (progress.perfect[id] ? STAR_MARK : MOON_MARK) : '') + '</button>';
+        return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="Boarding Up ' + (i + 1) + '">' + (i + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
       }).join('') + '</div>';
     }
     else if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
@@ -3592,7 +3600,7 @@
         CHALLENGES.forEach(function (c, i) {
           if (c.goal !== g.goal) return;
           var id = 'ch-' + (i + 1), n = CHALLENGES.slice(0, i + 1).filter(function (x) { return x.goal === g.goal; }).length;
-          html += '<button data-ch="' + i + '" class="' + (progress.done[id] ? 'done' : '') + '" aria-label="' + g.name + ' ' + n + '">' + n + (progress.done[id] ? STAR_MARK : '') + '</button>';
+          html += '<button data-ch="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="' + g.name + ' ' + n + '">' + n + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
         });
         html += '</div>';
       });

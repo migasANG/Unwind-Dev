@@ -187,16 +187,18 @@
     if (isGhost(state, a) || isRedCarded(state, a)) return false;
     return true;
   }
-  function group(level, a) {
-    return a.kind === 'twin' ? [a, level.arrows[a.twin]] : [a];
+  // A twin whose partner is already gone plays like a normal arrow.
+  function paired(state, a) { return a.kind === 'twin' && !(state && state.removed[a.twin]); }
+  function group(level, a, state) {
+    return paired(state, a) ? [a, level.arrows[a.twin]] : [a];
   }
   function canLaunch(level, state, id) {
-    return group(level, level.arrows[id]).every(function (m) { return isReady(state, m) && check(level, state, m).clear; });
+    return group(level, level.arrows[id], state).every(function (m) { return isReady(state, m) && check(level, state, m).clear; });
   }
 
   // A tap: launches the arrow when clear, otherwise reports the collision and costs a life.
   function tap(level, state, id) {
-    var members = group(level, level.arrows[id]);
+    var members = group(level, level.arrows[id], state);
     // Tapping an arrow that is not ready yet is free: nothing moves and no life is lost.
     if (!members.every(function (m) { return isReady(state, m); })) return { ok: false, notReady: true, results: [], failed: false };
     var results = members.map(function (m) { var c = check(level, state, m); c.fromTail = tipAtTail(state, m); return { id: m.id, check: c }; });
@@ -296,7 +298,7 @@
     var out = [];
     level.arrows.forEach(function (a) {
       if (state.removed[a.id]) return;
-      if (a.kind === 'twin' && a.twin < a.id) return;
+      if (paired(state, a) && a.twin < a.id) return;
       if (canLaunch(level, state, a.id)) out.push(a.id);
     });
     return out;
@@ -308,7 +310,7 @@
     level.arrows.forEach(function (a) {
       if (state.removed[a.id]) return;
       // Counts only if a tap would really crack the ice. Twins must both be ready, with only ice in their way.
-      var members = group(level, a);
+      var members = group(level, a, state);
       if (!members.every(function (m) { return isReady(state, m); })) return;
       var blocked = members.map(function (m) { return check(level, state, m); }).filter(function (c) { return !c.clear; });
       if (blocked.length && blocked.every(function (c) { return c.frozen; })) out.push(a.id);
@@ -323,7 +325,7 @@
     for (var guard = 0; guard < 400 && !found; guard++) {
       var hits = iceHits(level, state), cracked = false;
       hits.forEach(function (id) {
-        group(level, level.arrows[id]).forEach(function (m) {
+        group(level, level.arrows[id], state).forEach(function (m) {
           var c = check(level, state, m);
           if (c.frozen && state.frozen[c.blocker] !== undefined) { delete state.frozen[c.blocker]; cracked = true; }
         });
@@ -369,12 +371,12 @@
   // only if arrows truly block one another, one arrow is freed to fly through anything.
   function rescueStep(level, state) {
     state.rescued = state.rescued || { fire: [], ice: [], freed: [] };
-    var live = level.arrows.filter(function (a) { return !state.removed[a.id] && !(a.kind === 'twin' && a.twin < a.id); });
+    var live = level.arrows.filter(function (a) { return !state.removed[a.id] && !(paired(state, a) && a.twin < a.id); });
     var withoutIce = { frozen: {}, launches: state.launches, ghostFlip: state.ghostFlip, removed: state.removed, arrowsRef: state.arrowsRef, redLift: state.redLift, freed: state.freed };
     var soft = [];
     live.forEach(function (a) {
       var fire = {}, flowers = {}, solid = 0, ice = [], ready = true;
-      group(level, a).forEach(function (m) {
+      group(level, a, state).forEach(function (m) {
         var o = obstaclesOf(level, state, m);
         solid += o.solid; o.fire.forEach(function (k) { fire[k] = 1; }); o.flowers.forEach(function (k) { flowers[k] = 1; });
         if (state.frozen[m.id] !== undefined) ice.push(m.id);
@@ -407,8 +409,8 @@
     if (legalMoves(level, state).length || iceOpensPlay(level, state)) return false;
     // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
     // A compass keeps its own rule, so it is only ever freed if nothing else can be.
-    var order = live.map(function (a) { var s = 0; group(level, a).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
-    var free = function (a) { group(level, a).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
+    var order = live.map(function (a) { var s = 0; group(level, a, state).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
+    var free = function (a) { group(level, a, state).forEach(function (m) { state.freed[m.id] = true; delete state.frozen[m.id]; }); };
     for (i = 0; i < order.length && i < 10; i++) {
       var f = order[i].a;
       if (tryRescue(level, state, function () { free(f); })) { state.rescued.freed.push(f.id); return true; }
@@ -560,9 +562,9 @@
       var tried = 0, arrows = level.arrows;
       for (var i = 0; i < arrows.length; i++) {
         var cand = arrows[i];
-        if (state.removed[cand.id] || (cand.kind === 'twin' && cand.twin < cand.id) || !canLaunch(level, state, cand.id)) continue;
+        if (state.removed[cand.id] || (paired(state, cand) && cand.twin < cand.id) || !canLaunch(level, state, cand.id)) continue;
         tried++;
-        var members = group(level, cand);
+        var members = group(level, cand, state);
         members.forEach(function (m) { state.removed[m.id] = true; });
         state.launches++; path.push(cand.id);
         if (dfs()) return true;
@@ -1077,7 +1079,7 @@
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
   return {
-    TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
+    TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, paired: paired, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
