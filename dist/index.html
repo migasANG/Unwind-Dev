@@ -3111,7 +3111,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-l';
+  var BUILD = '2026.11.24-m';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6513,6 +6513,19 @@ window.UnwindI18n = (function () {
         g.globalAlpha = 0.9;
         g.drawImage(reflBuf, moonX - size2 / 2, ry0 - size2 / 2, size2, size2);
         g.globalAlpha = 1;
+        // Where the water breaks the reflection: little slivers of moonlight that split off its left and right
+        // edges, drift out a little and fade, the way a reflection frays at the sides on moving water.
+        g.lineCap = 'round';
+        for (var fr = 0; fr < 14; fr++) {
+          var side2 = fr % 2 ? 1 : -1, rowU = ((fr * 0.618) % 1) * 1.7 - 0.85, fy3 = ry0 + rowU * moonR;
+          var halfW = Math.sqrt(Math.max(0, 1 - rowU * rowU)) * moonR;
+          var life = (sec * (0.35 + (fr % 5) * 0.06) + fr * 0.37) % 1, fade = Math.sin(life * Math.PI);
+          var start = moonX + side2 * (halfW - moonR * 0.06 + life * moonR * 0.22), flen = moonR * (0.1 + 0.16 * ((fr * 0.41) % 1)) * (0.6 + 0.4 * fade);
+          var fg = g.createLinearGradient(start, 0, start + side2 * flen, 0);
+          fg.addColorStop(0, 'rgba(236,240,255,' + (0.7 * fade).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(236,240,255,0)');
+          g.strokeStyle = fg; g.lineWidth = 1.6 + (1 - Math.abs(rowU)) * 1.2;
+          g.beginPath(); g.moveTo(start, fy3); g.lineTo(start + side2 * flen, fy3); g.stroke();
+        }
         // A few bright glints sliding across it, in the same style as the path.
         g.lineCap = 'round';
         for (var gk = 0; gk < 6; gk++) {
