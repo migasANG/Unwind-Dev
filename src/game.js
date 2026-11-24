@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-q';
+  var BUILD = '2026.11.24-r';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4546,12 +4546,12 @@
         g.restore();
       };
       var body2 = Math.max(17, Math.min(26, W * 0.05));
-      var F = '600 SIZE Figtree,system-ui,sans-serif', side = Math.max(24, W * 0.07);
+      var F = '600 SIZE Figtree,system-ui,sans-serif', side = Math.max(28, W * 0.13);
       // On the moon
       words(LINE1, H * 0.74, body2, F, fadeWin(700, 4700) * 0.95);
       // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
-      words(HOPE1, H * 0.2, body2, F, fadeWin(4800, 8800) * 0.95, false, 'left', side);
-      words(HOPE2, H * 0.8, body2, F, fadeWin(6250, 10500) * 0.95, false, 'right', W - side);
+      words(HOPE1, H * 0.26, body2, F, fadeWin(4800, 8800) * 0.95, false, 'left', side);
+      words(HOPE2, H * 0.74, body2, F, fadeWin(6250, 10500) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
       words(CARE, H * 0.88, body2 * 0.88, F, fadeWin(11300, 15300) * 0.85);
