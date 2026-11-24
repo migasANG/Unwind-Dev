@@ -746,6 +746,19 @@
       if (t >= 1) coopResolve(B, q, now);
     }
     drawCoopEffects(now);
+    // The forecast of a held sniper: its path in, dashed, and a sight on what it would hit.
+    if (coop.preview && coop.preview.b === coop.idx) {
+      var pv = coop.preview, pcol = arrowColor({ sniper: true }), pp = pv.pts.map(px);
+      ctx.save(); ctx.globalAlpha = 0.85; ctx.strokeStyle = pcol; ctx.lineWidth = Math.max(2.5, cs * 0.09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.setLineDash([cs * 0.18, cs * 0.16]); ctx.lineDashOffset = -now / 40;
+      ctx.beginPath(); pp.forEach(function (q2, n) { if (n) ctx.lineTo(q2.x, q2.y); else ctx.moveTo(q2.x, q2.y); }); ctx.stroke();
+      ctx.restore();
+      if (pv.kind !== 'none') {
+        var end = pp[pp.length - 1], pulse = 1 + 0.12 * Math.sin(now / 140);
+        ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = pcol; ctx.beginPath(); ctx.arc(end.x, end.y, cs * 0.62 * pulse, 0, 7); ctx.fill(); ctx.restore();
+        drawCrosshair(end, cs * 0.34 * pulse, pcol);
+      }
+    }
     // Snipers burning in fire.
     coop.burners = coop.burners.filter(function (x) {
       var bu = x.a.burn;
@@ -762,8 +775,32 @@
   }
   // Holding a cross-board twin shows its partners' boards one after another, and letting go comes back.
   var coopHold = null, coopFocus = -1;
+  // Holding a sniper shows where its shot would go: the board it lands on, its path there and what it would hit.
+  function sniperForecast(id) {
+    var l = current.level, a = l.arrows[id], from = coop.idx;
+    var c = E.check(l, state, a);
+    if (!c.clear) return { why: 'This sniper is blocked on this board.' };
+    var corner = c.path && c.path.length ? c.path[c.path.length - 1] : E.headOf(a), to = E.coopNeighbour(from, c.endDir, coop.n);
+    if (to < 0) return { why: 'No board that way: this shot would fly off.' };
+    var B = coop.boards[to], hit = coopWalk(B.level, B.state, coopEntry(B.level, c.endDir, corner), c.endDir);
+    return { b: to, pts: hit.pts, kind: hit.kind, target: hit.kind === 'arrow' ? hit.id : -1 };
+  }
   function coopHoldStart(id, pid) {
     coopHoldEnd(false);
+    if (current.level.arrows[id].sniper && current.level.arrows[id].coopGroup === undefined) {
+      var from0 = coop.idx;
+      coopHold = { id: id, from: from0, partners: [], peeking: false, step: 0 };
+      coopHold.timer = setTimeout(function () {
+        if (!coopHold) return;
+        var fc = sniperForecast(id);
+        coopHold.peeking = true;
+        if (fc.why) { setCaption(fc.why); return; }
+        coop.preview = fc;
+        coopSwitch(fc.b);
+        setCaption(fc.kind === 'arrow' ? 'Your sniper would hit this arrow on board ' + (fc.b + 1) + '.' : fc.kind === 'none' ? 'Your sniper would fly straight across board ' + (fc.b + 1) + '.' : 'Your sniper would stop here on board ' + (fc.b + 1) + '.');
+      }, 420);
+      return;
+    }
     var from = coop.idx, partners = coop.room.groups[current.level.arrows[id].coopGroup].members.filter(function (m) { return m[0] !== from; });
     coopHold = { id: id, from: from, partners: partners, peeking: false, step: 0 };
     coopHold.timer = setTimeout(function peek() {
@@ -778,7 +815,8 @@
     if (!coopHold) return;
     var h = coopHold; coopHold = null;
     clearTimeout(h.timer);
-    if (h.peeking) { if (coop) coopSwitch(h.from); }
+    if (coop) coop.preview = null;
+    if (h.peeking) { if (coop) { coopSwitch(h.from); refresh(); } }
     else if (released) onTap(h.id);
   }
   function coopEffect(kind, b, p, dir, now) { coop.effects.push({ kind: kind, b: b, p: p, dir: dir, start: now }); }
@@ -1063,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-e';
+  var BUILD = '2026.11.24-f';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3208,7 +3246,7 @@
     if (!current || $('sheetHost').firstChild) return;
     audio();
     if (!cam) {
-      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && current.level.arrows[hitId].coopGroup !== undefined && !ended;
+      var hitId = arrowAt(ev.clientX, ev.clientY), coopTwin = current.coop && coop && hitId >= 0 && (current.level.arrows[hitId].coopGroup !== undefined || current.level.arrows[hitId].sniper) && !ended && !current.level.arrows[hitId].wait;
       if (ev.pointerType === 'touch') {
         // Touch waits a moment before playing, so a second finger (a pinch to zoom) cancels the tap instead of costing a life.
         if (touchMulti) return;
@@ -4189,7 +4227,7 @@
     var KEYS = [[0, 0], [3900, 0], [9600, 1.05, 'io'], [14400, 1.05], [20100, 2, 'io'], [25300, 2]], FADE = 900, TOTAL = 25300;
     var T = function (str) { return window.UnwindI18n ? window.UnwindI18n.t(str) : str; };
     var LINE1 = T('A cozy and relaxing puzzle game with arrows'), LINE2 = T('Created by Hearthbound Games');
-    var HOPE1 = T('We hope you can enjoy...'), HOPE2 = T('and relax with our game'), PRESENT = T('We present to you:');
+    var HOPE1 = T('We hope you can enjoy...'), HOPE2 = T('...and relax with our game'), PRESENT = T('We present to you:');
     // The moon, drawn once to its own small canvas, so its reflection is the very same moon, upside down.
     var moonArt = null, moonArtR = 0, reflBuf = null;
     // A soft, glowing moon: a gentle light-to-cool shading, quiet grey-blue seas and a bright rim.
@@ -4297,10 +4335,10 @@
       g.lineCap = 'round';
       glints.forEach(function (gl) {
         var sy = near(pathY(gl.u)); if (sy < -6 || sy > H + 6) return;
-        var tw = Math.pow(Math.max(0, Math.sin(sec * gl.s + gl.p)), 1.5);
-        if (tw < 0.03) return;
+        // Halfway between steady lines and twinkling flecks: they never fully vanish, just brighten and dim.
+        var tw = 0.4 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin(sec * gl.s * 0.8 + gl.p), 1.3);
         var x = moonX + gl.x * spread(gl.u) * 0.85 + Math.sin(sec * 0.7 + gl.d) * moonR * 0.06 * (0.4 + gl.u);
-        var len = moonR * (0.05 + 0.34 * gl.u) * gl.l * (0.7 + 0.3 * tw), edge = 1 - Math.abs(gl.x) * 0.55;
+        var len = moonR * (0.08 + 0.42 * gl.u) * gl.l * (0.8 + 0.2 * tw), edge = 1 - Math.abs(gl.x) * 0.5;
         var al = (0.35 + 0.6 * gl.u) * tw * edge;
         var lgr = g.createLinearGradient(x - len, 0, x + len, 0);
         lgr.addColorStop(0, 'rgba(236,240,255,0)'); lgr.addColorStop(0.5, 'rgba(244,247,255,' + al.toFixed(3) + ')'); lgr.addColorStop(1, 'rgba(236,240,255,0)');
@@ -4413,6 +4451,10 @@
           var yy3 = sy2 / dpr, wob2 = (Math.sin(sec * 1.2 + yy3 * 0.09) * 0.6 + Math.sin(sec * 0.55 + yy3 * 0.028) * 0.4) * wobPx;
           rb.drawImage(moonArt, 0, sy2, moonArt.width, 1, wob2, sy2, moonArt.width, 1);
         }
+        // Keep it perfectly round: the sway only moves the light inside the disc, never its edge.
+        rb.globalCompositeOperation = 'destination-in'; rb.fillStyle = '#000';
+        rb.beginPath(); rb.arc(reflBuf.width / 2, reflBuf.height / 2, moonR * dpr, 0, 7); rb.fill();
+        rb.globalCompositeOperation = 'source-over';
         g.globalAlpha = 0.9;
         g.drawImage(reflBuf, moonX - size2 / 2, ry0 - size2 / 2, size2, size2);
         g.globalAlpha = 1;
@@ -4442,15 +4484,15 @@
       var body2 = Math.max(17, Math.min(26, W * 0.05));
       var F = '600 SIZE Figtree,system-ui,sans-serif', side = Math.max(24, W * 0.07);
       // On the moon
-      words(LINE1, H * 0.74, body2, F, fadeWin(700, 3700) * 0.95);
+      words(LINE1, H * 0.74, body2, F, fadeWin(700, 4700) * 0.95);
       // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
-      words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8300) * 0.95, false, 'left', side);
-      words(HOPE2, H * 0.8, body2, F, fadeWin(5500, 9500) * 0.95, false, 'right', W - side);
+      words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8800) * 0.95, false, 'left', side);
+      words(HOPE2, H * 0.8, body2, F, fadeWin(5500, 10000) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
       // Down to the reflection, then the title above it
       var titleSize = Math.max(54, Math.min(110, W * 0.15)), titleY = H * 0.56 - moonR * 2.6;
-      words(PRESENT, titleY - titleSize * 0.95, body2, F, fadeWin(15000, 99999) * 0.95);
+      words(PRESENT, titleY - titleSize * 0.95, body2, F, fadeWin(15750, 99999) * 0.95);
       words('Unwind', titleY, titleSize, '600 SIZE Fredoka,Figtree,system-ui,sans-serif', fadeWin(19400, 99999), true);
       // Fade in from black at the start
       if (t < 1200) { g.fillStyle = 'rgba(7,11,36,' + (1 - t / 1200) + ')'; g.fillRect(0, 0, W, H); }
