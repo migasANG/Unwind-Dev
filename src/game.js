@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-h';
+  var BUILD = '2026.11.24-i';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4488,7 +4488,7 @@
         // The same moon, upside down and a touch softer, swaying slowly in thin slices like light on calm water.
         // Slices are painted at full strength on their own layer first, so where they meet there are no seams.
         if (!reflBuf || reflBuf.width !== moonArt.width) { reflBuf = document.createElement('canvas'); reflBuf.width = moonArt.width; reflBuf.height = moonArt.height; }
-        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.022 * dpr;
+        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.035 * dpr;
         rb.setTransform(1, 0, 0, 1, 0, 0); rb.clearRect(0, 0, reflBuf.width, reflBuf.height);
         for (var sy2 = 0; sy2 < rows; sy2 += 1) {
           var yy3 = sy2 / dpr, wob2 = (Math.sin(sec * 1.2 + yy3 * 0.09) * 0.6 + Math.sin(sec * 0.55 + yy3 * 0.028) * 0.4) * wobPx;
@@ -4499,8 +4499,8 @@
         rb.beginPath(); rb.arc(reflBuf.width / 2, reflBuf.height / 2, moonR * dpr, 0, 7); rb.fill();
         rb.globalCompositeOperation = 'source-over';
         // The whole disc rides the water: a slow sway and bob, and a very slight breathing stretch.
-        var swayX = Math.sin(sec * 0.8) * moonR * 0.06 + Math.sin(sec * 1.9) * moonR * 0.015, swayY = Math.sin(sec * 1.1 + 0.6) * moonR * 0.035;
-        var sx2 = 1 + Math.sin(sec * 1.3) * 0.02, sy3 = 1 - Math.sin(sec * 1.3) * 0.02;
+        var swayX = Math.sin(sec * 0.8) * moonR * 0.15 + Math.sin(sec * 1.9) * moonR * 0.035, swayY = Math.sin(sec * 1.1 + 0.6) * moonR * 0.08;
+        var sx2 = 1 + Math.sin(sec * 1.3) * 0.035, sy3 = 1 - Math.sin(sec * 1.3) * 0.035;
         g.globalAlpha = 0.9;
         g.drawImage(reflBuf, moonX + swayX - size2 * sx2 / 2, ry0 + swayY - size2 * sy3 / 2, size2 * sx2, size2 * sy3);
         g.globalAlpha = 1;
@@ -4533,7 +4533,7 @@
       words(LINE1, H * 0.74, body2, F, fadeWin(700, 4700) * 0.95);
       // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
       words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8800) * 0.95, false, 'left', side);
-      words(HOPE2, H * 0.8, body2, F, fadeWin(5750, 10000) * 0.95, false, 'right', W - side);
+      words(HOPE2, H * 0.8, body2, F, fadeWin(6250, 10500) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
       words(CARE, H * 0.88, body2 * 0.88, F, fadeWin(11300, 15300) * 0.85);
