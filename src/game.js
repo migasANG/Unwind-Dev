@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-j';
+  var BUILD = '2026.11.24-k';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4488,21 +4488,17 @@
         // The same moon, upside down and a touch softer, swaying slowly in thin slices like light on calm water.
         // Slices are painted at full strength on their own layer first, so where they meet there are no seams.
         if (!reflBuf || reflBuf.width !== moonArt.width) { reflBuf = document.createElement('canvas'); reflBuf.width = moonArt.width; reflBuf.height = moonArt.height; }
-        // The reflection stays put; small waves travelling down through it bend each row of light sideways,
-        // so its outline ripples softly the way a moon does on calm water.
-        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.042 * dpr;
+        // The reflection stays put. Several gentle waves of different lengths and speeds pass through it: each row of
+        // light is nudged sideways and sampled from a little above or below, which is how a moon looks on calm water.
+        var rb = reflBuf.getContext('2d'), rows = moonArt.height, ampX = moonR * 0.034 * dpr, ampY = moonR * 0.025 * dpr;
+        var swell = 0.8 + 0.2 * Math.sin(sec * 0.45);
         rb.setTransform(1, 0, 0, 1, 0, 0); rb.clearRect(0, 0, reflBuf.width, reflBuf.height);
         for (var sy2 = 0; sy2 < rows; sy2 += 1) {
-          var yy3 = sy2 / dpr / moonR, wob2 = (Math.sin(yy3 * 7.5 - sec * 2.2) * 0.55 + Math.sin(yy3 * 3.2 + sec * 1.1) * 0.3 + Math.sin(yy3 * 13 - sec * 3.1) * 0.15) * wobPx;
-          rb.drawImage(moonArt, 0, sy2, moonArt.width, 1, wob2, sy2, moonArt.width, 1);
+          var yy3 = sy2 / dpr / moonR;
+          var dx3 = (Math.sin(yy3 * 5.1 - sec * 1.25 + Math.sin(sec * 0.37) * 1.4) * 0.5 + Math.sin(yy3 * 9.3 + sec * 1.7) * 0.32 + Math.sin(yy3 * 16.5 - sec * 2.4) * 0.18) * ampX * swell;
+          var dy3 = Math.sin(yy3 * 6.4 - sec * 1.5) * ampY * swell, src = Math.max(0, Math.min(rows - 1, Math.round(sy2 + dy3)));
+          rb.drawImage(moonArt, 0, src, moonArt.width, 1, dx3, sy2, moonArt.width, 1);
         }
-        // Faint darker bands drift down across it, like the troughs of the small waves.
-        rb.globalCompositeOperation = 'source-atop';
-        for (var bd = 0; bd < 6; bd++) {
-          var by2 = ((bd / 6 + sec * 0.09) % 1) * rows;
-          rb.fillStyle = 'rgba(40,52,110,.07)'; rb.fillRect(0, by2, reflBuf.width, Math.max(1, rows * 0.045));
-        }
-        rb.globalCompositeOperation = 'source-over';
         var swayX = 0;
         g.globalAlpha = 0.9;
         g.drawImage(reflBuf, moonX - size2 / 2, ry0 - size2 / 2, size2, size2);
