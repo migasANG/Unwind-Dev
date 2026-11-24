@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-o';
+  var BUILD = '2026.11.24-p';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4407,11 +4407,11 @@
         var tipX = -u2 * 13, tipY = -u2 * 10;
         g.strokeStyle = 'rgba(231,236,255,.55)'; g.lineWidth = 1;
         g.beginPath(); g.moveTo(tipX, tipY); g.quadraticCurveTo(tipX - u2 * 2, tipY + u2 * 6, tipX - u2 * 2.5, u2 * 0.6); g.stroke();
-        // A white float with a red band round its middle.
+        // A white float with two thin red bands.
         var flY = u2 * 0.4 + Math.sin(sec * 2.4) * u2 * 0.3, flX = tipX - u2 * 2.5, flR = u2 * 0.45;
         g.fillStyle = '#ffffff'; g.beginPath(); g.arc(flX, flY, flR, 0, 7); g.fill();
         g.save(); g.beginPath(); g.arc(flX, flY, flR, 0, 7); g.clip();
-        g.fillStyle = '#e0303a'; g.fillRect(flX - flR, flY - flR * 0.22, flR * 2, flR * 0.44);
+        g.fillStyle = '#e0303a'; [-0.34, 0.34].forEach(function (k) { g.fillRect(flX - flR, flY + k * flR - flR * 0.11, flR * 2, flR * 0.22); });
         g.restore();
         // Hull
         g.fillStyle = '#0c1030';
