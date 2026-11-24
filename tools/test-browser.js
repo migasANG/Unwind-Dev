@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');const path=require('path');
 (async()=>{const b=await chromium.launch();const errs=[];const out=process.argv[2];
 const url='file://'+path.resolve(__dirname,'../dist/index.html');
-const ctx=await b.newContext({viewport:{width:390,height:800}});
+const ctx=await b.newContext({viewport:{width:390,height:800}});await ctx.addInitScript(()=>{try{localStorage.setItem('unwind.intro','true')}catch(e){}});
 const p=await ctx.newPage();p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error'&&!/ERR_TUNNEL|fonts/.test(m.text()))errs.push(m.text())});
 await p.goto(url);await p.waitForTimeout(300);await p.screenshot({path:out+'/begin.png'});await p.click('#begin');await p.waitForTimeout(1200);await p.screenshot({path:out+'/l1.png'});
 const snap=()=>p.evaluate(()=>unwindTest.snapshot());
@@ -55,7 +55,7 @@ const audio=await p.evaluate(async()=>{const M=unwindTest.music,res=[];
  return res});
 console.log(JSON.stringify(audio,null,0).replace(/},/g,'},\n'));
 await ctx.close();
-for(const [n,w,h] of [['small',360,640],['desk',1280,800]]){const c=await b.newContext({viewport:{width:w,height:h}});const q=await c.newPage();q.on('pageerror',e=>errs.push(e.message));await q.goto(url);await q.waitForTimeout(200);await q.click('#begin');await q.waitForTimeout(600);await q.evaluate(()=>unwindTest.open('hard',11));await q.waitForTimeout(1800);await q.screenshot({path:out+`/${n}.png`});
+for(const [n,w,h] of [['small',360,640],['desk',1280,800]]){const c=await b.newContext({viewport:{width:w,height:h}});await c.addInitScript(()=>{try{localStorage.setItem('unwind.intro','true')}catch(e){}});const q=await c.newPage();q.on('pageerror',e=>errs.push(e.message));await q.goto(url);await q.waitForTimeout(200);await q.click('#begin');await q.waitForTimeout(600);await q.evaluate(()=>unwindTest.open('hard',11));await q.waitForTimeout(1800);await q.screenshot({path:out+`/${n}.png`});
  const sq=await q.evaluate(()=>unwindTest.solve());await q.evaluate(()=>unwindTest.open('calm',0));await q.waitForTimeout(60);for(const id of await q.evaluate(()=>unwindTest.solve())){const pt=await q.evaluate(i=>unwindTest.point(i),id);await q.mouse.click(pt.x,pt.y)}await q.waitForSelector('#next');await q.waitForTimeout(1200);await q.screenshot({path:out+`/${n}win.png`});
  console.log(n,'winCardFits',await q.evaluate(()=>{const c=document.querySelector('.card');return [c.scrollHeight,c.clientHeight,document.documentElement.scrollWidth]}));await c.close();}
 console.log('errors',errs);await b.close()})().catch(e=>{console.error(e);process.exit(1)});

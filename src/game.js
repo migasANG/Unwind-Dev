@@ -1063,7 +1063,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.23-l';
+  var BUILD = '2026.11.24-a';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4178,14 +4178,215 @@
     return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"><output class="notr" id="' + id + 'Pct">' + v + '%</output></label>';
   }
   var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
+
+  // ── Intro ────────────────────────────────────────────────────────────────
+  // A night scene in the game's flat style: the camera starts on the moon, tilts down past the coast and a
+  // fisherman in his boat, and comes to rest on the sea where the moon is reflected. Plays on first launch.
+  function playIntro(done) {
+    var box = $('intro'), cv = box.querySelector('canvas'), g = cv.getContext('2d'), alive = true, t0 = 0;
+    // Camera keyframes (ms, and how far down it looks in screen heights): the moon, the coast, a slow drift, the water.
+    var KEYS = [[0, 0], [1700, 0], [5200, 1.0], [7600, 1.12], [10600, 2], [12600, 2]], FADE = 900, TOTAL = 12600;
+    var rnd = E.rng32(20261124), stars = [], waves = [], i;
+    for (i = 0; i < 170; i++) stars.push({ x: rnd(), y: rnd(), r: 0.5 + rnd() * 1.3, p: rnd() * 6.28, s: 0.6 + rnd() * 1.6 });
+    for (i = 0; i < 260; i++) waves.push({ x: rnd(), y: rnd(), l: 0.4 + rnd() * 0.9, p: rnd() * 6.28 });
+    box.hidden = false; box.classList.remove('out');
+    var finish = function () {
+      if (!alive) return;
+      alive = false; save('unwind.intro', true);
+      box.classList.add('out');
+      setTimeout(function () { box.hidden = true; box.classList.remove('out'); if (done) done(); }, FADE);
+      window.removeEventListener('keydown', onKey);
+    };
+    var onKey = function (ev) { if (ev.key === 'Escape' || ev.key === ' ' || ev.key === 'Enter') finish(); };
+    window.addEventListener('keydown', onKey);
+    $('introSkip').onclick = finish;
+    var easeIO = function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+    var round = function (x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
+    var draw = function (now) {
+      if (!alive && box.hidden) return;
+      if (!t0) t0 = now;
+      var t = now - t0, sec = t / 1000;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2), W = box.clientWidth, H = box.clientHeight;
+      if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var S = Math.min(W, H * 0.8), horizon = H * 1.42, depth = H * 3;
+      var cam = H * 2;
+      for (var ki = 1; ki < KEYS.length; ki++) if (t < KEYS[ki][0]) { var a0 = KEYS[ki - 1], a1 = KEYS[ki], f = easeIO((t - a0[0]) / (a1[0] - a0[0])); cam = H * (a0[1] + (a1[1] - a0[1]) * f); break; }
+      // Things far away move a little slower, so the tilt has depth.
+      var sky = function (y) { return y - cam * 0.82; }, near = function (y) { return y - cam; };
+      var moonX = W * 0.63, moonY = H * 0.36, moonR = S * 0.11;
+      // Sky
+      var gs = g.createLinearGradient(0, sky(0), 0, near(horizon));
+      gs.addColorStop(0, '#070b24'); gs.addColorStop(0.6, '#141c45'); gs.addColorStop(1, '#2c3870');
+      g.fillStyle = gs; g.fillRect(0, 0, W, H);
+      stars.forEach(function (st) {
+        var y = sky(st.y * horizon * 0.95);
+        if (y < -4 || y > H) return;
+        g.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(sec * st.s + st.p));
+        g.fillStyle = '#e7ecff'; g.beginPath(); g.arc(st.x * W, y, st.r, 0, 7); g.fill();
+      });
+      g.globalAlpha = 1;
+      // Moon, with a soft halo
+      var my = sky(moonY);
+      if (my > -moonR * 4) {
+        var halo = g.createRadialGradient(moonX, my, moonR * 0.8, moonX, my, moonR * 4);
+        halo.addColorStop(0, 'rgba(223,230,255,.28)'); halo.addColorStop(1, 'rgba(223,230,255,0)');
+        g.fillStyle = halo; g.beginPath(); g.arc(moonX, my, moonR * 4, 0, 7); g.fill();
+        g.fillStyle = '#eef0ff'; g.beginPath(); g.arc(moonX, my, moonR, 0, 7); g.fill();
+        g.fillStyle = 'rgba(160,170,220,.28)';
+        [[-0.35, -0.2, 0.22], [0.3, 0.25, 0.16], [0.05, 0.45, 0.1], [0.42, -0.35, 0.09]].forEach(function (c) { g.beginPath(); g.arc(moonX + c[0] * moonR, my + c[1] * moonR, c[2] * moonR, 0, 7); g.fill(); });
+      }
+      // Slow clouds
+      g.fillStyle = 'rgba(58,68,122,.55)';
+      [[0.15, 0.55, 1], [0.78, 0.82, 0.8], [0.42, 1.08, 1.2]].forEach(function (c, n) {
+        var cx = ((c[0] + sec * 0.006 * (n + 1)) % 1.3 - 0.15) * W, cy = sky(H * c[1]), u = S * 0.06 * c[2];
+        round(cx - u * 2.4, cy - u * 0.5, u * 4.8, u, u * 0.5);
+        g.beginPath(); g.arc(cx - u * 0.6, cy - u * 0.5, u * 0.75, 0, 7); g.arc(cx + u * 0.5, cy - u * 0.6, u * 0.95, 0, 7); g.fill();
+      });
+      // Sea
+      var hy = near(horizon);
+      var gw = g.createLinearGradient(0, hy, 0, near(depth));
+      gw.addColorStop(0, '#25336b'); gw.addColorStop(0.35, '#16214f'); gw.addColorStop(1, '#0a0f2c');
+      g.fillStyle = gw; g.fillRect(0, Math.max(0, hy), W, H);
+      // The moon's path on the water: short shimmering strokes, wider the closer they are.
+      for (var yy = horizon + 3; yy < depth; yy += Math.max(3, (yy - horizon) * 0.03)) {
+        var sy = near(yy); if (sy < -10 || sy > H + 10) continue;
+        var d = (yy - horizon) / (depth - horizon), wob = Math.sin(sec * 1.7 + yy * 0.05);
+        var len = S * (0.05 + d * 0.4) * (0.55 + 0.45 * Math.abs(Math.sin(yy * 0.37 + sec * 1.3)));
+        g.globalAlpha = (0.55 - d * 0.25) * (0.6 + 0.4 * wob);
+        g.strokeStyle = '#dfe6ff'; g.lineWidth = Math.max(1.2, S * (0.004 + d * 0.012)); g.lineCap = 'round';
+        var off = Math.sin(yy * 0.13 + sec) * S * 0.03 * (0.3 + d);
+        g.beginPath(); g.moveTo(moonX + off - len / 2, sy); g.lineTo(moonX + off + len / 2, sy); g.stroke();
+      }
+      g.globalAlpha = 1;
+      // Little waves everywhere
+      waves.forEach(function (wv) {
+        var yy = horizon + wv.y * (depth - horizon), sy = near(yy); if (sy < -4 || sy > H + 4) return;
+        var d = wv.y, x = ((wv.x + Math.sin(sec * 0.4 + wv.p) * 0.01) * W), len = S * (0.015 + d * 0.06) * wv.l;
+        g.globalAlpha = 0.12 + 0.12 * Math.sin(sec * 1.2 + wv.p);
+        g.strokeStyle = '#8ea0e6'; g.lineWidth = 1 + d * 2.2; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - len / 2, sy); g.quadraticCurveTo(x, sy - 1.5 - d * 3, x + len / 2, sy); g.stroke();
+      });
+      g.globalAlpha = 1;
+      // The coast: far hills, a village with lit windows, a lighthouse on the headland.
+      if (hy > -H * 0.6 && hy < H * 1.4) {
+        g.fillStyle = '#1b2350';
+        g.beginPath(); g.moveTo(0, hy); g.lineTo(0, hy - S * 0.16); g.bezierCurveTo(W * 0.12, hy - S * 0.26, W * 0.3, hy - S * 0.2, W * 0.42, hy - S * 0.07); g.quadraticCurveTo(W * 0.48, hy - S * 0.02, W * 0.52, hy); g.closePath(); g.fill();
+        g.fillStyle = '#131a40';
+        g.beginPath(); g.moveTo(W * 0.74, hy); g.quadraticCurveTo(W * 0.8, hy - S * 0.1, W * 0.9, hy - S * 0.11); g.lineTo(W, hy - S * 0.12); g.lineTo(W, hy); g.closePath(); g.fill();
+        // Houses
+        [[0.05, 0.17, 1], [0.13, 0.205, 0.9], [0.21, 0.2, 1.1], [0.29, 0.165, 0.85], [0.36, 0.11, 0.9]].forEach(function (hs, n) {
+          var u = S * 0.035 * hs[2], x = W * hs[0], base = hy - S * hs[1] + u * 0.7;
+          g.fillStyle = '#242d5e'; g.fillRect(x - u * 0.8, base - u * 1.1, u * 1.6, u * 1.1);
+          g.fillStyle = '#161d45'; g.beginPath(); g.moveTo(x - u, base - u * 1.05); g.lineTo(x, base - u * 1.8); g.lineTo(x + u, base - u * 1.05); g.closePath(); g.fill();
+          var lit = 0.75 + 0.25 * Math.sin(sec * 2 + n * 1.7);
+          g.globalAlpha = lit; g.fillStyle = '#ffd27a'; round(x - u * 0.35, base - u * 0.75, u * 0.42, u * 0.42, u * 0.08); g.globalAlpha = 1;
+          // Its light on the water
+          g.globalAlpha = 0.3 * lit; g.strokeStyle = '#ffd27a'; g.lineWidth = 1.5; g.lineCap = 'round';
+          for (var r2 = 0; r2 < 3; r2++) { var ry = hy + 5 + r2 * 6; g.beginPath(); g.moveTo(x - u * 0.3 + Math.sin(sec * 2 + r2) * 2, ry); g.lineTo(x + u * 0.2 + Math.sin(sec * 2 + r2) * 2, ry); g.stroke(); }
+          g.globalAlpha = 1;
+        });
+        // Lighthouse and its slow beam
+        var lx = W * 0.88, lb = hy - S * 0.105, lh = S * 0.15, lw = S * 0.032;
+        var ang = Math.sin(sec * 0.55) * 0.9 + Math.PI;
+        var beam = g.createRadialGradient(lx, lb - lh, 0, lx, lb - lh, S * 0.8);
+        beam.addColorStop(0, 'rgba(255,226,150,.38)'); beam.addColorStop(1, 'rgba(255,226,150,0)');
+        g.fillStyle = beam; g.beginPath(); g.moveTo(lx, lb - lh);
+        g.arc(lx, lb - lh, S * 0.8, ang - 0.13, ang + 0.13); g.closePath(); g.fill();
+        g.fillStyle = '#e7ecff'; g.beginPath(); g.moveTo(lx - lw * 0.65, lb); g.lineTo(lx - lw * 0.45, lb - lh); g.lineTo(lx + lw * 0.45, lb - lh); g.lineTo(lx + lw * 0.65, lb); g.closePath(); g.fill();
+        g.fillStyle = '#c2476d'; [0.25, 0.62].forEach(function (f) { g.fillRect(lx - lw * 0.62 + f * lw * 0.1, lb - lh * f - lh * 0.09, lw * 1.24 - f * lw * 0.2, lh * 0.12); });
+        g.fillStyle = '#ffd27a'; round(lx - lw * 0.42, lb - lh - lw * 0.75, lw * 0.84, lw * 0.75, lw * 0.15);
+        g.fillStyle = '#161d45'; g.beginPath(); g.moveTo(lx - lw * 0.62, lb - lh - lw * 0.72); g.lineTo(lx, lb - lh - lw * 1.4); g.lineTo(lx + lw * 0.62, lb - lh - lw * 0.72); g.closePath(); g.fill();
+      }
+      // The fisherman in his boat, rocking gently with a warm lantern.
+      var bx = W * (W < H ? 0.42 : 0.34), by = near(horizon + H * 0.3);
+      if (by > -S * 0.5 && by < H + S * 0.3) {
+        var u2 = S * 0.018, rock = Math.sin(sec * 1.25) * 0.045, bob = Math.sin(sec * 1.05) * u2 * 0.6;
+        // Reflection of the boat and lantern
+        g.save(); g.translate(bx, by + bob); g.scale(1, -0.45); g.rotate(-rock); g.globalAlpha = 0.25;
+        g.fillStyle = '#05081c'; g.beginPath(); g.moveTo(-u2 * 9, 0); g.lineTo(u2 * 9, 0); g.lineTo(u2 * 6.5, u2 * 3); g.lineTo(-u2 * 6.5, u2 * 3); g.closePath(); g.fill();
+        g.restore(); g.globalAlpha = 1;
+        g.strokeStyle = 'rgba(255,194,94,.4)'; g.lineWidth = 2; g.lineCap = 'round';
+        for (var q = 0; q < 4; q++) { var qy = by + u2 * (3 + q * 2.2); g.globalAlpha = 0.45 - q * 0.09; g.beginPath(); g.moveTo(bx + u2 * 4.2 - u2 * (1.5 - q * 0.2) + Math.sin(sec * 2.2 + q) * u2 * 0.6, qy); g.lineTo(bx + u2 * 4.2 + u2 * (1.5 - q * 0.2) + Math.sin(sec * 2.2 + q) * u2 * 0.6, qy); g.stroke(); }
+        g.globalAlpha = 1;
+        g.save(); g.translate(bx, by + bob); g.rotate(rock);
+        // Lantern glow
+        var lg = g.createRadialGradient(u2 * 4.2, -u2 * 6.5, 0, u2 * 4.2, -u2 * 6.5, u2 * 9);
+        lg.addColorStop(0, 'rgba(255,194,94,.45)'); lg.addColorStop(1, 'rgba(255,194,94,0)');
+        g.fillStyle = lg; g.beginPath(); g.arc(u2 * 4.2, -u2 * 6.5, u2 * 9, 0, 7); g.fill();
+        // Fishing line, from the rod tip down into the water, with a little float
+        var tipX = -u2 * 13, tipY = -u2 * 10;
+        g.strokeStyle = 'rgba(231,236,255,.55)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(tipX, tipY); g.quadraticCurveTo(tipX - u2 * 2, tipY + u2 * 6, tipX - u2 * 2.5, u2 * 0.6); g.stroke();
+        g.fillStyle = '#ff6b6b'; g.beginPath(); g.arc(tipX - u2 * 2.5, u2 * 0.4 + Math.sin(sec * 2.4) * u2 * 0.3, u2 * 0.45, 0, 7); g.fill();
+        // Hull
+        g.fillStyle = '#0c1030';
+        g.beginPath(); g.moveTo(-u2 * 9.5, -u2 * 1.6); g.lineTo(u2 * 9.5, -u2 * 1.6); g.quadraticCurveTo(u2 * 8, u2 * 2.4, u2 * 5.5, u2 * 2.6); g.lineTo(-u2 * 5.5, u2 * 2.6); g.quadraticCurveTo(-u2 * 8, u2 * 2.4, -u2 * 9.5, -u2 * 1.6); g.closePath(); g.fill();
+        g.fillStyle = '#2b3670'; g.fillRect(-u2 * 9.2, -u2 * 1.6, u2 * 18.4, u2 * 0.5);
+        // Lantern on its pole
+        g.fillStyle = '#0c1030'; g.fillRect(u2 * 4, -u2 * 8.5, u2 * 0.4, u2 * 7);
+        g.fillStyle = '#ffc25e'; round(u2 * 3.5, -u2 * 7.3, u2 * 1.4, u2 * 1.6, u2 * 0.4);
+        // The fisherman, sitting, rod in hand
+        g.fillStyle = '#0c1030';
+        round(-u2 * 2.6, -u2 * 5.6, u2 * 3.2, u2 * 4.2, u2 * 1.2);
+        g.beginPath(); g.arc(-u2 * 1, -u2 * 6.6, u2 * 1.25, 0, 7); g.fill();
+        round(-u2 * 2.7, -u2 * 7.4, u2 * 3.4, u2 * 0.55, u2 * 0.25);
+        round(-u2 * 1.9, -u2 * 8.5, u2 * 1.8, u2 * 1.3, u2 * 0.4);
+        g.strokeStyle = '#0c1030'; g.lineWidth = u2 * 0.5; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-u2 * 1.6, -u2 * 4); g.lineTo(-u2 * 3.4, -u2 * 3.6); g.stroke();
+        g.lineWidth = Math.max(1, u2 * 0.25);
+        g.beginPath(); g.moveTo(-u2 * 3, -u2 * 3.4); g.lineTo(tipX, tipY); g.stroke();
+        g.restore();
+        // Ripples from the float
+        for (var rr = 0; rr < 2; rr++) {
+          var ph = ((sec * 0.6 + rr * 0.5) % 1), rx = bx + (tipX - u2 * 2.5) * Math.cos(rock), ry = by + bob + u2 * 0.6;
+          g.globalAlpha = 0.35 * (1 - ph); g.strokeStyle = '#b8c4ff'; g.lineWidth = 1;
+          g.beginPath(); g.ellipse(rx, ry, u2 * (1 + ph * 5), u2 * (0.35 + ph * 1.5), 0, 0, 7); g.stroke();
+        }
+        g.globalAlpha = 1;
+      }
+      // Close up: the moon itself, mirrored in the water and broken up by small ripples.
+      var ry0 = near(H * 2.5), rR = moonR * 1.5;
+      if (ry0 > -rR * 2 && ry0 < H + rR * 2) {
+        var halo2 = g.createRadialGradient(moonX, ry0, rR * 0.6, moonX, ry0, rR * 3.2);
+        halo2.addColorStop(0, 'rgba(223,230,255,.16)'); halo2.addColorStop(1, 'rgba(223,230,255,0)');
+        g.fillStyle = halo2; g.beginPath(); g.ellipse(moonX, ry0, rR * 3.4, rR * 2.6, 0, 0, 7); g.fill();
+        // A soft disc underneath, then thin bands drifting sideways on top, like the moon on gently moving water.
+        g.globalAlpha = 0.35; g.fillStyle = '#c9d2ff'; g.beginPath(); g.arc(moonX, ry0, rR * 0.98, 0, 7); g.fill();
+        var slices = 30, sh = (rR * 2) / slices;
+        for (var sl = 0; sl < slices; sl++) {
+          var yy2 = -rR + sl * sh + sh / 2, half = Math.sqrt(Math.max(0, rR * rR - yy2 * yy2));
+          var shift = Math.sin(sec * 1.4 + sl * 0.45) * rR * 0.05 + Math.sin(sec * 0.6 + sl * 0.17) * rR * 0.03;
+          g.globalAlpha = 0.82 + 0.15 * Math.sin(sec * 1.8 + sl * 0.6);
+          g.fillStyle = '#e4e8ff';
+          round(moonX - half + shift, ry0 + yy2 - sh * 0.42, half * 2, sh * 0.84, sh * 0.42);
+        }
+        g.globalAlpha = 1;
+        for (var rp = 0; rp < 3; rp++) {
+          var ph2 = ((sec * 0.25 + rp / 3) % 1);
+          g.globalAlpha = 0.28 * (1 - ph2); g.strokeStyle = '#c9d2ff'; g.lineWidth = 1.5;
+          g.beginPath(); g.ellipse(moonX, ry0, rR * (1.1 + ph2 * 2.2), rR * (0.4 + ph2 * 0.8), 0, 0, 7); g.stroke();
+        }
+        g.globalAlpha = 1;
+      }
+      // Fade in from black at the start
+      if (t < 1200) { g.fillStyle = 'rgba(7,11,36,' + (1 - t / 1200) + ')'; g.fillRect(0, 0, W, H); }
+      if (alive && t >= TOTAL) finish();
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+  }
   function settingsSheet() {
     var themeRow = function (id, name, mood) { return '<button class="theme" data-theme-id="' + id + '" aria-pressed="' + (audioPrefs.theme === id) + '"><b>' + name + '</b><span>' + mood + '</span></button>'; };
     var html = '<div class="row"><h2>Settings</h2><button class="close" id="x" aria-label="Close">×</button></div>' + languageRow() +
       '<div class="setting"><span id="lMusic">Music</span><button class="switch" id="sMusic" role="switch" aria-labelledby="lMusic" aria-checked="' + audioPrefs.music + '"></button></div>' + volumeBar('vMusic', 'Music volume', audioPrefs.musicVol) +
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
       '<p class="now" id="nowPlaying"></p><details class="mpx"><summary>Music themes</summary><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div></details>';
+    // Temporary, while the intro is being tuned.
+    html += '<button class="tomenu" id="playIntro">Play the intro</button>';
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     var s = sheet(html);
+    s.querySelector('#playIntro').onclick = function () { closeSheet(); playIntro(); };
     wireLanguage(s);
     s.querySelector('#toMenu').onclick = startMenu;
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
@@ -4372,6 +4573,8 @@
   // Browsers, especially on phones, only allow sound after a tap, so the first tap starts the music.
   (function () {
     startMenu();
+    // The intro plays once, the first time the game is opened.
+    if (!load('unwind.intro', false) && !/[?&]nointro=1/.test(location.search)) playIntro();
   })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);
