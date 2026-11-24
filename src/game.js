@@ -1101,7 +1101,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.24-f';
+  var BUILD = '2026.11.24-g';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -1355,15 +1355,15 @@
     for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
     var n = c.createBufferSource(); n.buffer = buf;
     var bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9; bp.frequency.setValueAtTime(2600, t); bp.frequency.exponentialRampToValueAtTime(320, t + 0.45);
-    var ng = c.createGain(); ng.gain.setValueAtTime(0.55, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    var ng = c.createGain(); ng.gain.setValueAtTime(0.33, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     n.connect(bp); bp.connect(ng); ng.connect(sfxBus); n.start(t); n.stop(t + 0.52);
     var o = c.createOscillator(), og = c.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.35);
-    og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.7, t + 0.012); og.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+    og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.42, t + 0.012); og.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
     o.connect(og); og.connect(sfxBus); o.start(t); o.stop(t + 0.45);
     var k = c.createOscillator(), kg = c.createGain();
     k.type = 'triangle'; k.frequency.setValueAtTime(1760, t); k.frequency.exponentialRampToValueAtTime(880, t + 0.08);
-    kg.gain.setValueAtTime(0.25, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    kg.gain.setValueAtTime(0.15, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     k.connect(kg); kg.connect(sfxBus); k.start(t); k.stop(t + 0.14);
     buzz(30);
   }
@@ -4227,7 +4227,7 @@
     var KEYS = [[0, 0], [3900, 0], [9600, 1.05, 'io'], [14400, 1.05], [20100, 2, 'io'], [25300, 2]], FADE = 900, TOTAL = 25300;
     var T = function (str) { return window.UnwindI18n ? window.UnwindI18n.t(str) : str; };
     var LINE1 = T('A cozy and relaxing puzzle game with arrows'), LINE2 = T('Created by Hearthbound Games');
-    var HOPE1 = T('We hope you can enjoy...'), HOPE2 = T('...and relax with our game'), PRESENT = T('We present to you:');
+    var HOPE1 = T('We hope you can enjoy...'), HOPE2 = T('...and relax with our game'), PRESENT = T('We present to you:'), CARE = T('Made with care, one arrow at a time');
     // The moon, drawn once to its own small canvas, so its reflection is the very same moon, upside down.
     var moonArt = null, moonArtR = 0, reflBuf = null;
     // A soft, glowing moon: a gentle light-to-cool shading, quiet grey-blue seas and a bright rim.
@@ -4334,10 +4334,12 @@
       }
       g.lineCap = 'round';
       glints.forEach(function (gl) {
-        var sy = near(pathY(gl.u)); if (sy < -6 || sy > H + 6) return;
+        var sy = near(pathY(gl.u)); if (sy < -8 || sy > H + 8) return;
         // Halfway between steady lines and twinkling flecks: they never fully vanish, just brighten and dim.
         var tw = 0.4 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin(sec * gl.s * 0.8 + gl.p), 1.3);
-        var x = moonX + gl.x * spread(gl.u) * 0.85 + Math.sin(sec * 0.7 + gl.d) * moonR * 0.06 * (0.4 + gl.u);
+        // Each glint slides back and forth along its ripple and bobs a touch, like light riding small waves.
+        var x = moonX + gl.x * spread(gl.u) * 0.85 + Math.sin(sec * (0.9 + gl.s * 0.35) + gl.d) * moonR * 0.22 * (0.4 + gl.u) + Math.sin(sec * 2.1 + gl.p) * moonR * 0.05;
+        sy += Math.sin(sec * 1.7 + gl.d * 2) * (0.6 + gl.u * 1.6);
         var len = moonR * (0.08 + 0.42 * gl.u) * gl.l * (0.8 + 0.2 * tw), edge = 1 - Math.abs(gl.x) * 0.5;
         var al = (0.35 + 0.6 * gl.u) * tw * edge;
         var lgr = g.createLinearGradient(x - len, 0, x + len, 0);
@@ -4431,6 +4433,49 @@
         }
         g.globalAlpha = 1;
       }
+      // A fish leaps out of the water during the last tilt, with a splash going in and out and rings after.
+      var FISH_AT = 16200, FISH_LEN = 1250, fx0 = W * (W < H ? 0.22 : 0.27), fWorld = H * 1.98, fs = S * 0.038;
+      var fishT = (t - FISH_AT) / FISH_LEN, fyS = near(fWorld), jumpW = S * 0.2, jumpH = S * 0.16;
+      if (fishT > -0.1 && fishT < 3 && fyS > -jumpH && fyS < H + 40) {
+        var ringAt = function (cx, age) {
+          for (var rg = 0; rg < 3; rg++) {
+            var ra = age - rg * 0.18; if (ra < 0 || ra > 1.4) continue;
+            g.globalAlpha = 0.45 * (1 - ra / 1.4); g.strokeStyle = '#b8c4ff'; g.lineWidth = 1.4;
+            g.beginPath(); g.ellipse(cx, fyS, fs * (0.6 + ra * 3), fs * (0.18 + ra * 0.8), 0, 0, 7); g.stroke();
+          }
+          g.globalAlpha = 1;
+        };
+        var splash = function (cx, age) {
+          if (age < 0 || age > 0.5) return;
+          for (var dr = 0; dr < 7; dr++) {
+            var ang = -Math.PI / 2 + (dr - 3) * 0.32, sp = fs * (2.2 + (dr % 3) * 0.7), tt = age;
+            var dx = Math.cos(ang) * sp * tt * 2, dy = Math.sin(ang) * sp * tt * 2 + fs * 14 * tt * tt;
+            g.globalAlpha = 0.8 * (1 - age / 0.5); g.fillStyle = '#dfe6ff';
+            g.beginPath(); g.arc(cx + dx, fyS + dy, Math.max(1, fs * 0.12), 0, 7); g.fill();
+          }
+          g.globalAlpha = 1;
+        };
+        var exitX = fx0 - jumpW / 2, entryX = fx0 + jumpW / 2;
+        ringAt(exitX, (t - FISH_AT) / 1000); splash(exitX, (t - FISH_AT) / 1000);
+        ringAt(entryX, (t - FISH_AT - FISH_LEN) / 1000); splash(entryX, (t - FISH_AT - FISH_LEN) / 1000);
+        if (fishT >= 0 && fishT <= 1) {
+          var fx = exitX + jumpW * fishT, fy = fyS - jumpH * 4 * fishT * (1 - fishT);
+          var ang2 = Math.atan2(-jumpH * 4 * (1 - 2 * fishT), jumpW);
+          g.save(); g.translate(fx, fy); g.rotate(ang2);
+          // A small silvery fish with a dark back, a tail and an eye; the moon catches its belly.
+          var body3 = g.createLinearGradient(0, -fs * 0.5, 0, fs * 0.5);
+          body3.addColorStop(0, '#3a4a8c'); body3.addColorStop(0.55, '#9fb0e8'); body3.addColorStop(1, '#e4e9ff');
+          g.fillStyle = body3; g.beginPath(); g.ellipse(0, 0, fs * 1.25, fs * 0.45, 0, 0, 7); g.fill();
+          g.beginPath(); g.moveTo(-fs * 1.05, 0); g.lineTo(-fs * 1.85, -fs * 0.48); g.lineTo(-fs * 1.7, 0); g.lineTo(-fs * 1.85, fs * 0.48); g.closePath(); g.fillStyle = '#6f80c4'; g.fill();
+          g.beginPath(); g.moveTo(-fs * 0.1, -fs * 0.4); g.lineTo(fs * 0.35, -fs * 0.72); g.lineTo(fs * 0.5, -fs * 0.38); g.closePath(); g.fill();
+          g.fillStyle = '#0c1030'; g.beginPath(); g.arc(fs * 0.82, -fs * 0.08, fs * 0.09, 0, 7); g.fill();
+          g.restore();
+          // Water trailing off it
+          g.globalAlpha = 0.5; g.fillStyle = '#dfe6ff';
+          for (var dd = 1; dd < 4; dd++) { var tb = Math.max(0, fishT - dd * 0.035); g.beginPath(); g.arc(exitX + jumpW * tb, fyS - jumpH * 4 * tb * (1 - tb) + dd * 2, Math.max(0.8, fs * 0.08), 0, 7); g.fill(); }
+          g.globalAlpha = 1;
+        }
+      }
       // Close up: the very same moon, mirrored in the water, wobbling gently.
       var ry0 = near(reflY);
       if (ry0 > -moonR * 4 && ry0 < H + moonR * 4) {
@@ -4445,7 +4490,7 @@
         // The same moon, upside down and a touch softer, swaying slowly in thin slices like light on calm water.
         // Slices are painted at full strength on their own layer first, so where they meet there are no seams.
         if (!reflBuf || reflBuf.width !== moonArt.width) { reflBuf = document.createElement('canvas'); reflBuf.width = moonArt.width; reflBuf.height = moonArt.height; }
-        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.035 * dpr;
+        var rb = reflBuf.getContext('2d'), rows = moonArt.height, wobPx = moonR * 0.022 * dpr;
         rb.setTransform(1, 0, 0, 1, 0, 0); rb.clearRect(0, 0, reflBuf.width, reflBuf.height);
         for (var sy2 = 0; sy2 < rows; sy2 += 1) {
           var yy3 = sy2 / dpr, wob2 = (Math.sin(sec * 1.2 + yy3 * 0.09) * 0.6 + Math.sin(sec * 0.55 + yy3 * 0.028) * 0.4) * wobPx;
@@ -4455,14 +4500,17 @@
         rb.globalCompositeOperation = 'destination-in'; rb.fillStyle = '#000';
         rb.beginPath(); rb.arc(reflBuf.width / 2, reflBuf.height / 2, moonR * dpr, 0, 7); rb.fill();
         rb.globalCompositeOperation = 'source-over';
+        // The whole disc rides the water: a slow sway and bob, and a very slight breathing stretch.
+        var swayX = Math.sin(sec * 0.8) * moonR * 0.06 + Math.sin(sec * 1.9) * moonR * 0.015, swayY = Math.sin(sec * 1.1 + 0.6) * moonR * 0.035;
+        var sx2 = 1 + Math.sin(sec * 1.3) * 0.02, sy3 = 1 - Math.sin(sec * 1.3) * 0.02;
         g.globalAlpha = 0.9;
-        g.drawImage(reflBuf, moonX - size2 / 2, ry0 - size2 / 2, size2, size2);
+        g.drawImage(reflBuf, moonX + swayX - size2 * sx2 / 2, ry0 + swayY - size2 * sy3 / 2, size2 * sx2, size2 * sy3);
         g.globalAlpha = 1;
         // A few bright glints sliding across it, in the same style as the path.
         g.lineCap = 'round';
         for (var gk = 0; gk < 6; gk++) {
           var gy = ry0 + (gk / 5 - 0.5) * moonR * 1.7 + Math.sin(sec * 0.6 + gk) * moonR * 0.05, tw2 = Math.pow(Math.max(0, Math.sin(sec * (0.9 + gk * 0.21) + gk * 1.9)), 1.5);
-          var gx = moonX + Math.sin(sec * 0.45 + gk * 2.3) * moonR * 0.5, glen = moonR * (0.35 + 0.25 * Math.sin(gk * 3.1)) * (0.6 + 0.4 * tw2);
+          var gx = moonX + swayX + Math.sin(sec * 0.45 + gk * 2.3) * moonR * 0.5, glen = moonR * (0.35 + 0.25 * Math.sin(gk * 3.1)) * (0.6 + 0.4 * tw2);
           var gg = g.createLinearGradient(gx - glen, 0, gx + glen, 0);
           gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,255,255,' + (0.55 * tw2).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,255,255,0)');
           g.strokeStyle = gg; g.lineWidth = 2; g.beginPath(); g.moveTo(gx - glen, gy); g.lineTo(gx + glen, gy); g.stroke();
@@ -4487,9 +4535,10 @@
       words(LINE1, H * 0.74, body2, F, fadeWin(700, 4700) * 0.95);
       // During the tilt down to the coast: one line top left, then one bottom right; they leave in the same order.
       words(HOPE1, H * 0.2, body2, F, fadeWin(4300, 8800) * 0.95, false, 'left', side);
-      words(HOPE2, H * 0.8, body2, F, fadeWin(5500, 10000) * 0.95, false, 'right', W - side);
+      words(HOPE2, H * 0.8, body2, F, fadeWin(5750, 10000) * 0.95, false, 'right', W - side);
       // Over the coast and the boat
       words(LINE2, H * 0.15, body2, F, fadeWin(10000, 14000) * 0.95);
+      words(CARE, H * 0.88, body2 * 0.88, F, fadeWin(10800, 14000) * 0.85);
       // Down to the reflection, then the title above it
       var titleSize = Math.max(54, Math.min(110, W * 0.15)), titleY = H * 0.56 - moonR * 2.6;
       words(PRESENT, titleY - titleSize * 0.95, body2, F, fadeWin(15750, 99999) * 0.95);
