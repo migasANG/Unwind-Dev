@@ -66,14 +66,20 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .volbar input{flex:1;min-width:0;accent-color:var(--ink);height:24px}
 .volbar output{flex:none;width:3.2em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 #coopNav{position:fixed;inset:0;pointer-events:none;z-index:2}
-#boardMap{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:2;pointer-events:none;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;border-radius:14px;background:color-mix(in srgb,var(--card) 82%,transparent);color:var(--ink);font:700 .78rem/1 var(--display);opacity:.92}
+#boardMap{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:2;pointer-events:none;display:flex;align-items:center;gap:9px;padding:5px 7px 5px 12px;border-radius:20px;background:color-mix(in srgb,var(--card) 93%,transparent);color:var(--ink);box-shadow:0 3px 14px color-mix(in srgb,var(--ink) 18%,transparent),inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 9%,transparent)}
+#boardMap .bm-label{font:700 .8rem/1 var(--display);font-variant-numeric:tabular-nums;opacity:.75;letter-spacing:.02em}
 #boardMap svg{display:block;overflow:visible}
-#boardMap line{stroke:color-mix(in srgb,var(--ink) 35%,transparent);stroke-width:2;stroke-linecap:round}
-#boardMap circle{fill:var(--card);stroke:color-mix(in srgb,var(--ink) 55%,transparent);stroke-width:1.8;transition:r .3s}
-#boardMap circle.done{fill:color-mix(in srgb,var(--gold) 55%,var(--card));stroke:var(--gold-ink)}
-#boardMap circle.here{fill:var(--compass);stroke:var(--ink);stroke-width:2.2}
-#boardMap circle.ballDot{fill:var(--ink);stroke:none}
-@media (min-width:760px){#boardMap{bottom:calc(24px + env(safe-area-inset-bottom,0px));left:max(20px,env(safe-area-inset-left,0px))}}
+#boardMap .trail{stroke:color-mix(in srgb,var(--ink) 32%,transparent);stroke-width:3;stroke-linecap:round;stroke-dasharray:0 6}
+#boardMap .todo{fill:var(--card);stroke:color-mix(in srgb,var(--ink) 30%,transparent);stroke-width:2}
+#boardMap .done{fill:var(--gold);stroke:var(--gold-ink);stroke-width:1.5}
+#boardMap .star{fill:#fffaf0}
+#boardMap .here{fill:var(--ink);stroke:var(--card);stroke-width:2}
+#boardMap .heredot{fill:var(--card)}
+#boardMap .halo{fill:none;stroke:var(--gold);stroke-width:2.5;transform-box:fill-box;transform-origin:50% 50%;animation:bmHalo 2.4s ease-in-out infinite}
+#boardMap .ballDot{fill:#fbfbf7;stroke:#26262e;stroke-width:1.4}
+@keyframes bmHalo{0%,100%{opacity:.35;transform:scale(.92)}50%{opacity:.95;transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){#boardMap .halo{animation:none;opacity:.7}}
+@media (min-width:760px){#boardMap{bottom:calc(24px + env(safe-area-inset-bottom,0px));right:max(20px,env(safe-area-inset-right,0px))}}
 .cnav{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 25%,transparent);display:grid;place-items:center;line-height:1}
 .cnav b{font-size:1.15rem;font-weight:700}
 .cnav svg{display:block}
@@ -120,6 +126,10 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 .wave{animation:wave 4s ease-in-out infinite alternate}.wave.b{animation-delay:1.2s}
 .sway{animation:sway 5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
 .sway.b{animation-delay:1.6s}
+.sweep{animation:sweep 9s ease-in-out infinite alternate;transform-origin:50% 50%}
+@keyframes sweep{from{transform:rotate(-13deg)}to{transform:rotate(5deg)}}
+.glowpulse{animation:glowpulse 3s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes glowpulse{from{opacity:.65;transform:scale(.9)}to{opacity:1;transform:scale(1.08)}}
 @keyframes hop{0%,62%,100%{transform:translate(0,0)}70%{transform:translate(calc(9px*var(--s,1)),calc(-13px*var(--s,1)))}78%{transform:translate(calc(18px*var(--s,1)),0)}86%{transform:translate(calc(9px*var(--s,1)),calc(-9px*var(--s,1)))}94%{transform:translate(0,0)}}
 @keyframes wag{from{transform:rotate(-9deg)}to{transform:rotate(11deg)}}
 @keyframes wave{from{transform:translateX(calc(-10px*var(--s,1)))}to{transform:translateX(calc(10px*var(--s,1)))}}
@@ -451,7 +461,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>

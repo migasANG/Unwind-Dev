@@ -454,7 +454,7 @@
     room.names = names || room.names || COOP_NAMES;
     coopZoomK = 1; coopFocus = -1;
     coop = { room: room, make: make, n: room.boards.length, idx: 0, lives: room.lives || 12, burners: [], effects: [], poemDone: 0, boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
-    propAnims = []; specialFx = []; aim = null; specialBusy = 0;
+    propAnims = []; specialFx = []; aim = null; specialBusy = 0; ballHiddenUntil = 0;
     coop.boards.forEach(function (B, i) {
       if (i === 0) return;
       E.resetBoard(B.level);
@@ -531,7 +531,7 @@
 
   /* ---------- Boarding Up specials: Matchday (a football), Woodland (birds and a slingshot) and The Poem ---------- */
   // Moving balls, birds and letters are drawn from these, so a prop slides along its real path, board by board.
-  var propAnims = [], specialFx = [], aim = null, specialBusy = 0, trips = [], poemUndo = [];
+  var propAnims = [], specialFx = [], aim = null, specialBusy = 0, trips = [], poemUndo = [], ballHiddenUntil = 0;
   function special() { return current && current.level && current.level.special ? current.level.special : ''; }
   function inRoom() { return !!(current && current.coop && coop); }
   function roomLevels() { return inRoom() ? coop.boards.map(function (B) { return B.level; }) : [current.level]; }
@@ -544,8 +544,9 @@
     var t = start;
     segs.forEach(function (sg, i) {
       var len = pathCells(sg.path), dur = Math.max(140, len * perCell), last = i === segs.length - 1;
-      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly, hold: i === 0 && opts && opts.hold });
-      t += dur;
+      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly, hold: i === 0 && opts && opts.hold, edgeOut: !last && opts && opts.edges, edgeIn: i > 0 && opts && opts.edges });
+      // Between boards the prop is gone for a moment before it comes in on the next one.
+      t += dur + (!last && opts && opts.gap ? opts.gap : 0);
     });
     return t;
   }
@@ -606,39 +607,45 @@
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.42, r * 0.22, r * 0.12, -0.6, 0, 7); ctx.fill();
     ctx.restore(); ctx.globalAlpha = 1;
   }
-  // A little round bird drawn like the bees: flat colours, no outlines, big shiny eyes, rosy cheeks and a tuft.
-  // In flight both wings beat.
+  // A little round bird drawn like the bees: flat colours, no outlines. A fan of tail feathers, a big beak,
+  // big shiny eyes and orange feet. In flight both wings beat and the feet tuck in.
   function drawBird(x, y, s, color, face, flap, now) {
     var k = s / 24;
-    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k); ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k);
     var beat = reduced ? 0 : flap ? Math.sin(now / 38) : Math.sin(now / 700) * 0.08;
     var dark = mixColor(color, '#1d1d2a', 0.28), light = mixColor(color, '#ffffff', 0.62);
     // Far wing, behind the body, only while flying.
-    if (flap) { ctx.fillStyle = dark; ctx.save(); ctx.translate(-1, -3); ctx.rotate(-0.6 + beat * 1.1); ctx.beginPath(); ctx.ellipse(-1, -7, 4.5, 8, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
-    // Tail feathers.
-    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-15, -5); ctx.lineTo(-13.5, 0.5); ctx.lineTo(-15, 4.5); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#e39a2a'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
-    if (!flap) [[-3, 8, -3.5, 11.5], [3, 8, 3.5, 11.5]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
+    if (flap) { ctx.fillStyle = dark; ctx.save(); ctx.translate(-1, -3); ctx.rotate(-0.6 + beat * 1.1); ctx.beginPath(); ctx.ellipse(-1, -7, 4.8, 8.5, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
+    // A fan of three tail feathers.
+    ctx.fillStyle = dark;
+    [[-0.55, 8.5], [-0.15, 9.5], [0.25, 8.5]].forEach(function (f) { ctx.save(); ctx.translate(-8, 0); ctx.rotate(Math.PI + f[0]); ctx.beginPath(); ctx.ellipse(f[1] * 0.55, 0, f[1] * 0.62, 2.9, 0, 0, 7); ctx.fill(); ctx.restore(); });
+    // Feet: standing with three toes each, or tucked in while flying.
+    ctx.strokeStyle = '#e8902a'; ctx.lineWidth = 1.7; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    [-3.5, 3].forEach(function (fx) {
+      ctx.beginPath();
+      if (flap) { ctx.moveTo(fx, 8.5); ctx.lineTo(fx - 2.5, 11); }
+      else { ctx.moveTo(fx, 8); ctx.lineTo(fx, 12.5); ctx.moveTo(fx - 2.6, 13.6); ctx.lineTo(fx, 12.5); ctx.lineTo(fx + 2.8, 13.6); ctx.moveTo(fx, 12.5); ctx.lineTo(fx + 0.4, 14.4); }
+      ctx.stroke();
+    });
     // A round body and a pale tummy.
-    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 10, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 4, 7, 5, 0, 0, 7); ctx.fill();
-    // A little tuft on top.
-    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(1, -9); ctx.quadraticCurveTo(0, -15, 4, -16); ctx.quadraticCurveTo(3, -12, 5, -9.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 10.2, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 4.2, 7.2, 5, 0, 0, 7); ctx.fill();
     // Near wing: folded at rest, beating in flight.
     ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1);
-    if (flap) { ctx.rotate(0.3 - beat * 1.2); ctx.beginPath(); ctx.ellipse(-2, -6, 5, 8.5, 0.25, 0, 7); ctx.fill(); }
-    else { ctx.rotate(-0.3 - beat); ctx.beginPath(); ctx.ellipse(-2, 0, 6.5, 4.2, 0.2, 0, 7); ctx.fill(); }
+    if (flap) { ctx.rotate(0.3 - beat * 1.2); ctx.beginPath(); ctx.ellipse(-2, -6, 5.2, 9, 0.25, 0, 7); ctx.fill(); }
+    else { ctx.rotate(-0.3 - beat); ctx.beginPath(); ctx.ellipse(-2, 0, 6.8, 4.4, 0.2, 0, 7); ctx.fill(); }
     ctx.restore();
-    // Beak, cheeks and big eyes with a shine.
-    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(10.5, -2.5); ctx.lineTo(15, -0.5); ctx.lineTo(10.5, 1.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(255,128,150,.55)'; ctx.beginPath(); ctx.ellipse(7.5, 2.2, 2.2, 1.4, 0, 0, 7); ctx.fill();
+    // A big two-part beak.
+    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(9.5, -4); ctx.quadraticCurveTo(15, -3.6, 19, 0); ctx.lineTo(9.5, 0.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e08a1a'; ctx.beginPath(); ctx.moveTo(9.5, 0.6); ctx.lineTo(17, 0.6); ctx.quadraticCurveTo(13, 3.6, 9.5, 3); ctx.closePath(); ctx.fill();
+    // Big eyes with two shines each.
     ctx.fillStyle = '#1a1a24';
-    ctx.beginPath(); ctx.arc(4.6, -3.2, 2.1, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(9, -3.2, 1.9, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(3.6, -3.6, 2.9, 3.3, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(8.8, -3.6, 2.5, 3, 0, 0, 7); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(5.2, -3.9, 0.75, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(9.5, -3.9, 0.65, 0, 7); ctx.fill();
-    ctx.restore(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(4.5, -4.8, 1.1, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(2.9, -2.3, 0.55, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(9.6, -4.7, 0.95, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(8.2, -2.4, 0.45, 0, 7); ctx.fill();
+    ctx.restore();
   }
   // A twig nest with speckled eggs. A bird sitting in it covers the eggs.
   function drawNest(c, sitting, now) {
@@ -744,8 +751,9 @@
     var moving = {};
     anims.forEach(function (an) { if (now < an.start + an.dur + 30) moving[an.id] = 1; });
     if (anims === propAnims || anims.live) trips.forEach(function (o) { moving[o.id] = 1; });
+    var hideBall = anims === propAnims || anims.live ? performance.now() < ballHiddenUntil : false;
     (S.props || []).forEach(function (p) {
-      if (p.gone || moving[p.id]) return;
+      if (p.gone || moving[p.id] || (hideBall && p.kind === 'ball')) return;
       var c = px([p.x, p.y]), held = p.kind === 'letter' && L.slotAt && L.slotAt[p.y * L.w + p.x] === p.ch;
       // A bird on the slingshot sits small in its band, so the slingshot stays easy to see.
       if (p.kind === 'bird' && p.loaded) { drawBird(c.x, c.y - cs * 0.2, cs * 0.3, p.color || '#3d8bf2', 1, false, now); return; }
@@ -756,8 +764,10 @@
       // A prop that waits for its turn (knocked out of a nest) stays where it is until then.
       if (an.b !== b || now > an.start + an.dur + 30) return;
       if (now < an.start && !an.hold) return;
-      var at = animAt(an, now), c = px([at.x, at.y]);
-      var alpha = an.fadeOut && at.t > 0.6 ? Math.max(0, 1 - (at.t - 0.6) / 0.4) : 1;
+      var at = animAt(an, now), c = px([at.x, at.y]), total = pathCells(an.pts), alpha = 1;
+      // Fades go by distance: the last stretch of a prop leaving, the first stretch of one arriving.
+      if (an.fadeOut || an.edgeOut) alpha = Math.min(alpha, Math.max(0, Math.min(1, (total - at.dist) / 0.7)));
+      if (an.edgeIn) alpha = Math.min(alpha, Math.max(0, Math.min(1, at.dist / 0.7)));
       var dx = an.pts[an.pts.length - 1][0] - an.pts[0][0];
       ctx.save(); ctx.globalAlpha = alpha;
       ctx.beginPath(); ctx.rect(ox - cs * 1.2, oy - cs * 1.2, L.w * cs + cs * 2.4, L.h * cs + cs * 2.4); ctx.clip();
@@ -900,6 +910,11 @@
       var p = anyProp(pu.id) || {};
       if (pu.kind === 'ball') {
         var segs = rt && rt.ball ? rt.ball.segs : [{ b: b, path: pu.path }], last = rt && rt.ball ? rt.ball.result : 'moved', spot = rt && rt.ballSpot;
+        if (last === 'out') {
+          // A ball kicked off the pitch rolls on until it is fully out of sight.
+          segs = segs.slice(); var ls = segs[segs.length - 1], lp = ls.path, e1 = lp[lp.length - 1], e0 = lp[lp.length - 2] || e1;
+          segs[segs.length - 1] = { b: ls.b, path: lp.concat([[e1[0] + (e1[0] - e0[0]) * 1.2, e1[1] + (e1[1] - e0[1]) * 1.2]]), exit: ls.exit };
+        }
         specialSound('kick'); buzz(12);
         startTrip({ segs: segs, kind: 'ball', id: pu.id, perCell: 62, delay: 140, fadeOut: last === 'out', onEnd: function (t) { ballLanded(last, t, spot); } });
         return;
@@ -950,9 +965,18 @@
       setCaption(last === 'own' ? 'Own goal! That costs a life. The ball goes back to where it was kicked from.' : 'Out! That costs a life. The ball goes back to where it was kicked from.');
       if (inRoom()) coopSyncLives(); refresh();
       if (state.lives === 0) { finish(false, 'lives'); return; }
-      var k = spot || coop.room.kick;
-      if (coop.idx !== k.b) coopSwitch(k.b);
-      specialFxAdd({ kind: 'pop', b: k.b, cell: [k.x, k.y], start: now + 380, dur: 700 });
+      // The message shows first; a second later the ball comes back where it was kicked from.
+      var k = spot || coop.room.kick, c = current;
+      ballHiddenUntil = Infinity; specialBusy = now + 1600;
+      setTimeout(function () {
+        if (current !== c || ended) return;
+        var wait = 0;
+        if (coop.idx !== k.b) { coopSwitch(k.b); wait = 440; }
+        var at = performance.now() + wait;
+        ballHiddenUntil = at; specialBusy = at + 450;
+        specialFxAdd({ kind: 'pop', b: k.b, cell: [k.x, k.y], start: at, dur: 700 });
+        setTimeout(function () { if (current === c) pluck(659.25, 0, 0.07, 0.4); }, wait);
+      }, 1000);
     }
     whenIdle(specialCheck);
   }
@@ -1065,7 +1089,7 @@
     L.caption = line === 1 && !(progress.tutorials && progress.tutorials.poemBackTip) ? 'Line 2 of ' + n + ': tap this message to go back to line 1.' : 'Line ' + (line + 1) + ' of ' + n + ': push the letters into their slots.';
     save('unwind.progress2', progress);
     begin({ id: P.id, mode: 'poem', poem: idx, line: line, n: n, lines: room.boards.map(function (B) { return B.line; }), level: L, title: P.title + ' · Line ' + (line + 1) + ' of ' + n, chapter: CHAPTERS[timeChapter()], sunY: 40 });
-    state.safe = false; poemUndo = []; trips = []; propAnims = []; specialFx = []; aim = null; specialBusy = 0;
+    state.safe = false; poemUndo = []; trips = []; propAnims = []; specialFx = []; aim = null; specialBusy = 0; ballHiddenUntil = 0;
     boardLayer = null; refresh();
   }
   function lineHtml(line, glow) {
@@ -1713,21 +1737,26 @@
     var el = $('boardMap');
     var show = current && current.coop && coop && !ended && !coop.online && coop.room.boarding !== undefined && coop.room.kind !== 'poem' && coop.n > 1;
     if (!show) { el.hidden = true; el.innerHTML = ''; return; }
-    var row = coop.room.layout === 'row', gap = 22, r = 6.5, pad = 10, pos = [], i;
+    var row = coop.room.layout === 'row', gap = 26, pad = 13, pos = [], i;
     for (i = 0; i < coop.n; i++) { var q = coopPos(i); pos.push([pad + q.c * gap, pad + q.r * gap]); }
     var w = pad * 2 + (row ? (coop.n - 1) * gap : gap), h = pad * 2 + (row ? 0 : (Math.ceil(coop.n / 2) - 1) * gap);
-    var lines = '', dots = '';
+    var trail = '', dots = '';
+    // A dotted trail between neighbouring boards, like a path on a little map.
     for (i = 0; i < coop.n; i++) for (var j = i + 1; j < coop.n; j++) {
       var a = coopPos(i), b = coopPos(j);
-      if (Math.abs(a.c - b.c) + Math.abs(a.r - b.r) === 1) lines += '<line x1="' + pos[i][0] + '" y1="' + pos[i][1] + '" x2="' + pos[j][0] + '" y2="' + pos[j][1] + '"/>';
+      if (Math.abs(a.c - b.c) + Math.abs(a.r - b.r) === 1) trail += '<line class="trail" x1="' + pos[i][0] + '" y1="' + pos[i][1] + '" x2="' + pos[j][0] + '" y2="' + pos[j][1] + '"/>';
     }
+    var STAR = 'M0 -4.6l1.35 2.75 3.05.45-2.2 2.15.52 3.03L0 2.95l-2.72 1.43.52-3.03-2.2-2.15 3.05-.45Z';
     for (i = 0; i < coop.n; i++) {
       var here = i === coop.idx, done = coop.room.kind === 'football' ? false : !!coop.boards[i].state && E.isWon(coop.boards[i].state);
       var ball = coop.room.kind === 'football' && coop.boards[i].state && coop.boards[i].state.props && coop.boards[i].state.props.some(function (p) { return p.kind === 'ball' && !p.gone; });
-      dots += '<circle class="' + (here ? 'here' : done ? 'done' : '') + '" cx="' + pos[i][0] + '" cy="' + pos[i][1] + '" r="' + (here ? r + 1.5 : r) + '"/>';
-      if (ball && !here) dots += '<circle class="ballDot" cx="' + pos[i][0] + '" cy="' + pos[i][1] + '" r="2.4"/>';
+      var x = pos[i][0], y = pos[i][1];
+      if (here) dots += '<circle class="halo" cx="' + x + '" cy="' + y + '" r="11"/><circle class="here" cx="' + x + '" cy="' + y + '" r="8.5"/><circle class="heredot" cx="' + x + '" cy="' + y + '" r="3"/>';
+      else if (done) dots += '<circle class="done" cx="' + x + '" cy="' + y + '" r="7.5"/><path class="star" transform="translate(' + x + ' ' + (y + 0.3) + ')" d="' + STAR + '"/>';
+      else dots += '<circle class="todo" cx="' + x + '" cy="' + y + '" r="7"/>';
+      if (ball && !here) dots += '<circle class="ballDot" cx="' + (x + 6) + '" cy="' + (y - 6) + '" r="3.4"/>';
     }
-    el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" aria-hidden="true">' + lines + dots + '</svg><span>' + (coop.idx + 1) + ' / ' + coop.n + '</span>';
+    el.innerHTML = '<span class="bm-label">' + (coop.idx + 1) + ' / ' + coop.n + '</span><svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" aria-hidden="true">' + trail + dots + '</svg>';
     el.setAttribute('aria-label', 'Board ' + (coop.idx + 1) + ' of ' + coop.n);
     el.hidden = false;
     placeBoardMap();
@@ -1911,7 +1940,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-c';
+  var BUILD = '2026.11.25-d';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3286,7 +3315,7 @@
   }
   // A scene is split into stacked pieces, each cropped to what it shows. Moving pieces then glide on their own
   // layer, so the browser never has to repaint the whole picture. It looks identical, in the same stacking order.
-  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel';
+  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel,.sweep,.glowpulse';
   function bakeScene(bg, season) {
     bg.innerHTML = seasonScene(season);
     var src = bg.querySelector('svg');
@@ -3378,8 +3407,10 @@
       '<rect y="486" width="1000" height="314" fill="url(#cSea)"/>' + trail + swells +
       // The headland on the right, with the lighthouse and its beam sweeping out to sea.
       '<path d="M690 492 C730 452 790 440 840 446 C900 452 960 470 1040 476 L1040 520 L690 520 Z" fill="#141b3c"/>' +
-      '<path d="M712 492 L560 452 L560 512 Z" fill="url(#cBeam)"/>' +
-      '<g transform="translate(760 446)"><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/><circle cy="-84" r="48" fill="url(#cLamp)"/></g>' +
+      // The beam starts at the lamp and sweeps slowly over the sea. The clear circle centres its layer on the lamp,
+      // so the layer turns around the lamp itself.
+      '<g class="sweep"><circle cx="760" cy="362" r="470" fill="#000" opacity="0"/><path d="M760 362 L300 398 A470 470 0 0 1 306 476 Z" fill="url(#cBeam)"/></g>' +
+      '<g transform="translate(760 446)"><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/></g><circle class="glowpulse" cx="760" cy="362" r="54" fill="url(#cLamp)"/>' +
       // The fisherman in his boat, gently rocking.
       '<g class="sway"><g transform="translate(470 616)">' +
       '<ellipse cy="16" rx="78" ry="8" fill="#0a1230" opacity=".7"/>' +
@@ -4945,14 +4976,14 @@
         at: -1, phaseEnd: 0, pending: false, flights: [], bounces: {}, anims: [], fx: [], aim: null, finished: 0 };
     };
     restart();
-    // Boards in a demo sit half a tile apart. A prop that crosses to the next board meets it in the middle of the gap,
-    // so it moves on smoothly instead of jumping back.
+    // A prop that crosses to the next board fades out as it leaves the first one, is gone for a quarter of a second,
+    // then fades in at the edge of the next one.
     var demoSegs = function (segs) {
-      var L0 = run.room.boards[0], gap = run.room.boards.length > 1 ? 0.5 : 0;
+      var L0 = run.room.boards[0];
       return segs.map(function (sg, i) {
         var path = sg.path.map(function (c) { return c.slice(); }), edge = function (c) {
-          if (c[0] >= L0.w) c[0] = L0.w - 0.5 + gap / 2; else if (c[0] < 0) c[0] = -0.5 - gap / 2;
-          if (c[1] >= L0.h) c[1] = L0.h - 0.5 + gap / 2; else if (c[1] < 0) c[1] = -0.5 - gap / 2;
+          if (c[0] >= L0.w) c[0] = L0.w - 0.15; else if (c[0] < 0) c[0] = -0.85;
+          if (c[1] >= L0.h) c[1] = L0.h - 0.15; else if (c[1] < 0) c[1] = -0.85;
         };
         if (i < segs.length - 1) edge(path[path.length - 1]);
         if (i > 0) edge(path[0]);
@@ -4975,7 +5006,7 @@
         run.aim = null;
         if (!r || r.noop) return;
         var keep = propAnims; propAnims = run.anims;
-        var end = animTrip(demoSegs(r.segs), { id: r.id, kind: 'bird', color: bird.color }, now, 70, { fadeOut: r.gone, fly: true, linear: true });
+        var end = animTrip(demoSegs(r.segs), { id: r.id, kind: 'bird', color: bird.color }, now, 70, { fadeOut: r.gone, fly: true, linear: true, edges: true, gap: 250 });
         if (r.chain) { var cb = E.findProp(states[r.chain.b], r.chain.slide.id) || {}; animTrip(demoSegs(r.chain.trip ? r.chain.trip.segs : [{ b: r.chain.b, path: r.chain.slide.path }]), { id: r.chain.slide.id, kind: 'bird', color: cb.color }, end, 70, { fly: true, hold: true }); }
         propAnims = keep;
         if (r.broke) run.fx.push({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: end - 40, dur: 700 });
@@ -5006,11 +5037,11 @@
         var endAt = now + 140, birdTrips = (rt.birds || []).slice();
         res.pushed.forEach(function (pu, pi) {
           var p = E.findProp(states[st.b], pu.id) || {}, from = pi === 0 ? now + 140 : endAt;
-          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(demoSegs(rt.ball.segs), { id: pu.id, kind: 'ball' }, now + 140, 70, {}); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
+          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(demoSegs(rt.ball.segs), { id: pu.id, kind: 'ball' }, now + 140, 70, { edges: true, gap: 250 }); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
           else if (pu.kind === 'bird') {
             // A bird knocked out of a nest starts once the newcomer is in.
             var tr = pu.exit ? birdTrips.shift() : null;
-            endAt = animTrip(demoSegs(tr ? tr.segs : [{ b: st.b, path: pu.path }]), { id: pu.id, kind: 'bird', color: p.color }, from, 80, { fadeOut: !!(tr && tr.result === 'lost'), fly: true, hold: pi > 0 });
+            endAt = animTrip(demoSegs(tr ? tr.segs : [{ b: st.b, path: pu.path }]), { id: pu.id, kind: 'bird', color: p.color }, from, 80, { fadeOut: !!(tr && tr.result === 'lost'), fly: true, hold: pi > 0, edges: true, gap: 250 });
           }
           else endAt = animTrip([{ b: st.b, path: pu.path }], { id: pu.id, kind: pu.kind, color: p.color, ch: p.ch }, now + 140, pu.kind === 'letter' ? 150 : 70, {});
         });
