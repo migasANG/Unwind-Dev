@@ -198,6 +198,35 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 .oguide span{color:#e8e2ff!important;opacity:.9}
 
 .sweep{animation:sweep 9s ease-in-out infinite alternate;transform-origin:50% 50%}
+/* Painted season backgrounds: everything that moves on top of the picture (distances in picture units x --s). */
+.pdrift{animation:pdrift 80s ease-in-out infinite alternate}
+@keyframes pdrift{from{transform:translateX(calc(var(--a,-80)*var(--s,1)*1px))}to{transform:translateX(calc(var(--b,100)*var(--s,1)*1px))}}
+.psmoke{animation:psmoke 7.5s linear infinite;opacity:0}
+@keyframes psmoke{0%{transform:translate(0,0) scale(.5);opacity:0}8%{opacity:.95}50%{opacity:.6}100%{transform:translate(calc(var(--dx,60)*var(--s,1)*1px),calc(var(--dy,-300)*var(--s,1)*1px)) scale(2.4);opacity:0}}
+.pglow{animation:pglow 6s ease-in-out infinite;mix-blend-mode:screen}
+@keyframes pglow{0%,100%{opacity:.45}9%{opacity:.75}14%{opacity:.5}31%{opacity:.85}38%{opacity:.6}55%{opacity:1}62%{opacity:.55}78%{opacity:.8}88%{opacity:.5}}
+.pfall{animation:pfall 16s linear infinite}
+.prise{animation:pfall 30s linear infinite reverse}
+@keyframes pfall{0%{transform:translate(0,calc(var(--h)*var(--s,1)*-1px))}40%{transform:translate(calc(var(--g,0)*.15*var(--s,1)*1px),calc(var(--h)*var(--s,1)*-.6px))}55%{transform:translate(calc(var(--g,0)*var(--s,1)*1px),calc(var(--h)*var(--s,1)*-.45px))}75%{transform:translate(calc(var(--g,0)*.4*var(--s,1)*1px),calc(var(--h)*var(--s,1)*-.25px))}100%{transform:translate(0,0)}}
+.pflutter{animation:pflutter 11s linear infinite;opacity:0}
+@keyframes pflutter{0%{transform:translate(0,0) rotate(0);opacity:0}6%{opacity:1}25%{transform:translate(calc(var(--fx)*.32*var(--s,1)*1px),calc(var(--fy)*.2*var(--s,1)*1px)) rotate(calc(var(--r,300)*.25deg))}45%{transform:translate(calc(var(--fx)*.4*var(--s,1)*1px),calc(var(--fy)*.45*var(--s,1)*1px)) rotate(calc(var(--r,300)*.45deg))}70%{transform:translate(calc(var(--fx)*.78*var(--s,1)*1px),calc(var(--fy)*.68*var(--s,1)*1px)) rotate(calc(var(--r,300)*.7deg))}92%{opacity:1}100%{transform:translate(calc(var(--fx)*var(--s,1)*1px),calc(var(--fy)*var(--s,1)*1px)) rotate(calc(var(--r,300)*1deg));opacity:0}}
+.pbutter{animation:pbutter 18s ease-in-out infinite}
+@keyframes pbutter{0%,100%{transform:translate(0,0)}15%{transform:translate(calc(60px*var(--k)*var(--s,1)),calc(-45px*var(--k)*var(--s,1)))}32%{transform:translate(calc(130px*var(--k)*var(--s,1)),calc(-20px*var(--k)*var(--s,1)))}50%{transform:translate(calc(90px*var(--k)*var(--s,1)),calc(30px*var(--k)*var(--s,1)))}68%{transform:translate(calc(-30px*var(--k)*var(--s,1)),calc(-35px*var(--k)*var(--s,1)))}84%{transform:translate(calc(-60px*var(--k)*var(--s,1)),calc(10px*var(--k)*var(--s,1)))}}
+.pwingl,.pwingr{animation:pwing .32s ease-in-out infinite alternate;transform-box:fill-box}
+.pwingl{transform-origin:100% 40%}.pwingr{transform-origin:0 40%}
+@keyframes pwing{from{transform:scaleX(1)}to{transform:scaleX(.25)}}
+.pbee{animation:pbee 7s ease-in-out infinite}
+@keyframes pbee{0%,100%{transform:translate(0,0)}12%{transform:translate(calc(22px*var(--k)*var(--s,1)),calc(-14px*var(--k)*var(--s,1)))}25%{transform:translate(calc(48px*var(--k)*var(--s,1)),calc(4px*var(--k)*var(--s,1)))}40%{transform:translate(calc(30px*var(--k)*var(--s,1)),calc(18px*var(--k)*var(--s,1)))}55%{transform:translate(calc(-6px*var(--k)*var(--s,1)),calc(-10px*var(--k)*var(--s,1)))}72%{transform:translate(calc(-30px*var(--k)*var(--s,1)),calc(8px*var(--k)*var(--s,1)))}86%{transform:translate(calc(-12px*var(--k)*var(--s,1)),calc(16px*var(--k)*var(--s,1)))}}
+.pbuzz{animation:pbuzz .09s linear infinite alternate}
+@keyframes pbuzz{from{opacity:.9}to{opacity:.25}}
+.pbird{animation:pbird 40s linear infinite;opacity:0}
+@keyframes pbird{0%{transform:translate(0,0);opacity:0}4%{opacity:1}25%{transform:translate(calc(var(--fx)*.25*var(--s,1)*1px),calc(-30*var(--s,1)*1px))}50%{transform:translate(calc(var(--fx)*.5*var(--s,1)*1px),calc(10*var(--s,1)*1px))}75%{transform:translate(calc(var(--fx)*.75*var(--s,1)*1px),calc(-20*var(--s,1)*1px))}96%{opacity:1}100%{transform:translate(calc(var(--fx)*var(--s,1)*1px),0);opacity:0}}
+.pflap{animation:pflap .45s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes pflap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
+.pfire{animation:pfire 3s ease-in-out infinite alternate}
+@keyframes pfire{0%{opacity:.05;transform:translate(0,0)}60%{opacity:.95}100%{opacity:.2;transform:translate(calc(var(--fx)*var(--s,1)*1px),calc(var(--fy)*var(--s,1)*1px))}}
+.pgust{animation:pgust 12s ease-in-out infinite;opacity:0}
+@keyframes pgust{0%{transform:translateX(calc(var(--d)*var(--s,1)*-.4px));opacity:0}6%{opacity:.7}18%{opacity:.5}24%{transform:translateX(calc(var(--d)*var(--s,1)*.6px));opacity:0}100%{transform:translateX(calc(var(--d)*var(--s,1)*.6px));opacity:0}}
 @keyframes sweep{from{transform:rotate(-13deg)}to{transform:rotate(5deg)}}
 .glowpulse{animation:glowpulse 3s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 50%}
 @keyframes glowpulse{from{opacity:.65;transform:scale(.9)}to{opacity:1;transform:scale(1.08)}}
@@ -533,7 +562,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbuzz,.pbird,.pflap,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>

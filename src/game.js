@@ -258,6 +258,8 @@
     if (!rotating()) return;
     var ask = ++bgRequest, choice = shownBackground(), next = SEASONS[choice] ? choice : null, old = $('seasonBg');
     if ((old.getAttribute('data-season') || null) === next && !old.hidden === !!next) { commitBackground(ask, null, next); return; }
+    // A painted season fades in only once its picture has loaded.
+    if (next && photoSeason(next) && !photoReady(next)) { photoLoad(next, function () { if (ask === bgRequest) applyBackgroundNow(); }); return; }
     var fresh = document.createElement('div');
     fresh.className = 'scenebg pending';
     old.parentNode.insertBefore(fresh, old.nextSibling);
@@ -1994,7 +1996,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-l';
+  var BUILD = '2026.11.25-m';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3384,6 +3386,7 @@
   }
   function applySeason(season) {
     activeScene = season;
+    if (season && photoSeason(season)) { photoLoad(season); if (!applySeason.pre) { applySeason.pre = 1; setTimeout(photoPreloadAll, 2500); } }
     document.body.classList.toggle('season', !!season);
     $('sun').hidden = !!season;
     var bg = $('seasonBg');
@@ -3392,7 +3395,7 @@
   }
   // A scene is split into stacked pieces, each cropped to what it shows. Moving pieces then glide on their own
   // layer, so the browser never has to repaint the whole picture. It looks identical, in the same stacking order.
-  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel,.sweep,.glowpulse,.fishj,.fring';
+  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pbee,.pbird,.pfire,.pgust';
   function bakeScene(bg, season) {
     bg.innerHTML = seasonScene(season);
     var src = bg.querySelector('svg');
@@ -3547,8 +3550,10 @@
       // Dark rocks along the near shore give the board a calm, deep backdrop.
       '<path d="M-40 800 L-40 742 C60 724 140 736 220 730 C320 722 380 744 470 738 C560 732 640 718 740 728 C840 738 920 724 1040 732 L1040 800 Z" fill="#0c1130"/>');
   }
+  /*__PHOTO_SCENES__*/
   function seasonScene(season) {
     if (season === 'coast') return coastScene();
+    if (photoSeason(season)) return photoScene(season);
     if (season === 'winter') {
       var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-5" y="-4" width="10" height="20" fill="#4a3528"/><path d="M0-96 20-66H9L30-36H13L38-2H-38L-13-36H-30L-9-66H-20Z" fill="#1f5a50"/><path d="M0-96 20-66H9L30-36H13L38-2H0Z" fill="#17473f"/><path d="M0-96 13-76 3-79-3-73-13-76ZM-22-50-9-54-3-47 7-53 22-50 13-36-3-41-13-36ZM-31-14-14-20-3-12 11-20 31-14 38-2H-38Z" fill="#fff"/></g>'; };
       var man = function (x, y, k, b2) { return '<g class="sway' + (b2 ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="10" rx="32" ry="7" fill="#b9d3e6" opacity=".8"/><circle cy="-16" r="26" fill="url(#wSnow)"/><circle cy="-52" r="19" fill="url(#wSnow)"/><circle cy="-80" r="14" fill="url(#wSnow)"/><circle cx="-5" cy="-83" r="2" fill="#1c2238"/><circle cx="5" cy="-83" r="2" fill="#1c2238"/><path d="M0-79 15-75 0-73Z" fill="#f08020"/><path d="M-6-74Q0-70 6-74" fill="none" stroke="#1c2238" stroke-width="1.500" stroke-dasharray="1.500 2"/><path d="M-14-68Q0-61 14-68V-62Q0-55-14-62Z" fill="#c8323c"/><path d="M6-62h8v20h-8Z" fill="#c8323c"/><path d="M6-48h8M6-44h8" stroke="#fff" stroke-width="1.500"/><rect x="-13" y="-108" width="26" height="17" rx="1" fill="#22243a"/><rect x="-13" y="-96" width="26" height="4" fill="#c8323c"/><rect x="-19" y="-92" width="38" height="4" rx="2" fill="#22243a"/><circle cy="-53" r="2.200" fill="#1c2238"/><circle cy="-43" r="2.200" fill="#1c2238"/><circle cy="-22" r="2.400" fill="#1c2238"/><path d="M-18-54-44-68M-34-63-42-58M-34-63-40-72M18-54 44-70M34-64 42-60M34-64 40-74" fill="none" stroke="#5a3e2a" stroke-width="2.800" stroke-linecap="round"/></g></g>'; };
