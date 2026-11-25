@@ -99,16 +99,30 @@
           '<g class="pwingr"><path d="M0 0C4-12 18-14 17-4 16 3 8 4 0 2ZM0 2C6 4 12 10 8 13 4 15 0 8 0 4Z" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="1"/></g>' +
           '<ellipse rx="1.6" ry="6" cy="3" fill="#3b2a24"/><path d="M-1-3-4-9M1-3 4-9" stroke="#3b2a24" stroke-width=".8" fill="none"/></g></g>';
       });
+      // The same bee as the one that flies over the board in spring levels.
       var bee = T(port ? 360 : 330, 1240);
-      out += '<g class="pbee" style="--k:' + f(U) + '"><g transform="translate(' + f(bee[0]) + ' ' + f(bee[1]) + ') scale(' + f(1.3 * U) + ')">' +
-        '<g class="pbuzz"><ellipse cx="-3" cy="-7" rx="5" ry="3.5" fill="#fff" opacity=".8"/><ellipse cx="3" cy="-7" rx="5" ry="3.5" fill="#fff" opacity=".8"/></g>' +
-        '<ellipse rx="8" ry="5.5" fill="#ffcf2e"/><path d="M-3-5V5M2-5.3V5.3" stroke="#3b2a24" stroke-width="2.4"/><circle cx="7.5" cy="-1" r="3.2" fill="#3b2a24"/></g></g>';
+      out += '<g class="pbee" style="--k:' + f(U) + '"><g transform="translate(' + f(bee[0]) + ' ' + f(bee[1]) + ') scale(' + f(1.5 * U) + ')">' +
+        '<g transform="translate(-3 -7) rotate(-23)"><g class="pbwl"><ellipse cy="-4" rx="3.6" ry="5.6" fill="#fff" fill-opacity=".85"/></g></g>' +
+        '<g transform="translate(2 -7) rotate(17)"><g class="pbwr"><ellipse cy="-4" rx="3.6" ry="5.6" fill="#fff" fill-opacity=".85"/></g></g>' +
+        '<path d="M-5 7-6.5 11M0 8V12M5 7 6.5 11" stroke="#222" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
+        '<ellipse rx="11" ry="8" fill="#f7c948"/><path d="M-6.5-6.5h3V6.5h-3ZM-.5-7.9h3V7.9h-3Z" fill="#6b4a2b"/>' +
+        '<circle cx="5.8" cy="-2" r="1.4" fill="#000"/><circle cx="9" cy="-2" r="1.4" fill="#000"/></g></g>';
     } else if (season === 'summer') {
       // Birds crossing the sky, pollen floating up in the warm air, and fireflies glowing in the bushes.
-      for (i = 0; i < 3; i++) {
-        var by2 = H * (port ? 0.12 + i * 0.1 : 0.1 + i * 0.07), bs = (1.4 + r() * 0.6) * U;
-        out += '<g class="pbird" style="--fx:' + Math.round(W * 1.35) + ';animation-duration:' + (34 + i * 9) + 's;animation-delay:' + (-i * 13) + 's"><g transform="translate(' + f(-W * 0.15) + ' ' + f(by2) + ') scale(' + f(bs) + ')"><g class="pflap" style="animation-delay:' + (-i * 0.2).toFixed(1) + 's"><path d="M-14 0Q-7-8 0 0Q7-8 14 0" fill="none" stroke="#3a3f52" stroke-width="2.4" stroke-linecap="round"/></g></g></g>';
-      }
+      // A small flock of swallows: dark blue backs, cream bellies, a red throat and forked tails, flapping as they go.
+      var swallow = function (dx, dy, k2, d) {
+        var wing = function (c, sc) { return '<g transform="translate(-1 -3) scale(' + sc + ')"><g class="pwingup" style="animation-delay:' + d + 's"><path d="M0 0C-4-10-1-19 8-23 6-14 9-6 6 0Z" fill="' + c + '"/></g></g>'; };
+        return '<g transform="translate(' + dx + ' ' + dy + ') scale(' + k2 + ')">' + wing('#25304d', 0.8) +
+          '<path d="M-11-1-28-8-21-.5-29 6-11 2Z" fill="#26314e"/><ellipse rx="13" ry="6.5" fill="#2f3b5c"/><ellipse cx="3" cy="2.6" rx="8.5" ry="3.4" fill="#f3e4cf"/>' +
+          '<circle cx="12" cy="-2.5" r="5.6" fill="#2f3b5c"/><circle cx="14.2" cy="1" r="2.4" fill="#d9603b"/><circle cx="13.9" cy="-3.6" r="1.4" fill="#fff"/><circle cx="14.3" cy="-3.6" r=".75" fill="#111"/>' +
+          '<path d="M17.2-2.6 21.6-1.4 17.2-.2Z" fill="#f0a83a"/>' + wing('#3c4b74', 1) + '</g>';
+      };
+      [[0.12, 3, 34], [0.24, 2, 47]].forEach(function (fl, j) {
+        var by2 = H * (port ? fl[0] + 0.04 : fl[0]), bs = 1.6 * U, birds = '';
+        var spots2 = [[0, 0, 1], [-52, -26, 0.85], [-64, 26, 0.9]];
+        for (var q = 0; q < fl[1]; q++) birds += swallow(spots2[q][0], spots2[q][1], spots2[q][2], (-q * 0.17 - j * 0.3).toFixed(2));
+        out += '<g class="pbird" style="--fx:' + Math.round(W * 1.35) + ';animation-duration:' + fl[2] + 's;animation-delay:' + (-j * 19) + 's"><g transform="translate(' + f(-W * 0.15) + ' ' + f(by2) + ') scale(' + f(bs) + ')">' + birds + '</g></g>';
+      });
       out += photoSheet('prise', 34, W, H, r, function (x, y, a) { return '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f((1.6 + a * 1.6) * U) + '" fill="#fff6c8" opacity="' + f(0.45 + a * 0.4) + '"/>'; }, '--g:120;animation-duration:38s');
       var bushes = port ? [[120, 1450], [520, 1560], [1120, 1500]] : [[150, 1450], [520, 1560], [3050, 1450], [2700, 1600]];
       for (i = 0; i < 10; i++) {

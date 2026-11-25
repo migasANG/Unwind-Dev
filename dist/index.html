@@ -219,12 +219,12 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 @keyframes pwing{from{transform:scaleX(1)}to{transform:scaleX(.25)}}
 .pbee{animation:pbee 7s ease-in-out infinite}
 @keyframes pbee{0%,100%{transform:translate(0,0)}12%{transform:translate(calc(22px*var(--k)*var(--s,1)),calc(-14px*var(--k)*var(--s,1)))}25%{transform:translate(calc(48px*var(--k)*var(--s,1)),calc(4px*var(--k)*var(--s,1)))}40%{transform:translate(calc(30px*var(--k)*var(--s,1)),calc(18px*var(--k)*var(--s,1)))}55%{transform:translate(calc(-6px*var(--k)*var(--s,1)),calc(-10px*var(--k)*var(--s,1)))}72%{transform:translate(calc(-30px*var(--k)*var(--s,1)),calc(8px*var(--k)*var(--s,1)))}86%{transform:translate(calc(-12px*var(--k)*var(--s,1)),calc(16px*var(--k)*var(--s,1)))}}
-.pbuzz{animation:pbuzz .09s linear infinite alternate}
-@keyframes pbuzz{from{opacity:.9}to{opacity:.25}}
+.pbwl{animation:pbwl .17s ease-in-out infinite alternate}.pbwr{animation:pbwr .17s ease-in-out infinite alternate}
+@keyframes pbwl{from{transform:rotate(17deg)}to{transform:rotate(-17deg)}}@keyframes pbwr{from{transform:rotate(-17deg)}to{transform:rotate(17deg)}}
+.pwingup{animation:pwingup .42s ease-in-out infinite alternate}
+@keyframes pwingup{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
 .pbird{animation:pbird 40s linear infinite;opacity:0}
 @keyframes pbird{0%{transform:translate(0,0);opacity:0}4%{opacity:1}25%{transform:translate(calc(var(--fx)*.25*var(--s,1)*1px),calc(-30*var(--s,1)*1px))}50%{transform:translate(calc(var(--fx)*.5*var(--s,1)*1px),calc(10*var(--s,1)*1px))}75%{transform:translate(calc(var(--fx)*.75*var(--s,1)*1px),calc(-20*var(--s,1)*1px))}96%{opacity:1}100%{transform:translate(calc(var(--fx)*var(--s,1)*1px),0);opacity:0}}
-.pflap{animation:pflap .45s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
-@keyframes pflap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
 .pfire{animation:pfire 3s ease-in-out infinite alternate}
 @keyframes pfire{0%{opacity:.05;transform:translate(0,0)}60%{opacity:.95}100%{opacity:.2;transform:translate(calc(var(--fx)*var(--s,1)*1px),calc(var(--fy)*var(--s,1)*1px))}}
 .pgust{animation:pgust 12s ease-in-out infinite;opacity:0}
@@ -564,7 +564,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbuzz,.pbird,.pflap,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbwl,.pbwr,.pbird,.pwingup,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>
@@ -5360,7 +5360,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-m';
+  var BUILD = '2026.11.25-n';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -7015,16 +7015,30 @@ window.UnwindI18n = (function () {
           '<g class="pwingr"><path d="M0 0C4-12 18-14 17-4 16 3 8 4 0 2ZM0 2C6 4 12 10 8 13 4 15 0 8 0 4Z" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="1"/></g>' +
           '<ellipse rx="1.6" ry="6" cy="3" fill="#3b2a24"/><path d="M-1-3-4-9M1-3 4-9" stroke="#3b2a24" stroke-width=".8" fill="none"/></g></g>';
       });
+      // The same bee as the one that flies over the board in spring levels.
       var bee = T(port ? 360 : 330, 1240);
-      out += '<g class="pbee" style="--k:' + f(U) + '"><g transform="translate(' + f(bee[0]) + ' ' + f(bee[1]) + ') scale(' + f(1.3 * U) + ')">' +
-        '<g class="pbuzz"><ellipse cx="-3" cy="-7" rx="5" ry="3.5" fill="#fff" opacity=".8"/><ellipse cx="3" cy="-7" rx="5" ry="3.5" fill="#fff" opacity=".8"/></g>' +
-        '<ellipse rx="8" ry="5.5" fill="#ffcf2e"/><path d="M-3-5V5M2-5.3V5.3" stroke="#3b2a24" stroke-width="2.4"/><circle cx="7.5" cy="-1" r="3.2" fill="#3b2a24"/></g></g>';
+      out += '<g class="pbee" style="--k:' + f(U) + '"><g transform="translate(' + f(bee[0]) + ' ' + f(bee[1]) + ') scale(' + f(1.5 * U) + ')">' +
+        '<g transform="translate(-3 -7) rotate(-23)"><g class="pbwl"><ellipse cy="-4" rx="3.6" ry="5.6" fill="#fff" fill-opacity=".85"/></g></g>' +
+        '<g transform="translate(2 -7) rotate(17)"><g class="pbwr"><ellipse cy="-4" rx="3.6" ry="5.6" fill="#fff" fill-opacity=".85"/></g></g>' +
+        '<path d="M-5 7-6.5 11M0 8V12M5 7 6.5 11" stroke="#222" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
+        '<ellipse rx="11" ry="8" fill="#f7c948"/><path d="M-6.5-6.5h3V6.5h-3ZM-.5-7.9h3V7.9h-3Z" fill="#6b4a2b"/>' +
+        '<circle cx="5.8" cy="-2" r="1.4" fill="#000"/><circle cx="9" cy="-2" r="1.4" fill="#000"/></g></g>';
     } else if (season === 'summer') {
       // Birds crossing the sky, pollen floating up in the warm air, and fireflies glowing in the bushes.
-      for (i = 0; i < 3; i++) {
-        var by2 = H * (port ? 0.12 + i * 0.1 : 0.1 + i * 0.07), bs = (1.4 + r() * 0.6) * U;
-        out += '<g class="pbird" style="--fx:' + Math.round(W * 1.35) + ';animation-duration:' + (34 + i * 9) + 's;animation-delay:' + (-i * 13) + 's"><g transform="translate(' + f(-W * 0.15) + ' ' + f(by2) + ') scale(' + f(bs) + ')"><g class="pflap" style="animation-delay:' + (-i * 0.2).toFixed(1) + 's"><path d="M-14 0Q-7-8 0 0Q7-8 14 0" fill="none" stroke="#3a3f52" stroke-width="2.4" stroke-linecap="round"/></g></g></g>';
-      }
+      // A small flock of swallows: dark blue backs, cream bellies, a red throat and forked tails, flapping as they go.
+      var swallow = function (dx, dy, k2, d) {
+        var wing = function (c, sc) { return '<g transform="translate(-1 -3) scale(' + sc + ')"><g class="pwingup" style="animation-delay:' + d + 's"><path d="M0 0C-4-10-1-19 8-23 6-14 9-6 6 0Z" fill="' + c + '"/></g></g>'; };
+        return '<g transform="translate(' + dx + ' ' + dy + ') scale(' + k2 + ')">' + wing('#25304d', 0.8) +
+          '<path d="M-11-1-28-8-21-.5-29 6-11 2Z" fill="#26314e"/><ellipse rx="13" ry="6.5" fill="#2f3b5c"/><ellipse cx="3" cy="2.6" rx="8.5" ry="3.4" fill="#f3e4cf"/>' +
+          '<circle cx="12" cy="-2.5" r="5.6" fill="#2f3b5c"/><circle cx="14.2" cy="1" r="2.4" fill="#d9603b"/><circle cx="13.9" cy="-3.6" r="1.4" fill="#fff"/><circle cx="14.3" cy="-3.6" r=".75" fill="#111"/>' +
+          '<path d="M17.2-2.6 21.6-1.4 17.2-.2Z" fill="#f0a83a"/>' + wing('#3c4b74', 1) + '</g>';
+      };
+      [[0.12, 3, 34], [0.24, 2, 47]].forEach(function (fl, j) {
+        var by2 = H * (port ? fl[0] + 0.04 : fl[0]), bs = 1.6 * U, birds = '';
+        var spots2 = [[0, 0, 1], [-52, -26, 0.85], [-64, 26, 0.9]];
+        for (var q = 0; q < fl[1]; q++) birds += swallow(spots2[q][0], spots2[q][1], spots2[q][2], (-q * 0.17 - j * 0.3).toFixed(2));
+        out += '<g class="pbird" style="--fx:' + Math.round(W * 1.35) + ';animation-duration:' + fl[2] + 's;animation-delay:' + (-j * 19) + 's"><g transform="translate(' + f(-W * 0.15) + ' ' + f(by2) + ') scale(' + f(bs) + ')">' + birds + '</g></g>';
+      });
       out += photoSheet('prise', 34, W, H, r, function (x, y, a) { return '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f((1.6 + a * 1.6) * U) + '" fill="#fff6c8" opacity="' + f(0.45 + a * 0.4) + '"/>'; }, '--g:120;animation-duration:38s');
       var bushes = port ? [[120, 1450], [520, 1560], [1120, 1500]] : [[150, 1450], [520, 1560], [3050, 1450], [2700, 1600]];
       for (i = 0; i < 10; i++) {

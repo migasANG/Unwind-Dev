@@ -217,12 +217,12 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 @keyframes pwing{from{transform:scaleX(1)}to{transform:scaleX(.25)}}
 .pbee{animation:pbee 7s ease-in-out infinite}
 @keyframes pbee{0%,100%{transform:translate(0,0)}12%{transform:translate(calc(22px*var(--k)*var(--s,1)),calc(-14px*var(--k)*var(--s,1)))}25%{transform:translate(calc(48px*var(--k)*var(--s,1)),calc(4px*var(--k)*var(--s,1)))}40%{transform:translate(calc(30px*var(--k)*var(--s,1)),calc(18px*var(--k)*var(--s,1)))}55%{transform:translate(calc(-6px*var(--k)*var(--s,1)),calc(-10px*var(--k)*var(--s,1)))}72%{transform:translate(calc(-30px*var(--k)*var(--s,1)),calc(8px*var(--k)*var(--s,1)))}86%{transform:translate(calc(-12px*var(--k)*var(--s,1)),calc(16px*var(--k)*var(--s,1)))}}
-.pbuzz{animation:pbuzz .09s linear infinite alternate}
-@keyframes pbuzz{from{opacity:.9}to{opacity:.25}}
+.pbwl{animation:pbwl .17s ease-in-out infinite alternate}.pbwr{animation:pbwr .17s ease-in-out infinite alternate}
+@keyframes pbwl{from{transform:rotate(17deg)}to{transform:rotate(-17deg)}}@keyframes pbwr{from{transform:rotate(-17deg)}to{transform:rotate(17deg)}}
+.pwingup{animation:pwingup .42s ease-in-out infinite alternate}
+@keyframes pwingup{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
 .pbird{animation:pbird 40s linear infinite;opacity:0}
 @keyframes pbird{0%{transform:translate(0,0);opacity:0}4%{opacity:1}25%{transform:translate(calc(var(--fx)*.25*var(--s,1)*1px),calc(-30*var(--s,1)*1px))}50%{transform:translate(calc(var(--fx)*.5*var(--s,1)*1px),calc(10*var(--s,1)*1px))}75%{transform:translate(calc(var(--fx)*.75*var(--s,1)*1px),calc(-20*var(--s,1)*1px))}96%{opacity:1}100%{transform:translate(calc(var(--fx)*var(--s,1)*1px),0);opacity:0}}
-.pflap{animation:pflap .45s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
-@keyframes pflap{from{transform:scaleY(1)}to{transform:scaleY(-.5)}}
 .pfire{animation:pfire 3s ease-in-out infinite alternate}
 @keyframes pfire{0%{opacity:.05;transform:translate(0,0)}60%{opacity:.95}100%{opacity:.2;transform:translate(calc(var(--fx)*var(--s,1)*1px),calc(var(--fy)*var(--s,1)*1px))}}
 .pgust{animation:pgust 12s ease-in-out infinite;opacity:0}
@@ -562,7 +562,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbuzz,.pbird,.pflap,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbwl,.pbwr,.pbird,.pwingup,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>
