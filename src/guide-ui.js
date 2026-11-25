@@ -53,6 +53,8 @@
       guide.beamAt = now; guide.aim = -1;
       pluck(659.25, 0, 0.05, 1.4); pluck(987.77, 0.06, 0.04, 1.6);
       if (G.serpents.some(function (s) { return s.frozen; }) && (guide.local || guide.role === 'keeper')) setTimeout(function () { pluck(196, 0, 0.06, 0.5); pluck(220, 0.12, 0.05, 0.5); }, 280);
+    } else if (act.a === 'rekindle') {
+      pluck(196, 0, 0.06, 0.8); pluck(293.66, 0.15, 0.05, 1); pluck(392, 0.3, 0.05, 1.2);
     } else if (act.a === 'flare') {
       pluck(1318.5, 0, 0.06, 0.6); pluck(1760, 0.08, 0.05, 0.8);
     } else if (act.a === 'sail') {
@@ -68,15 +70,12 @@
       if (log.washBack) setTimeout(function () { specialSound('out'); }, 200);
     }
     if (G.ended) setTimeout(function () { if (guide && guide.G === G) guideEnd(); }, guide.anim ? guide.anim.boatDur + 900 : 300);
-    else if (guide.local && before.phase !== G.phase && (G.phase === 'boat' || G.phase === 'keeper')) {
-      // On one device the screen covers up before the other player looks, unless the same player goes again
-      // (on Hard, when the lamp is cooling down the captain sails twice in a row).
-      var delay = guide.anim ? guide.anim.boatDur + 600 : 900;
-      if (act.a === 'beam' || G.phase === 'keeper') setTimeout(function () { if (guide && guide.G === G && !G.ended) guideCover(true); }, delay);
-      else setTimeout(function () { if (guide && guide.G === G) guideToast('The lamp is cooling down. Captain, sail on.'); }, delay);
+    else if (guide.local && before.phase !== G.phase) {
+      // On one device the screen covers up before the other player looks.
+      setTimeout(function () { if (guide && guide.G === G && !G.ended) guideCover(true); }, guide.anim ? guide.anim.boatDur + 600 : 900);
     } else if (!guide.local && G.phase !== before.phase && !G.ended) {
       var mine = guideMine();
-      setTimeout(function () { if (guide && guide.G === G && mine) { pluck(784, 0, 0.05, 0.4); guideToast(G.phase === 'keeper' ? 'Your turn: shine the light.' : (before.round !== G.round && guide.role === 'boat' ? 'The lamp is cooling down. Sail on.' : 'Your turn: catch a wave.')); } }, guide.anim ? guide.anim.boatDur + 400 : 300);
+      setTimeout(function () { if (guide && guide.G === G && mine) { pluck(784, 0, 0.05, 0.4); guideToast(G.phase === 'keeper' ? (G.lampOut ? 'Your turn: rekindle the light.' : 'Your turn: shine the light.') : (act.a === 'rekindle' ? 'The light is out this round. Your turn: catch a wave.' : 'Your turn: catch a wave.')); } }, guide.anim ? guide.anim.boatDur + 400 : 300);
     }
     guideHud();
     return true;
@@ -115,24 +114,28 @@
     var wind = el.querySelector('.g-wind');
     wind.hidden = !G.hard;
     if (G.hard) wind.querySelector('.g-windarrow').style.transform = 'rotate(' + (G.wind * 90) + 'deg)';
+    el.querySelector('.g-flares b').textContent = G.flares;
     var msg = '', btns = '';
     if (guide.cover) msg = '';
     else if (G.ended) msg = G.ended === 'won' ? 'Home safe!' : 'Lost at sea…';
     else if (G.phase === 'keeper') {
-      if (role === 'keeper' && mine) { msg = guide.aim >= 0 ? 'Shine the light this way?' : 'Tap the sea to aim the light.'; btns = '<button class="primary" id="gShine"' + (guide.aim >= 0 ? '' : ' disabled') + '>Shine</button>'; }
-      else msg = 'The keeper is aiming the light…';
+      if (role === 'keeper' && mine && G.lampOut) { msg = 'The light went out. Rekindle it now, and it shines again next round.'; btns = '<button class="primary" id="gRekindle">Rekindle the light</button>'; }
+      else if (role === 'keeper' && mine) { msg = guide.aim >= 0 ? 'Shine the light this way?' : 'Tap the sea to aim the light.'; btns = '<button class="primary" id="gShine"' + (guide.aim >= 0 ? '' : ' disabled') + '>Shine</button>'; }
+      else msg = G.lampOut ? 'The light is out. The keeper is rekindling it…' : 'The keeper is aiming the light…';
     } else {
       if (role === 'boat' && mine) {
-        var waves = Gd.catchable(G).length;
+        var waves = Gd.catchable(G).length, canWait = Gd.canWait(G);
         msg = waves ? 'Tap a wave next to the boat to ride it.' : 'No waves next to the boat. Wait for the sea to change.';
-        btns = '<button id="gWait">Wait</button><button id="gFlare"' + (G.flares > 0 && !G.flareUsed ? '' : ' disabled') + '>Flare <span class="notr">' + G.flares + '</span></button>' +
+        if (!canWait) msg = 'You waited last round: catch a wave this time.';
+        btns = '<button id="gWait"' + (canWait ? '' : ' disabled') + '>Wait</button><button id="gFlare"' + (G.flares > 0 && !G.flareUsed ? '' : ' disabled') + '>Use a flare</button>' +
           (G.hard ? '<button id="gSail" aria-pressed="' + G.sail + '">' + (G.sail ? 'Sail up' : 'Sail down') + '</button>' : '');
-      } else msg = !Gd.lampWorks(G) && guide.role === 'keeper' ? 'The lamp is cooling down. The captain sails…' : 'The captain is sailing…';
+      } else msg = 'The captain is sailing…';
     }
     el.querySelector('.g-msg').textContent = msg;
     var row = el.querySelector('.g-btns');
     row.innerHTML = btns;
     if (row.querySelector('#gShine')) row.querySelector('#gShine').onclick = function () { if (guide.aim >= 0) guideAct({ a: 'beam', dir: guide.aim }); };
+    if (row.querySelector('#gRekindle')) row.querySelector('#gRekindle').onclick = function () { guideAct({ a: 'rekindle' }); };
     if (row.querySelector('#gWait')) row.querySelector('#gWait').onclick = function () { guideAct({ a: 'wait' }); };
     if (row.querySelector('#gFlare')) row.querySelector('#gFlare').onclick = function () { guideAct({ a: 'flare' }); };
     if (row.querySelector('#gSail')) row.querySelector('#gSail').onclick = function () { guideAct({ a: 'sail', up: !G.sail }); };
@@ -172,6 +175,8 @@
       guideDraw(now);
     });
   }
+  // The boat glides along its whole path in one smooth motion (two tiles with the wind are one move, not two).
+  // Over a whirlpool it flips around its own horizontal axis.
   function animBoat(now) {
     var G = guide.G, a = guide.anim;
     if (!a || !a.log.path) return { x: G.boat.x, y: G.boat.y, alpha: 1 };
@@ -180,14 +185,14 @@
     var moveDur = segs * 230;
     if (t >= a.boatDur) return { x: G.boat.x, y: G.boat.y, alpha: 1 };
     if (t < moveDur) {
-      var k = Math.min(segs - 1, Math.floor(t / 230)), u = (t - k * 230) / 230, e = u * u * (3 - 2 * u);
-      var p = path[k], q = path[k + 1];
-      var off = a.log.washBack && k === segs - 1;
-      return { x: p[0] + (q[0] - p[0]) * e, y: p[1] + (q[1] - p[1]) * e, alpha: off ? 1 - e * 0.8 : 1, spin: a.log.whirls.some(function (w) { return w.x === p[0] && w.y === p[1]; }) ? u : 0 };
+      var u = t / moveDur, e = u * u * (3 - 2 * u), f = e * segs, k = Math.min(segs - 1, Math.floor(f)), v = f - k;
+      var p = path[k], q = path[k + 1], off = a.log.washBack && k === segs - 1;
+      var w = a.log.whirls.filter(function (z) { return z.x === p[0] && z.y === p[1]; })[0];
+      return { x: p[0] + (q[0] - p[0]) * v, y: p[1] + (q[1] - p[1]) * v, alpha: off ? 1 - v * 0.8 : 1, flip: w ? v : 0 };
     }
     // Washed back after drifting off the edge.
-    var w = Math.min(1, (t - moveDur) / 520);
-    return { x: a.log.washBack[0], y: a.log.washBack[1], alpha: w };
+    var wb = Math.min(1, (t - moveDur) / 520);
+    return { x: a.log.washBack[0], y: a.log.washBack[1], alpha: wb };
   }
   function animSerpent(now, s) {
     var a = guide.anim;
@@ -281,7 +286,7 @@
     }
     // The boat.
     if (showBoat || (guide.anim && now - guide.anim.t0 < guide.anim.boatDur && role === 'keeper' && Gd.isLit(G, G.boat.x, G.boat.y))) {
-      guideBoat(ctx2, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs, now, G.hard ? G.sail : true, boatPos.alpha, boatPos.spin || 0);
+      guideBoat(ctx2, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs, now, G.hard ? G.sail : true, boatPos.alpha, boatPos.flip || 0);
       if (role === 'boat' && !guide.peek) {
         // The captain's lantern: a soft glow around the boat, bigger with a flare.
         var R = cs * (G.flare ? 2.6 : 1.7), lg = ctx2.createRadialGradient(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs * 0.3, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, R);
@@ -295,8 +300,13 @@
         var pulse = 0.55 + 0.25 * Math.sin(now / 260);
         ctx2.strokeStyle = 'rgba(255,233,168,' + pulse + ')'; ctx2.lineWidth = Math.max(2, cs * 0.05);
         ctx2.beginPath(); ctx2.arc(X(w.x) + cs / 2, Y(w.y) + cs / 2, cs * 0.42, 0, 7); ctx2.stroke();
+        // Where this wave would take the boat: a dashed outline on that tile, or a cross when the wind holds it back.
         var steps = Gd.stepsFor(G, w.dir), tx = G.boat.x + Gd.DX[w.dir] * steps, ty = G.boat.y + Gd.DY[w.dir] * steps;
-        if (steps > 0) { ctx2.fillStyle = 'rgba(255,233,168,.35)'; ctx2.beginPath(); ctx2.arc(X(tx) + cs / 2, Y(ty) + cs / 2, cs * 0.09, 0, 7); ctx2.fill(); }
+        ctx2.save(); ctx2.strokeStyle = 'rgba(255,233,168,.6)'; ctx2.lineWidth = Math.max(1.5, cs * 0.035);
+        // Off the edge of the map the mark turns red: that move costs a life.
+        if (steps > 0) { var offMap = !Gd.inside(G, tx, ty) || !Gd.inside(G, G.boat.x + Gd.DX[w.dir], G.boat.y + Gd.DY[w.dir]); if (offMap) ctx2.strokeStyle = 'rgba(255,120,140,.8)'; ctx2.setLineDash([cs * 0.1, cs * 0.08]); ctx2.strokeRect(X(tx) + cs * 0.12, Y(ty) + cs * 0.12, cs * 0.76, cs * 0.76); }
+        else { var mx2 = X(G.boat.x) + cs / 2 + Gd.DX[w.dir] * cs * 0.42, my2 = Y(G.boat.y) + cs / 2 + Gd.DY[w.dir] * cs * 0.42, z = cs * 0.08; ctx2.beginPath(); ctx2.moveTo(mx2 - z, my2 - z); ctx2.lineTo(mx2 + z, my2 + z); ctx2.moveTo(mx2 + z, my2 - z); ctx2.lineTo(mx2 - z, my2 + z); ctx2.stroke(); }
+        ctx2.restore();
       });
     }
     // Fog over everything the player cannot see, soft at the edges.
@@ -345,14 +355,40 @@
     var t = G.grid[y * G.n + x], cx = px + cs / 2, cy = py + cs / 2;
     c.save(); c.globalAlpha = alpha;
     if (t === Gd.ROCK) {
-      c.fillStyle = '#5d6390'; c.beginPath(); c.ellipse(cx, cy + cs * 0.08, cs * 0.34, cs * 0.24, 0, 0, 7); c.fill();
-      c.fillStyle = '#8389b4'; c.beginPath(); c.ellipse(cx - cs * 0.06, cy - cs * 0.02, cs * 0.2, cs * 0.13, -0.3, 0, 7); c.fill();
-      c.strokeStyle = 'rgba(220,230,255,.35)'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(cx, cy + cs * 0.24, cs * 0.4, cs * 0.08, 0, 0, Math.PI); c.stroke();
+      // A low cluster of weathered stones with a ring of foam where the sea meets them.
+      var seedR = (x * 7 + y * 13) % 5;
+      c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.2, cs * 0.4, cs * 0.12, 0, 0, 7); c.fill();
+      [[-0.14, 0.06, 0.2, 0.17], [0.13, 0.08, 0.17, 0.14], [0.0, -0.06, 0.22, 0.2]].forEach(function (st, i) {
+        if (i === 1 && seedR > 3) return;
+        var sx = cx + cs * st[0], sy = cy + cs * st[1], rx = cs * st[2], ry = cs * st[3];
+        var g = c.createLinearGradient(sx - rx, sy - ry, sx + rx * 0.4, sy + ry);
+        g.addColorStop(0, '#8a8798'); g.addColorStop(0.55, '#5c5a6e'); g.addColorStop(1, '#383748');
+        c.fillStyle = g; c.beginPath();
+        c.moveTo(sx - rx, sy + ry * 0.55);
+        c.quadraticCurveTo(sx - rx * 1.05, sy - ry * 0.5, sx - rx * 0.3, sy - ry);
+        c.quadraticCurveTo(sx + rx * 0.5, sy - ry * 1.15, sx + rx, sy - ry * 0.1);
+        c.quadraticCurveTo(sx + rx * 1.05, sy + ry * 0.6, sx + rx * 0.6, sy + ry * 0.75);
+        c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = Math.max(1, cs * 0.025); c.beginPath(); c.moveTo(sx - rx * 0.55, sy - ry * 0.55); c.quadraticCurveTo(sx - rx * 0.1, sy - ry * 0.95, sx + rx * 0.45, sy - ry * 0.6); c.stroke();
+        c.strokeStyle = 'rgba(20,18,30,.35)'; c.beginPath(); c.moveTo(sx - rx * 0.1, sy - ry * 0.2); c.lineTo(sx + rx * 0.25, sy + ry * 0.3); c.stroke();
+      });
+      c.strokeStyle = 'rgba(225,235,255,.55)'; c.lineWidth = Math.max(1.2, cs * 0.03);
+      var fw = reduced ? 0 : Math.sin(now / 700 + x + y) * cs * 0.015;
+      c.beginPath(); c.ellipse(cx, cy + cs * 0.2, cs * 0.4 + fw, cs * 0.1, 0, 0.1, Math.PI - 0.1); c.stroke();
+      c.fillStyle = 'rgba(225,235,255,.55)'; [[-0.36, 0.22], [0.33, 0.25], [0.05, 0.31]].forEach(function (d) { c.beginPath(); c.arc(cx + cs * d[0], cy + cs * d[1], cs * 0.018, 0, 7); c.fill(); });
     } else if (t === Gd.BIG) {
-      // A tall sea stack: it hides what is behind it from the light and from the boat.
-      c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.34, cs * 0.44, cs * 0.12, 0, 0, 7); c.fill();
-      c.fillStyle = '#3a3f66'; c.beginPath(); c.moveTo(cx - cs * 0.4, cy + cs * 0.34); c.lineTo(cx - cs * 0.28, cy - cs * 0.3); c.lineTo(cx - cs * 0.05, cy - cs * 0.46); c.lineTo(cx + cs * 0.22, cy - cs * 0.36); c.lineTo(cx + cs * 0.4, cy + cs * 0.34); c.closePath(); c.fill();
-      c.fillStyle = '#545a88'; c.beginPath(); c.moveTo(cx - cs * 0.28, cy - cs * 0.3); c.lineTo(cx - cs * 0.05, cy - cs * 0.46); c.lineTo(cx - cs * 0.02, cy + cs * 0.34); c.lineTo(cx - cs * 0.4, cy + cs * 0.34); c.closePath(); c.fill();
+      // A tall sea stack with layered cliffs: it hides what is behind it from the light and from the boat.
+      c.fillStyle = 'rgba(0,0,0,.32)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.36, cs * 0.46, cs * 0.12, 0, 0, 7); c.fill();
+      var gb = c.createLinearGradient(cx - cs * 0.4, 0, cx + cs * 0.4, 0);
+      gb.addColorStop(0, '#6f6a80'); gb.addColorStop(0.5, '#4b4760'); gb.addColorStop(1, '#2e2b3e');
+      c.fillStyle = gb; c.beginPath();
+      c.moveTo(cx - cs * 0.42, cy + cs * 0.36); c.lineTo(cx - cs * 0.34, cy - cs * 0.12); c.lineTo(cx - cs * 0.26, cy - cs * 0.42);
+      c.lineTo(cx - cs * 0.06, cy - cs * 0.58); c.lineTo(cx + cs * 0.14, cy - cs * 0.5); c.lineTo(cx + cs * 0.3, cy - cs * 0.22); c.lineTo(cx + cs * 0.42, cy + cs * 0.36); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(20,18,30,.45)'; c.lineWidth = Math.max(1, cs * 0.025);
+      [-0.3, -0.08, 0.14].forEach(function (k, i) { c.beginPath(); c.moveTo(cx - cs * (0.36 - i * 0.03), cy + cs * k); c.lineTo(cx + cs * (0.33 - i * 0.04), cy + cs * (k + 0.05)); c.stroke(); });
+      c.fillStyle = 'rgba(255,255,255,.16)'; c.beginPath(); c.moveTo(cx - cs * 0.26, cy - cs * 0.42); c.lineTo(cx - cs * 0.06, cy - cs * 0.58); c.lineTo(cx - cs * 0.12, cy - cs * 0.2); c.lineTo(cx - cs * 0.3, cy - cs * 0.05); c.closePath(); c.fill();
+      c.fillStyle = '#4e7a5a'; c.beginPath(); c.ellipse(cx - cs * 0.04, cy - cs * 0.55, cs * 0.12, cs * 0.04, -0.3, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(225,235,255,.6)'; c.lineWidth = Math.max(1.2, cs * 0.03); c.beginPath(); c.ellipse(cx, cy + cs * 0.36, cs * 0.46, cs * 0.1, 0, 0.15, Math.PI - 0.15); c.stroke();
     } else if (t === Gd.WHIRL) {
       c.strokeStyle = 'rgba(190,210,255,.75)'; c.lineWidth = Math.max(1.5, cs * 0.045); c.lineCap = 'round';
       var rot = reduced ? 0 : now / 500;
@@ -407,15 +443,17 @@
     c.globalAlpha = 0.5; c.strokeStyle = 'rgba(200,220,255,.6)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.2, cs * 0.3, cs * 0.06, 0, 0, 7); c.stroke();
     c.restore();
   }
-  function guideBoat(c, cx, cy, cs, now, sailUp, alpha, spin) {
+  function guideBoat(c, cx, cy, cs, now, sailUp, alpha, flip) {
     var rock = reduced ? 0 : Math.sin(now / 600) * 0.06;
-    c.save(); c.globalAlpha = alpha; c.translate(cx, cy + cs * 0.08); c.rotate(rock + spin * Math.PI * 2);
+    c.save(); c.globalAlpha = alpha; c.translate(cx, cy + cs * 0.08); c.rotate(rock);
+    // Caught in a whirlpool, the boat flips over twice around its horizontal axis, and comes back upright.
+    if (flip) { var fy = Math.cos(flip * Math.PI * 4); c.translate(0, -cs * 0.12); c.scale(1, Math.abs(fy) < 0.08 ? (fy < 0 ? -0.08 : 0.08) : fy); c.translate(0, cs * 0.12); }
     c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(0, cs * 0.2, cs * 0.36, cs * 0.07, 0, 0, 7); c.fill();
     c.fillStyle = '#7a4b32'; c.beginPath(); c.moveTo(-cs * 0.36, 0); c.lineTo(cs * 0.36, 0); c.lineTo(cs * 0.24, cs * 0.17); c.lineTo(-cs * 0.24, cs * 0.17); c.closePath(); c.fill();
     c.fillStyle = '#9a6644'; c.fillRect(-cs * 0.36, -cs * 0.02, cs * 0.72, cs * 0.05);
     c.strokeStyle = '#3a2a20'; c.lineWidth = Math.max(1.5, cs * 0.03); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -cs * 0.44); c.stroke();
+    // With the sail down only the bare mast is left.
     if (sailUp) { c.fillStyle = '#fff6f0'; c.beginPath(); c.moveTo(cs * 0.02, -cs * 0.42); c.lineTo(cs * 0.26, -cs * 0.06); c.lineTo(cs * 0.02, -cs * 0.06); c.closePath(); c.fill(); c.fillStyle = '#f3dccb'; c.beginPath(); c.moveTo(-cs * 0.02, -cs * 0.36); c.lineTo(-cs * 0.18, -cs * 0.06); c.lineTo(-cs * 0.02, -cs * 0.06); c.closePath(); c.fill(); }
-    else { c.fillStyle = '#e8d2c0'; c.fillRect(-cs * 0.02, -cs * 0.12, cs * 0.2, cs * 0.06); }
     c.fillStyle = '#ffd27a'; c.beginPath(); c.arc(-cs * 0.22, -cs * 0.08, cs * 0.045, 0, 7); c.fill();
     c.restore();
   }
@@ -497,14 +535,16 @@
   function guideMenu() {
     var o = load('unwind.guideOpts', { size: 1, hard: false });
     var seg = function (key, opts, cls) { return '<div class="sizes lseg ' + (cls || '') + '" role="group">' + opts.map(function (v) { return '<button data-g="' + key + '" data-v="' + v[0] + '" aria-pressed="' + (String(o[key]) === String(v[0])) + '">' + v[1] + '</button>'; }).join('') + '</div>'; };
-    var s = sheet('<div class="row"><h2>Guiding Light</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+    var html = '<div class="row" id="gMenuCard"><h2>Guiding Light</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
       '<p class="note">A game for two. One of you keeps the lighthouse, the other sails a little boat home through a dark, foggy sea. The keeper\'s beam is the only light out there.</p>' +
       '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('size', [[0, 'Small'], [1, 'Medium'], [2, 'Large']], 'o3') +
       '<div class="setting"><span>Difficulty<small>' + (o.hard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]) +
       '<button class="obig" id="gOnline"><b>Play online</b><span>Each of you on your own phone. Host a room and send your partner the code.</span></button>' +
       '<button class="obig" id="gLocal"><b>Play on one device</b><span>Pass the phone between turns. No peeking!</span></button>' +
       '<div class="chapter">How to play</div><div class="modes"><button id="gTutKeeper"><b>The keeper</b><span>Shine the light, find the boat, hold back the serpents.</span></button><button id="gTutBoat"><b>The captain</b><span>Catch waves, dodge danger, sail home.</span></button>' +
-      (o.hard ? '<button id="gTutHard"><b>Hard mode</b><span>Tall rocks, wind and sail, the faulty lamp.</span></button>' : '') + '</div>', 'tall lobby');
+      (o.hard ? '<button id="gTutHard"><b>Hard mode</b><span>Tall rocks, wind and sail, the faulty lamp.</span></button>' : '') + '</div>';
+    // Changing a setting swaps the menu's contents only, so it never fades out and back in.
+    var s = $('gMenuCard') ? sheetInPlace(html) : sheet(html, 'tall lobby');
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-g]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-g'), v = b.getAttribute('data-v'); o[k] = k === 'size' ? +v : v === 'true'; save('unwind.guideOpts', o); guideMenu(); }; });
     s.querySelector('#gLocal').onclick = function () { openGuide({ seed: 1 + Math.floor(Math.random() * 1e9), size: o.size, hard: o.hard, local: true }); };
@@ -521,20 +561,21 @@
       { t: 'You keep the lighthouse', p: 'The sea is dark and foggy. Your partner\'s boat is somewhere out there, and you cannot see it. Your job is to light the way so the boat can reach the lighthouse in the middle.', scene: 'intro' },
       { t: 'Aim and shine', p: 'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you.', scene: 'beam' },
       { t: 'Find the boat', p: 'You only see the boat when the beam is on it. When your light touches the boat or a tile next to it, the captain sees the whole lit path to the lighthouse.', scene: 'find' },
-      { t: 'Hold back the serpents', p: 'Sea serpents roam in the fog and bite the boat. A serpent caught in your light dives and cannot move this round. Bubbles show where it is.', scene: 'serpent' },
+      { t: 'Hold back the serpents', p: 'Sea serpents roam the fog looking for the boat. Once one spots it, it hunts it down. A serpent caught in your light dives and cannot move this round. Bubbles show where it is.', scene: 'serpent' },
       { t: 'Light the way, or guard it?', p: 'Every turn is a choice: search for the boat, show it a safe path, or pin down a serpent that is getting close. Talk to each other!', scene: 'choice' }
     ],
     boat: [
       { t: 'You sail the boat', p: 'You only see the tiles around your boat. Somewhere in the dark is the lighthouse in the middle of the map. Stop next to it to win.', scene: 'intro' },
-      { t: 'Catch a wave', p: 'Tap a wave on or next to your boat: it carries the boat one tile its way. Waves change every round. If none goes your way, wait.', scene: 'waves' },
+      { t: 'Catch a wave', p: 'Tap a wave next to your boat: it carries the boat one tile its way. A dashed square shows where you would end up. Waves change every round. If none goes your way, wait.', scene: 'waves' },
       { t: 'Follow the light', p: 'When the keeper\'s beam touches you or a tile next to you, you see the whole lit path to the lighthouse.', scene: 'find' },
-      { t: 'Out on the water', p: 'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life, and serpents bite.', scene: 'hazards' },
+      { t: 'Out on the water', p: 'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, so keep moving.', scene: 'hazards' },
       { t: 'Flares', p: 'A flare lets you see two tiles around you for this turn. Only you see it: the keeper does not.', scene: 'flare' }
     ],
     hard: [
-      { t: 'Tall rocks', p: 'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light and the captain\'s view. Look around them.', scene: 'tall' },
-      { t: 'Wind and sail', p: 'The wind is shown in the top left. With your sail up, a wave that goes with the wind carries you two tiles, and against the wind none. Side winds change nothing. Lower the sail to ignore the wind.', scene: 'wind' },
-      { t: 'A faulty lamp', p: 'The lamp only works every other round. On the dark rounds the captain sails on alone. Serpents are faster too: they move two tiles in a straight line.', scene: 'lamp' }
+      { t: 'Tall rocks', p: 'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light, for the keeper and for the captain. Look around them.', scene: 'tall' },
+      { t: 'Wind and sail', p: 'The wind direction is shown in the top left, and it can turn. With your sail up, a wave that goes with the wind carries you two tiles in one move, and against the wind you do not move. Side winds change nothing. Lower the sail to ignore the wind.', scene: 'wind' },
+      { t: 'A faulty lamp', p: 'After every shine the light goes out. On the keeper\'s next turn, press Rekindle the light: that round stays dark, and the light works again the round after.', scene: 'lamp' },
+      { t: 'No resting', p: 'On Hard the captain cannot wait two rounds in a row. And serpents are faster: they move two tiles in a straight line.', scene: 'hazards' }
     ]
   };
   function guideTutorial(kind, hard, after) {

@@ -1994,7 +1994,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-h';
+  var BUILD = '2026.11.25-i';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6089,7 +6089,7 @@
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     tutorial: function (k) { showTutorial([].concat(k), 0, false); },
-    guide: function () { return guide ? { phase: guide.G.phase, round: guide.G.round, boat: guide.G.boat, lives: guide.G.lives, flares: guide.G.flares, ended: guide.G.ended, cover: guide.cover, busy: performance.now() < guide.busyUntil, catchable: Gd.catchable(guide.G), n: guide.G.n, c: guide.G.c, hard: guide.G.hard, wind: guide.G.wind, sail: guide.G.sail, lit: guide.G.lit.length } : null; },
+    guide: function () { return guide ? { phase: guide.G.phase, round: guide.G.round, boat: guide.G.boat, lives: guide.G.lives, flares: guide.G.flares, ended: guide.G.ended, cover: guide.cover, busy: performance.now() < guide.busyUntil, catchable: Gd.catchable(guide.G), n: guide.G.n, c: guide.G.c, hard: guide.G.hard, wind: guide.G.wind, sail: guide.G.sail, lit: guide.G.lit.length, lampOut: guide.G.lampOut, canWait: Gd.canWait(guide.G) } : null; },
     guideOpen: function (o) { openGuide(o); },
     onlineJoin: function (code) { joinOnline(code, function () {}); },
     guideAct: function (a) { guideAct(a); },

@@ -2,6 +2,23 @@
 // reaches the page is swapped here, so a new sentence only needs a new line in this list.
 window.UnwindI18n = (function () {
   var PT = {
+    'Flares left:': 'Sinalizadores:',
+    'Wind Direction': 'Direção do vento',
+    'Use a flare': 'Usar sinalizador',
+    'Rekindle the light': 'Reacender a luz',
+    'The light went out. Rekindle it now, and it shines again next round.': 'A luz apagou-se. Reacende-a agora, e volta a brilhar na próxima ronda.',
+    'The light is out. The keeper is rekindling it…': 'A luz está apagada. O faroleiro está a reacendê-la…',
+    'You waited last round: catch a wave this time.': 'Esperaste na ronda passada: desta vez apanha uma onda.',
+    'Your turn: rekindle the light.': 'A tua vez: reacende a luz.',
+    'The light is out this round. Your turn: catch a wave.': 'A luz está apagada nesta ronda. A tua vez: apanha uma onda.',
+    'Sea serpents roam the fog looking for the boat. Once one spots it, it hunts it down. A serpent caught in your light dives and cannot move this round. Bubbles show where it is.': 'As serpentes do mar andam pelo nevoeiro à procura do barco. Quando uma o vê, persegue-o. Uma serpente apanhada pela tua luz mergulha e não se mexe nesta ronda. As bolhas mostram onde está.',
+    'Tap a wave next to your boat: it carries the boat one tile its way. A dashed square shows where you would end up. Waves change every round. If none goes your way, wait.': 'Toca numa onda ao lado do teu barco: ela leva o barco uma casa na sua direção. Um quadrado tracejado mostra onde vais parar. As ondas mudam em cada ronda. Se nenhuma for para onde queres, espera.',
+    'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, so keep moving.': 'As rochas bloqueiam o caminho. Os remoinhos atiram-te numa direção ao acaso. Os barris têm uma vida extra ou um sinalizador extra. Sair pela borda do mapa custa uma vida. As serpentes que chegam perto veem-te e perseguem-te, por isso não pares.',
+    'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light, for the keeper and for the captain. Look around them.': 'No Difícil, há rochas altas no mar. Bloqueiam o barco, e também a luz, para o faroleiro e para o capitão. Contorna-as.',
+    'The wind direction is shown in the top left, and it can turn. With your sail up, a wave that goes with the wind carries you two tiles in one move, and against the wind you do not move. Side winds change nothing. Lower the sail to ignore the wind.': 'A direção do vento aparece no canto superior esquerdo, e pode mudar. Com a vela içada, uma onda a favor do vento leva-te duas casas numa só jogada, e contra o vento não te mexes. O vento de lado não muda nada. Recolhe a vela para ignorar o vento.',
+    'After every shine the light goes out. On the keeper\'s next turn, press Rekindle the light: that round stays dark, and the light works again the round after.': 'Depois de cada vez que ilumina, a luz apaga-se. No turno seguinte do faroleiro, carrega em Reacender a luz: essa ronda fica às escuras, e a luz volta a funcionar na ronda a seguir.',
+    'No resting': 'Sem descanso',
+    'On Hard the captain cannot wait two rounds in a row. And serpents are faster: they move two tiles in a straight line.': 'No Difícil o capitão não pode esperar duas rondas seguidas. E as serpentes são mais rápidas: andam duas casas em linha reta.',
     'Guiding Light': 'Luz Guia',
     'Guiding Light room': 'Sala Luz Guia',
     'Lighthouse keeper': 'Faroleiro',

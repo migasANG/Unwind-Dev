@@ -157,8 +157,12 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 #guide .g-lives svg{width:15px;height:14px;fill:#ff7a93}
 #guide .g-stage{position:relative;flex:1;min-height:0}
 #guide canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
-#guide .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:6px;padding:6px 10px 6px 12px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.8rem;font-weight:600}
-#guide .g-windarrow{width:22px;height:22px;transition:transform .6s ease}
+#guide .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px 8px;border-radius:14px;background:rgba(238,240,255,.12);font-size:.72rem;font-weight:600;letter-spacing:.02em}
+#guide .g-windrow{display:flex;align-items:center;gap:8px}
+#guide .g-windicon{width:30px;height:22px;opacity:.85}
+#guide .g-windarrow{width:24px;height:24px;color:#ffe9a8;transition:transform .6s ease}
+#guide .g-flares{font-size:.75rem;opacity:.85}
+#guide .g-flares b{color:#ffe9a8}
 #guide .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:6px 12px;border-radius:14px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.75rem}
 #guide .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
 #guide .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
@@ -550,9 +554,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 <div id="loading" hidden role="status" aria-live="polite"><div><i></i><p>Loading boards…</p></div></div>
 <div id="coopNav" hidden></div>
 <div id="guide" hidden>
-  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light</b><span class="g-role"></span></div><div class="g-stats"><span class="g-round"><span>Round</span> <b class="notr">1</b></span><span class="g-lives"></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
+  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light</b><span class="g-role"></span></div><div class="g-stats"><span class="g-round"><span>Round</span> <b class="notr">1</b></span><span class="g-lives"></span><span class="g-flares"><span>Flares left:</span> <b class="notr">1</b></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
   <div class="g-stage"><canvas></canvas>
-    <div class="g-wind" hidden><span>Wind</span><svg class="g-windarrow" viewBox="-12 -12 24 24" aria-hidden="true"><path d="M0 9 V-7 M-6 -2 L0 -9 L6 -2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="g-wind" hidden><span class="g-windlabel">Wind Direction</span><span class="g-windrow"><svg class="g-windicon" viewBox="0 0 32 24" aria-hidden="true"><path d="M2 8 H20 A4 4 0 1 0 16 4 M2 14 H26 A4 4 0 1 1 22 18 M2 20 H12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><svg class="g-windarrow" viewBox="-12 -12 24 24" aria-hidden="true"><path d="M0 9 V-7 M-6 -2 L0 -9 L6 -2" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
     <button class="g-peek" type="button" hidden aria-pressed="false">Show all</button>
     <div class="g-toast" role="status"></div>
     <div class="g-cover" hidden></div>
