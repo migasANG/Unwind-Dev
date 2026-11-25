@@ -101,7 +101,12 @@
     { id: 'high-sun', trim: 1.55, name: 'High Sun', mood: 'Noon: sunny vibraphone and soft guitar', bpm: 100, beats: 4, style: 'noon',
       chords: [[48,64,67,72],[45,60,64,69],[41,60,65,69],[43,59,62,67],[48,64,67,72],[40,59,64,67],[41,57,60,65],[43,55,59,65],[45,60,64,72],[41,57,65,69],[38,57,62,65],[43,55,62,71]],
       melody: [[[0,76],[1,79],[2.5,84]],[[0.5,81],[2,79]],[[0,77],[1,81],[2,84],[3,81]],[[0,79],[2,74]],[[0,76],[1.5,79],[3,84]],[[0.5,83],[2,79]],[[0,77],[1.5,76],[3,74]],[[0,74],[1,77],[2,79]],[[0,81],[1.5,84],[3,88]],[[0.5,84],[2,81]],[[0,77],[1,81],[2.5,77]],[[0,79],[1.5,74],[3,71]]],
-      pent: [60,62,64,67,69,72,74,76,79,81,84] }
+      pent: [60,62,64,67,69,72,74,76,79,81,84] },
+    // The intro's song: a slow lullaby by the sea at night, with a rolling harp and a soft piano tune.
+    { id: 'moonlit-coast', trim: 1.25, name: 'Moonlit Coast', mood: 'Night coast: a gentle harp lullaby by the sea', bpm: 66, beats: 3, style: 'coast',
+      chords: [[38,57,62,66],[35,54,59,62],[31,55,59,62],[33,57,61,64],[42,57,62,66],[40,55,59,64],[43,55,59,67],[45,57,61,64]],
+      melody: [[[0,74],[1,76],[2,78]],[[0,79],[2,78]],[[0,74],[1.5,71]],[[0,73],[2,76]],[[0,78],[1,79],[2,81]],[[0,79],[1.5,76]],[[0,74],[1,76],[2,79]],[[0,78],[2,73]]],
+      pent: [50,52,54,57,59,62,64,66,69,71,74] }
   ];
 
   var bars = {
@@ -189,6 +194,14 @@
         voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.095, 0.85, 0.004, STEEL);
         voice(ctx, dest, hz(n[1]), t + (n[0] + 0.25) * beat, 0.036, 0.5, 0.004, STEEL);
       });
+    },
+    coast: function (ctx, dest, th, chord, melody, t, beat, len) {
+      // A deep, slow swell like the tide, a harp rolling up and down the chord, and a quiet piano tune.
+      swell(ctx, dest, hz(chord[0]), t, 0.08, len * 1.08, 0.7, 480);
+      [[0, 1], [0.5, 2], [1, 3], [1.5, 2], [2, 1], [2.5, 3]].forEach(function (p) {
+        voice(ctx, dest, hz(chord[p[1]] + 12), t + p[0] * beat, 0.034, beat * 2.6, 0.004, STEEL);
+      });
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.075, beat * 2.4, 0.03, FELT); });
     },
     amber: function (ctx, dest, th, chord, melody, t, beat, len) {
       swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);

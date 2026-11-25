@@ -39,7 +39,8 @@
     level.flowerAt = {};
     (level.flowers || []).forEach(function (f, i) { level.flowerAt[f[1] * level.w + f[0]] = i; });
     // Boarding Up specials: wooden walls on the edges between tiles, a slingshot, letter slots and goals.
-    level.wallAt = null; level.slotAt = null; level.slingAt = -1;
+    level.wallAt = null; level.slotAt = null; level.slingAt = -1; level.nestAt = null;
+    if (level.nests && level.nests.length) { level.nestAt = {}; level.nests.forEach(function (n) { level.nestAt[n[1] * level.w + n[0]] = true; }); }
     if (level.walls && level.walls.length) { level.wallAt = {}; level.walls.forEach(function (w) { level.wallAt[(w[2] === 'r' ? 'v' : 'h') + w[0] + '_' + w[1]] = true; }); }
     if (level.slots && level.slots.length) { level.slotAt = {}; level.slots.forEach(function (sl) { level.slotAt[sl.y * level.w + sl.x] = sl.ch; }); }
     if (level.sling) level.slingAt = level.sling.y * level.w + level.sling.x;
@@ -144,7 +145,7 @@
   // Whether this tile would stop an arrow: fire, a flower, or another solid arrow.
   function tileBlocks(level, state, a, partner, key) {
     if (state.burning && state.burning[key] > state.launches) return true;
-    if (propAt(level, state, key) >= 0) return true;
+    if (propAt(level, state, key) >= 0 || (level.nestAt && level.nestAt[key])) return true;
     if (level.flowerAt && flowerStands(level, state, key)) return true;
     var o = level.grid[key];
     return o !== -1 && o !== a.id && o !== partner && !state.removed[o] && !isGhost(state, level.arrows[o]);
@@ -163,6 +164,8 @@
       var mirror = level.mirrorAt && level.mirrorAt[key];
       if (mirror) { d = TURN[mirror][d]; path.push([x, y]); continue; }
       if (state.freed && state.freed[a.id] && !(level.mirrorAt && level.mirrorAt[y * level.w + x])) continue;
+      // An empty nest: the arrow would crush the eggs. A bird sitting in it is pushed instead, below.
+      if (level.nestAt && level.nestAt[key] && propAt(level, state, key) < 0) return { clear: false, nest: true, blocker: -7, dist: dist, dir: dirOf(a, state), endDir: d, path: path, at: [x, y] };
       // A phase arrow slips through one occupied tile of anything, as long as the tile after it is open.
       if (a.phase && !phased && tileBlocks(level, state, a, partner, key)) {
         var nx = x + DX[d], ny = y + DY[d];
@@ -227,10 +230,13 @@
       if (state.safe) ensurePlay(level, state);
       return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
     }
+    // An arrow that hits an empty nest breaks the eggs, and the level is lost.
+    if (hit.some(function (r) { return r.check.nest; })) return { ok: false, eggs: true, results: results, failed: true };
     // Hitting a ball, a bird or a letter pushes it. The arrow stays where it is and no life is lost.
     var shoves = hit.filter(function (r) { return r.check.prop !== undefined; });
     if (shoves.length && shoves.length === hit.length) {
-      var pushed = shoves.map(function (r) { return pushProp(level, state, r.check.prop, r.check.endDir); });
+      var pushed = [];
+      shoves.forEach(function (r) { var pu = pushProp(level, state, r.check.prop, r.check.endDir); pushed.push(pu); for (var c = pu.chain; c; c = c.chain) pushed.push(c); });
       state.falls = level.gravity ? settle(level, state) : [];
       return { ok: false, pushed: pushed, results: results, failed: false };
     }
@@ -355,6 +361,14 @@
       var nx = x + DX[d], ny = y + DY[d];
       if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) { if (p.kind !== 'letter') out.exit = { dir: d, x: x, y: y }; break; }
       var k = ny * level.w + nx;
+      // A nest catches a bird. If a bird is already resting there, the newcomer takes its place and pushes it on.
+      if (level.nestAt && level.nestAt[k] && p.kind === 'bird') {
+        var qi = propAt(level, state, k);
+        if (qi < 0) { x = nx; y = ny; path.push([x, y]); out.nest = true; break; }
+        var q = state.props[qi];
+        if (q !== p && q.kind === 'bird' && pushMoves(level, state, q, d)) { out.chain = slideProp(level, state, q, d); x = nx; y = ny; path.push([x, y]); out.nest = true; }
+        break;
+      }
       if (cellTaken(level, state, k, p)) break;
       if (k === level.slingAt && p.kind === 'bird' && (state.loaded === -1 || state.loaded === p.id)) { x = nx; y = ny; path.push([x, y]); out.loaded = true; break; }
       x = nx; y = ny; path.push([x, y]);
@@ -374,6 +388,8 @@
     if (wallOn(level, state, p.x, p.y, d)) return false;
     var nx = p.x + DX[d], ny = p.y + DY[d];
     if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) return p.kind !== 'letter';
+    var nk = ny * level.w + nx;
+    if (level.nestAt && level.nestAt[nk] && p.kind === 'bird') { var qi = propAt(level, state, nk); return qi < 0 || (state.props[qi].kind === 'bird' && pushMoves(level, state, state.props[qi], d)); }
     return !cellTaken(level, state, ny * level.w + nx, p);
   }
   // Letters fall until they land in a slot, on an arrow, on another letter or on the bottom row.
@@ -457,6 +473,15 @@
         continue;
       }
       var k = ny * L.w + nx, o = L.grid[k];
+      // A nest catches the bird. A bird already resting there is knocked on, and the newcomer takes its place.
+      if (L.nestAt && L.nestAt[k]) {
+        var qi = propAt(L, S, k);
+        if (qi >= 0 && !(S.props[qi].kind === 'bird' && pushMoves(L, S, S.props[qi], d))) { out.impact = { b: cb, p: [nx, ny] }; break; }
+        if (qi >= 0) { var q = S.props[qi], r2 = slideProp(L, S, q, d); out.chain = { b: cb, slide: r2, trip: r2.exit ? carry(boards, states, cb, r2) : null }; }
+        x = nx; y = ny; path.push([x, y]); out.nest = true;
+        land = { b: cb, x: x, y: y, seg: segs.length - 1, at: path.length - 1 };
+        break;
+      }
       if (o !== -1 && !S.removed[o] && isGhost(S, L.arrows[o])) { x = nx; y = ny; path.push([x, y]); continue; }
       if (o !== -1 && !S.removed[o]) {
         if (L.birdsBreak) out.destroyed = { b: cb, id: o };
@@ -511,9 +536,9 @@
     return { solved: false, first: -1, exhausted: true };
   }
   // After an out or an own goal the ball goes back to the centre spot.
-  function resetBall(boards, states, kick) {
-    var ball = null;
-    states.forEach(function (S) { (S.props || []).forEach(function (p) { if (p.kind === 'ball') ball = p; }); S.props = (S.props || []).filter(function (p) { return p.kind !== 'ball'; }); });
+  function resetBall(boards, states, kick, known) {
+    var ball = known || null;
+    states.forEach(function (S) { (S.props || []).forEach(function (p) { if (p.kind === 'ball' && !ball) ball = p; }); S.props = (S.props || []).filter(function (p) { return p.kind !== 'ball'; }); });
     if (!ball) return null;
     ball.gone = false; ball.x = kick.x; ball.y = kick.y;
     states[kick.b].props.push(ball);
@@ -526,10 +551,13 @@
       if (!pu.exit) return;
       if (pu.kind === 'bird') { (out.birds = out.birds || []).push(carry(boards, states, b, pu)); return; }
       if (pu.kind !== 'ball') return;
+      var ball = findProp(S, pu.id);
       out.ball = carry(boards, states, b, pu);
       if (out.ball.result === 'out' || out.ball.result === 'own') {
+        // The ball comes back to the spot it was kicked from.
         if (S.lives !== null) S.lives--;
-        resetBall(boards, states, kick);
+        out.ballSpot = { b: b, x: pu.from[0], y: pu.from[1] };
+        resetBall(boards, states, out.ballSpot, ball);
         res.failed = S.lives === 0;
       }
     });
@@ -1321,35 +1349,35 @@
   }
   var SPECIALS = {
     // Matchday: a row of boards and one ball. Score on the right; the goal on the left is your own.
-    fb1: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 0, x: 3, y: 3 }, { b: 0, x: 3, y: 1 }], lives: 5, boards: [
-      [['1,3 2,3'], ['1,1 2,1'], ['0,4 0,3', { red: 2 }]],
-      [['2,3 2,4'], ['2,0 2,1'], ['4,4 3,4']],
-      [['3,1 3,0'], ['3,3 3,4', { red: 1 }], ['0,4 1,4'], ['1,0 0,0']]
+    fb1: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 0, x: 3, y: 3 }], lives: 5, boards: [
+      [['1,3 2,3'], ['1,1 2,1'], ['0,4 0,3', { red: 2 }], ['3,0 3,1 3,2', { red: 1 }], ['4,3 4,2 4,1']],
+      [['2,3 2,4'], ['2,0 2,1'], ['4,4 3,4'], ['0,2 1,2 2,2'], ['4,1 3,1', { red: 2 }], ['1,3 0,3']],
+      [['3,1 3,0'], ['3,3 3,4', { red: 1 }], ['0,4 1,4'], ['1,0 0,0'], ['2,1 2,2 2,3']]
     ] },
-    fb2: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 4, y: 3 }, { b: 2, x: 2, y: 3 }, { b: 1, x: 2, y: 3 }], lives: 5, boards: [
-      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
-      [['2,0 2,1'], ['3,4 2,4', { red: 2 }], ['0,3 1,3'], ['4,2 3,2'], ['4,0 4,1']],
-      [['3,3 4,3', { red: 1 }], ['0,3 1,3'], ['2,0 3,0'], ['1,1 1,0']],
-      [['1,3 1,4'], ['2,4 2,3', { red: 2 }], ['2,0 1,0'], ['4,0 4,1', { red: 1 }]]
+    fb2: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 4, y: 3 }], lives: 5, boards: [
+      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3'], ['2,1 1,1 0,1', { red: 1 }], ['3,1 3,2 3,3']],
+      [['2,0 2,1'], ['3,4 2,4', { red: 2 }], ['0,3 1,3'], ['4,2 3,2'], ['4,0 4,1'], ['0,2 1,2 2,2']],
+      [['3,3 4,3', { red: 1 }], ['0,3 1,3'], ['2,0 3,0'], ['1,1 1,0'], ['2,2 2,3', { red: 2 }], ['4,1 3,1 2,1']],
+      [['1,3 1,4'], ['2,4 2,3', { red: 2 }], ['2,0 1,0'], ['4,0 4,1', { red: 1 }], ['0,1 0,2 0,3']]
     ] },
-    fb3: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 3, y: 1 }, { b: 3, x: 3, y: 2 }, { b: 1, x: 4, y: 1 }], lives: 5, boards: [
-      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
-      [['1,2 1,3'], ['2,4 2,3'], ['1,0 2,0', { red: 2 }], ['0,1 1,1'], ['4,4 4,3']],
-      [['4,2 3,2'], ['2,1 2,0', { red: 1 }], ['0,4 1,4'], ['0,0 1,0']],
-      [['1,1 2,1', { red: 2 }], ['4,1 4,2'], ['0,3 1,3'], ['3,4 3,3'], ['4,0 3,0']],
-      [['4,1 4,0'], ['2,1 3,1', { red: 2 }], ['3,4 3,3', { red: 1 }], ['0,4 1,4'], ['1,0 0,0']]
+    fb3: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 3, y: 1 }], lives: 5, boards: [
+      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3'], ['4,2 3,2 2,2'], ['2,1 1,1', { red: 2 }]],
+      [['1,2 1,3'], ['2,4 2,3'], ['1,0 2,0', { red: 2 }], ['0,1 1,1'], ['4,4 4,3'], ['4,2 4,1 4,0']],
+      [['4,2 3,2'], ['2,1 2,0', { red: 1 }], ['0,4 1,4'], ['0,0 1,0'], ['0,2 1,2 2,2'], ['4,3 3,3 2,3']],
+      [['1,1 2,1', { red: 2 }], ['4,1 4,2'], ['0,3 1,3'], ['3,4 3,3'], ['4,0 3,0'], ['2,3 2,2'], ['0,1 0,2']],
+      [['4,1 4,0'], ['2,1 3,1', { red: 2 }], ['3,4 3,3', { red: 1 }], ['0,4 1,4'], ['1,0 0,0'], ['1,2 2,2']]
     ] },
     fb4: { kind: 'football', w: 6, h: 6, goal: [2, 3, 4], kicks: [{ b: 2, x: 3, y: 3 }], lives: 5, boards: [
-      [['3,0 4,0'], ['5,5 4,5'], ['3,5 3,4']],
-      [['2,5 2,4'], ['1,1 2,1', { red: 2 }], ['0,2 1,2'], ['4,5 5,5'], ['4,0 4,1'], ['1,3 1,4']],
-      [['3,2 3,1', { red: 1 }], ['3,0 4,0'], ['2,0 2,1'], ['1,5 2,5', { red: 2 }], ['0,4 1,4'], ['4,4 4,5', { red: 1 }], ['5,3 4,3']],
-      [['2,0 1,0'], ['2,4 2,3', { red: 2 }], ['5,0 5,1', { red: 1 }], ['0,5 1,5'], ['3,5 4,5']]
+      [['3,0 4,0'], ['5,5 4,5'], ['3,5 3,4'], ['3,2 2,2 1,2', { red: 1 }], ['4,2 4,3 4,4'], ['2,5 2,4 2,3', { red: 2 }], ['4,1 3,1 2,1']],
+      [['2,5 2,4'], ['1,1 2,1', { red: 2 }], ['0,2 1,2'], ['4,5 5,5'], ['4,0 4,1'], ['1,3 1,4'], ['4,2 4,3 4,4'], ['3,5 3,4 3,3']],
+      [['3,2 3,1', { red: 1 }], ['3,0 4,0'], ['2,0 2,1'], ['1,5 2,5', { red: 2 }], ['0,4 1,4'], ['4,4 4,5', { red: 1 }], ['5,3 4,3'], ['2,3 1,3 0,3', { red: 3 }]],
+      [['2,0 1,0'], ['2,4 2,3', { red: 2 }], ['5,0 5,1', { red: 1 }], ['0,5 1,5'], ['3,5 4,5'], ['1,1 1,2 1,3', { red: 2 }], ['4,1 3,1'], ['3,3 3,2']]
     ] },
     fb5: { kind: 'football', w: 7, h: 7, goal: [2, 3, 4], kicks: [{ b: 3, x: 4, y: 4 }], lives: 5, boards: [
-      [['5,2 5,1']],
-      [['6,1 5,1', { red: 2 }]],
+      [['5,2 5,1'], ['1,0 2,0'], ['4,0 3,0'], ['3,2 3,3'], ['3,5 3,4'], ['6,6 5,6']],
+      [['6,1 5,1', { red: 2 }], ['0,3 1,3'], ['3,3 2,3'], ['2,5 3,5'], ['5,5 4,5'], ['1,0 1,1']],
       [['2,4 2,5'], ['3,6 3,5'], ['2,1 3,1', { red: 2 }], ['1,2 2,2'], ['5,6 6,6'], ['5,0 5,1', { red: 1 }], ['5,2 5,3', { red: 2 }]],
-      [['6,4 5,4'], ['2,2 2,3', { red: 2 }], ['1,5 2,5'], ['0,0 1,0'], ['4,6 5,6']],
+      [['6,4 5,4'], ['2,2 2,3', { red: 2 }], ['1,5 2,5'], ['0,0 1,0'], ['4,6 5,6'], ['3,1 4,1'], ['6,1 5,1']],
       [['4,2 4,1', { red: 1 }], ['4,0 5,0'], ['3,0 3,1'], ['2,5 3,5', { red: 2 }], ['1,4 2,4'], ['5,4 5,5', { red: 1 }], ['0,6 1,6']]
     ] },
     // Woodland: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
@@ -1360,19 +1388,24 @@
       { w: 5, h: 5, sling: [1, 3], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1'], ['2,4 3,4', { ghostPhase: 1 }], ['4,2 4,3']] },
       { w: 5, h: 5, birds: [[1, 3]], walls: [], arrows: [['4,3 3,3'], ['4,0 3,0 2,0', { phase: true }], ['1,1 1,0'], ['0,0 0,1']] }
     ] },
+    // Woodland 3 brings in nests: the nest is the only way to stop the bird where arrows can steer it onto the slingshot.
     sl3: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+      { w: 6, h: 6, sling: [0, 2], birds: [[0, 3]], walls: [], arrows: [['0,5 0,4'], ['2,0 3,0'], ['4,5 4,4'], ['2,3 3,3', { ghostPhase: 1 }], ['2,5 2,4']] },
+      { w: 6, h: 6, sling: [5, 4], nests: [[3, 2]], birds: [[3, 3]], walls: [[5, 2, 'r']], arrows: [['3,5 3,4'], ['0,2 1,2'], ['5,0 5,1'], ['1,5 2,5'], ['0,4 0,3'], ['2,0 1,0']] }
+    ] },
+    sl4: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, birds: [[3, 1]], walls: [], arrows: [['1,1 2,1'], ['0,4 1,4 2,4', { phase: true }], ['4,5 4,4'], ['0,2 0,3', { ghostPhase: 1 }]] },
       { w: 6, h: 6, sling: [2, 1], birds: [[2, 3]], walls: [[2, 1, 'b']], arrows: [['2,5 2,4'], ['5,5 4,5 3,5', { phase: true }], ['0,4 0,5']] },
       { w: 6, h: 6, walls: [], arrows: [['2,0 2,1'], ['2,4 2,3'], ['1,3 1,2'], ['4,0 4,1'], ['4,4 4,3'], ['0,5 1,5', { ghostPhase: 0 }]] }
     ] },
-    sl4: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+    sl5: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 7, h: 6, sling: [2, 3], birds: [[4, 3]], walls: [[2, 1, 'b']], arrows: [['6,3 5,3'], ['2,0 2,1'], ['5,5 4,5 3,5', { phase: true }], ['0,0 0,1']] },
       { w: 7, h: 6, sling: [2, 1], walls: [[3, 1, 'r']], arrows: [['3,2 3,3'], ['3,5 3,4'], ['2,5 2,4'], ['0,1 1,1'], ['1,2 1,3', { ghostPhase: 1 }], ['5,5 6,5']] }
     ] },
-    sl5: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+    sl6: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [2, 1], birds: [[5,  4]], walls: [[2, 0, 'b'], [3, 0, 'b']], arrows: [['1,3 1,4', { phase: true }], ['2,3 3,3'], ['5,1 5,2 5,3'], ['4,4 3,4'], ['3,1 3,0']] },
       { w: 6, h: 6, sling: [4, 2], birds: [[4,  3]], walls: [[0, 1, 'r']], arrows: [['0,0 1,0 2,0', { phase: true }], ['5,1 4,1', { ghostPhase: 0 }], ['2,4 1,4', { ghostPhase: 0 }], ['3,0 4,0', { ghostPhase: 0 }], ['4,5 4,4'], ['2,2 2,3']] },
-      { w: 6, h: 6, sling: [2, 2], birds: [[2,  3]], walls: [[2, 2, 'r'], [4, 4, 'b'], [0, 3, 'b']], arrows: [['4,2 4,3'], ['3,4 3,3', { phase: true }], ['5,5 5,4', { phase: true }], ['0,3 1,3']] }
+      { w: 6, h: 6, sling: [2, 2], nests: [[3, 1]], birds: [[2,  3]], walls: [[2, 2, 'r'], [4, 4, 'b'], [0, 3, 'b']], arrows: [['4,2 4,3'], ['3,4 3,3', { phase: true }], ['5,5 5,4', { phase: true }], ['0,3 1,3']] }
     ] },
     // The Poem: one level, one board per line. Compass arrows push letters into their slots; letters fall.
     poem: { kind: 'poem', lives: 5, boards: [
@@ -1407,7 +1440,7 @@
       var lvl = Object.assign({ w: bd.w, h: bd.h, arrows: arrowsOf(bd.arrows), props: [] }, base);
       if (d.kind === 'sling') {
         if (bd.sling) lvl.sling = { x: bd.sling[0], y: bd.sling[1] };
-        lvl.walls = bd.walls || []; lvl.birdsBreak = !!d.birdsBreak;
+        lvl.walls = bd.walls || []; lvl.birdsBreak = !!d.birdsBreak; lvl.nests = bd.nests || [];
         lvl.props = (bd.birds || []).map(function (c) { var i = bird++; return { id: i, kind: 'bird', x: c[0], y: c[1], color: BIRD_COLORS[i % BIRD_COLORS.length], loaded: !!(bd.sling && bd.sling[0] === c[0] && bd.sling[1] === c[1]) }; });
       } else {
         var word = lang === 'pt' ? bd.pt : bd.word;

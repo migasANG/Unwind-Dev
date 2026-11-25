@@ -66,6 +66,14 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .volbar input{flex:1;min-width:0;accent-color:var(--ink);height:24px}
 .volbar output{flex:none;width:3.2em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 #coopNav{position:fixed;inset:0;pointer-events:none;z-index:2}
+#boardMap{position:fixed;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:2;pointer-events:none;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;border-radius:14px;background:color-mix(in srgb,var(--card) 82%,transparent);color:var(--ink);font:700 .78rem/1 var(--display);opacity:.92}
+#boardMap svg{display:block;overflow:visible}
+#boardMap line{stroke:color-mix(in srgb,var(--ink) 35%,transparent);stroke-width:2;stroke-linecap:round}
+#boardMap circle{fill:var(--card);stroke:color-mix(in srgb,var(--ink) 55%,transparent);stroke-width:1.8;transition:r .3s}
+#boardMap circle.done{fill:color-mix(in srgb,var(--gold) 55%,var(--card));stroke:var(--gold-ink)}
+#boardMap circle.here{fill:var(--compass);stroke:var(--ink);stroke-width:2.2}
+#boardMap circle.ballDot{fill:var(--ink);stroke:none}
+@media (min-width:760px){#boardMap{bottom:calc(24px + env(safe-area-inset-bottom,0px));left:max(20px,env(safe-area-inset-left,0px))}}
 .cnav{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 25%,transparent);display:grid;place-items:center;line-height:1}
 .cnav b{font-size:1.15rem;font-weight:700}
 .cnav svg{display:block}
@@ -273,6 +281,12 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 body.sheetopen #capTip{display:none}
 @keyframes tipglow{50%{box-shadow:0 0 0 5px var(--gold),0 0 26px color-mix(in srgb,var(--gold) 70%,transparent)}}
 #intro{position:fixed;inset:0;z-index:60;background:#0b1030;transition:opacity .9s ease}
+#tapBegin{position:fixed;inset:0;z-index:61;display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#2b3770,#0b1030 70%);color:#e7ecff;cursor:pointer;transition:opacity .4s ease;outline:none}
+#tapBegin.out{opacity:0;pointer-events:none}
+#tapBegin .tb-in{text-align:center;display:flex;flex-direction:column;gap:18px;align-items:center}
+#tapBegin .tb-title{margin:0;font:700 clamp(2.6rem,12vw,4.2rem) var(--display,var(--body));letter-spacing:.02em}
+#tapBegin .tb-tap{margin:0;font:600 1.05rem var(--body);opacity:.85;animation:tbPulse 1.6s ease-in-out infinite alternate}
+@keyframes tbPulse{from{opacity:.45}to{opacity:1}}
 #intro.out{opacity:0;pointer-events:none}
 #intro canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #introSkip{position:absolute;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));padding:12px 26px;border:1px solid rgba(231,236,255,.4);border-radius:999px;background:rgba(11,16,48,.5);color:#e7ecff;font:600 1.05rem var(--body);cursor:pointer;opacity:.85}
@@ -458,6 +472,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 <div id="intro" hidden aria-label="Intro"><canvas></canvas><button id="introSkip" type="button">Skip</button></div>
 <div id="loading" hidden role="status" aria-live="polite"><div><i></i><p>Loading boards…</p></div></div>
 <div id="coopNav" hidden></div>
+<div id="boardMap" class="notr" role="img" hidden></div>
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
 <div id="caption" class="ui"></div>
 <nav class="ui">

@@ -91,6 +91,7 @@ function ascii(L, S) {
     });
   });
   if (L.sling) g[L.sling.y * 2 + 1][L.sling.x * 2 + 1] = 'Y';
+  (L.nests || []).forEach((n) => { g[n[1] * 2 + 1][n[0] * 2 + 1] = 'N'; });
   ((S && S.props) || L.props || []).forEach((p) => { if (!p.gone) g[p.y * 2 + 1][p.x * 2 + 1] = p.kind === 'ball' ? 'o' : p.kind === 'bird' ? 'B' : p.ch; });
   (L.walls || []).forEach((w) => { if (S && S.broken[(w[2] === 'r' ? 'v' : 'h') + w[0] + '_' + w[1]]) return; if (w[2] === 'r') g[w[1] * 2 + 1][w[0] * 2 + 2] = '#'; else g[w[1] * 2 + 2][w[0] * 2 + 1] = '='; });
   (L.goals || []).forEach((gl) => gl.ys.forEach((y) => { g[y * 2 + 1][gl.side === 1 ? W - 1 : 0] = gl.own ? '[' : ']'; }));

@@ -2,6 +2,28 @@
 // reaches the page is swapped here, so a new sentence only needs a new line in this list.
 window.UnwindI18n = (function () {
   var PT = {
+    'Intro': 'Introdução',
+    'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.': 'Um ninho! Um pássaro que deslize para lá fica a descansar. Para o pássaro no ninho e depois leva-o até à fisga.',
+    'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.': 'Três tabuleiros e três pássaros. Alguns pássaros só estorvam, e um ninho guarda um pássaro onde precisas dele.',
+    'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.': 'Empurra os pássaros para a fisga com as setas e depois atira-os. Um pássaro atirado parte a primeira parede de madeira ou seta em que bater. Os ninhos param os pássaros, mas nunca deixes uma seta acertar num ninho vazio. Limpa todas as setas para ganhar.',
+    'Coast': 'Costa',
+    'Moonlit Coast': 'Costa ao Luar',
+    'Night coast: a gentle harp lullaby by the sea': 'Costa à noite: uma canção de embalar suave em harpa, junto ao mar',
+    'The bird rests in the nest.': 'O pássaro descansa no ninho.',
+    'The bird rests in the nest. Never let an arrow hit an empty nest: the eggs would break.': 'O pássaro descansa no ninho. Nunca deixes uma seta acertar num ninho vazio: os ovos partiam-se.',
+    'Own goal! That costs a life. The ball goes back to where it was kicked from.': 'Autogolo! Custa uma vida. A bola volta ao sítio de onde foi chutada.',
+    'Out! That costs a life. The ball goes back to where it was kicked from.': 'Fora! Custa uma vida. A bola volta ao sítio de onde foi chutada.',
+    'The eggs broke!': 'Os ovos partiram-se!',
+    'An arrow hit an empty nest. Rest a bird in the nest first, or keep arrows away from it.': 'Uma seta acertou num ninho vazio. Põe primeiro um pássaro a descansar no ninho, ou mantém as setas longe dele.',
+    'Nests and eggs': 'Ninhos e ovos',
+    'A bird that slides into a nest rests there, like a stop sign, until an arrow pushes it on. A bird that slides in pushes the resting bird away and takes its place. A nest also blocks arrows: if an arrow hits an empty nest, the eggs break and the level is lost.': 'Um pássaro que desliza para um ninho fica lá a descansar, como um sinal de stop, até uma seta o empurrar. Um pássaro que entra empurra o que está a descansar e fica no lugar dele. O ninho também trava as setas: se uma seta acertar num ninho vazio, os ovos partem-se e perdes o nível.',
+    "A bird that slides into a nest rests there until an arrow pushes it on, and a bird that slides in takes the resting bird's place. Nests block arrows: an arrow that hits an empty nest breaks the eggs and loses the level.": 'Um pássaro que desliza para um ninho fica lá até uma seta o empurrar, e um pássaro que entra fica no lugar do que estava a descansar. Os ninhos travam as setas: uma seta que acerte num ninho vazio parte os ovos e perdes o nível.',
+    'A bird that reaches a nest rests there': 'Um pássaro que chega a um ninho fica lá a descansar',
+    'A new bird takes its place and pushes it on': 'Um pássaro novo fica no lugar dele e empurra-o',
+    'An arrow pushes the resting bird away': 'Uma seta empurra o pássaro que descansa',
+    'Never let an arrow hit an empty nest': 'Nunca deixes uma seta acertar num ninho vazio',
+    'Tap this message to go back to an earlier line, or to watch how it works again.': 'Toca nesta mensagem para voltares a um verso anterior, ou para veres outra vez como funciona.',
+    'The video for letters, slots and compass arrows.': 'O vídeo das letras, dos espaços e das setas bússola.',
     'Unwind': 'Unwind',
     'No winning moves left': 'Sem jogadas vencedoras',
     'This line can no longer be written. Try it again: the lines you have already written stay written.': 'Este verso já não pode ser escrito. Tenta outra vez: os versos que já escreveste ficam escritos.',
@@ -161,7 +183,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
-    [/^Hint (\d+)$/, 'Dica $1'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
+    [/^Hint (\d+)$/, 'Dica $1'], [/^Line 2 of (\d+): tap this message to go back to line 1\.$/, 'Verso 2 de $1: toca nesta mensagem para voltares ao verso 1.'], [/^Board (\d+) of (\d+)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
 [/^Players (\d) \/ (\d)$/, 'Jogadores $1 / $2'], [/^Waiting for (\d) players? to join$/, function (m, n) { return n === '1' ? 'À espera que entre 1 jogador' : 'À espera que entrem ' + n + ' jogadores'; }], [/^Waiting for (\d) players? to be ready$/, function (m, n) { return n === '1' ? 'À espera que 1 jogador fique pronto' : 'À espera que ' + n + ' jogadores fiquem prontos'; }], [/^Remove (.+)$/, 'Remover $1'],
 [/^Board (\d)$/, 'Tabuleiro $1'], [/^Only (.+) is still paused\. As the host, you can carry on without them\.$/, 'Só $1 ainda está em pausa. Como anfitrião, podes continuar sem essa pessoa.'], [/^Waiting for (.+) and (.+)…$/, 'À espera de $1 e $2…'],
 [/^(.+)'s room$/, 'Sala de $1'], [/^(\d) \/ (\d) players · (\d)x boards · (Hard|Normal)$/, function (m, a, b, c, d) { return a + ' / ' + b + ' jogadores · tabuleiros ' + c + 'x · ' + (d === 'Hard' ? 'Difícil' : 'Normal'); }],

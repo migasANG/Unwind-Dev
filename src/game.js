@@ -31,6 +31,7 @@
     winter: { name: 'Winter', a: '#bfdcf0', b: '#eef6fb', ink: '#12365a', twin: '#b83563', compass: '#5a3fc0', sun: '#ffffff', card: '#f6fbff', hint: '#e85d04', music: 4, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#8f5200', '#5a3fc0', '#4d7c0f', '#0369a1', '#9d174d'] },
     spring: { name: 'Spring', a: '#bfe6f5', b: '#a8d982', ink: '#143c24', twin: '#b83563', compass: '#6a3fb0', sun: '#fff7c9', card: '#f7fcef', hint: '#e85d04', music: 5, mirror: '#1f6fd6', twins: ['#b83563', '#a8127a', '#7d5200', '#5a3fc0', '#4d7c0f', '#0369a1', '#9d174d'] },
     summer: { name: 'Summer', a: '#8fd8f2', b: '#f7e3ac', ink: '#0d3555', twin: '#b83563', compass: '#5a3fc0', sun: '#fff0a8', card: '#fffaf0', hint: '#c2410c', music: 6, mirror: '#1f6fd6', twins: ['#b83563', '#0a7d55', '#7d5200', '#5a3fc0', '#4d7c0f', '#0369a1', '#9d174d'] },
+    coast: { name: 'Coast', a: '#0f1736', b: '#26315c', ink: '#e7ecff', twin: '#ffa6b8', compass: '#8ee8c6', sun: '#dfe6ff', card: '#1b2348', hint: '#ffe14d', music: 9, mirror: '#7cc4ff', twins: ['#ffa6b8', '#ffd479', '#a8f08a', '#a9d4ff', '#c4b5fd', '#f0abfc', '#fde047'] },
     autumn: { name: 'Autumn', a: '#e8b070', b: '#b5763c', ink: '#311705', twin: '#a01f4b', compass: '#2f4f8f', sun: '#ffd892', card: '#fff4e3', hint: '#0f6a79', music: 7, mirror: '#1f4fa6', twins: ['#a01f4b', '#14603f', '#2f4f8f', '#6a2fa0', '#4d7c0f', '#0369a1', '#9d174d'] }
   };
   function chapterFor(i, total) { return CHAPTERS[Math.min(4, Math.floor(i / total * 5))]; }
@@ -83,7 +84,10 @@
     }
     return ac;
   }
+  var introMusic = false;
   function wantedTheme() {
+    // The intro always plays its own song, the coast at night.
+    if (introMusic) return M.THEMES.map(function (t) { return t.id; }).indexOf('moonlit-coast');
     if (audioPrefs.theme !== 'auto') {
       var i = M.THEMES.map(function (t) { return t.id; }).indexOf(audioPrefs.theme);
       if (i >= 0) return i;
@@ -91,7 +95,7 @@
     return colors.music;
   }
   /* ---------- Open Water's default background: each song plays once, then the scene fades to the next ---------- */
-  var CYCLE = ['0', '1', '2', '3', '4', 'winter', 'spring', 'summer', 'autumn'], CYCLE_GAP = 2000;
+  var CYCLE = ['0', '1', '2', '3', '4', 'coast', 'winter', 'spring', 'summer', 'autumn'], CYCLE_GAP = 2000;
   var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
   function rotating() { return !!current && (current.mode === 'endless' || !!current.coop); }
   function cycleOn() { return rotating() && backgroundChoice() === 'default'; }
@@ -236,7 +240,7 @@
   }
   function timeChapter() { var h = new Date().getHours(); return h < 6 ? 4 : h < 10 ? 0 : h < 14 ? 1 : h < 18 ? 2 : h < 21 ? 3 : 4; }
   // Open water keeps the usual sky unless the player picks another background.
-  var BACKGROUNDS = [['default', 'Default'], ['0', 'Dawn'], ['1', 'Morning'], ['2', 'Noon'], ['3', 'Dusk'], ['4', 'Night'], ['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn']];
+  var BACKGROUNDS = [['default', 'Default'], ['0', 'Dawn'], ['1', 'Morning'], ['2', 'Noon'], ['3', 'Dusk'], ['4', 'Night'], ['coast', 'Coast'], ['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn']];
   function backgroundChoice() { return endlessOpts().background || 'default'; }
   function backgroundPalette() {
     var b = shownBackground();
@@ -495,13 +499,14 @@
     { set: 'match', title: 'Matchday 5', special: 'fb5', caption: 'Five big boards. Switch lanes twice, and mind your own goal.' },
     { set: 'wood', title: 'Woodland 1', special: 'sl1', caption: 'Push the bird onto the slingshot, then throw it at the wooden wall.' },
     { set: 'wood', title: 'Woodland 2', special: 'sl2', caption: 'A thrown bird breaks the first arrow it hits. Birds can slide to other boards.' },
-    { set: 'wood', title: 'Woodland 3', special: 'sl3', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
-    { set: 'wood', title: 'Woodland 4', special: 'sl4', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
-    { set: 'wood', title: 'Woodland 5', special: 'sl5', caption: 'Three boards and three birds. Some birds are only in the way.' }
+    { set: 'wood', title: 'Woodland 3', special: 'sl3', caption: 'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.' },
+    { set: 'wood', title: 'Woodland 4', special: 'sl4', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
+    { set: 'wood', title: 'Woodland 5', special: 'sl5', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
+    { set: 'wood', title: 'Woodland 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
-    ['wood', 'Woodland', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Clear every arrow to win.']];
+    ['wood', 'Woodland', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
@@ -539,7 +544,7 @@
     var t = start;
     segs.forEach(function (sg, i) {
       var len = pathCells(sg.path), dur = Math.max(140, len * perCell), last = i === segs.length - 1;
-      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly });
+      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly, hold: i === 0 && opts && opts.hold });
       t += dur;
     });
     return t;
@@ -601,23 +606,56 @@
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.42, r * 0.22, r * 0.12, -0.6, 0, 7); ctx.fill();
     ctx.restore(); ctx.globalAlpha = 1;
   }
-  // A little round bird drawn like the bees: flat colours, no outlines, two dot eyes, and a wing that beats.
+  // A little round bird drawn like the bees: flat colours, no outlines, big shiny eyes, rosy cheeks and a tuft.
+  // In flight both wings beat.
   function drawBird(x, y, s, color, face, flap, now) {
     var k = s / 24;
     ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k); ctx.globalAlpha = 1;
-    var lift = reduced ? 0 : flap ? Math.sin(now / 45) * 0.7 : Math.sin(now / 700) * 0.06;
-    var dark = mixColor(color, '#1d1d2a', 0.3), light = mixColor(color, '#ffffff', 0.6);
-    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-8, -1); ctx.lineTo(-15, -6); ctx.lineTo(-14, 3); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-    if (!flap) [[-3, 7, -4, 11], [3, 7, 3.5, 11]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
-    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11, 9, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 3.5, 7, 4.6, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1); ctx.rotate(-0.35 - lift); ctx.beginPath(); ctx.ellipse(-2, -3, 6.5, 4, 0.2, 0, 7); ctx.fill(); ctx.restore();
-    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(10, -3.5); ctx.lineTo(15.5, -1); ctx.lineTo(10, 1.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(4.8, -3, 1.4, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(8, -3, 1.4, 0, 7); ctx.fill();
+    var beat = reduced ? 0 : flap ? Math.sin(now / 38) : Math.sin(now / 700) * 0.08;
+    var dark = mixColor(color, '#1d1d2a', 0.28), light = mixColor(color, '#ffffff', 0.62);
+    // Far wing, behind the body, only while flying.
+    if (flap) { ctx.fillStyle = dark; ctx.save(); ctx.translate(-1, -3); ctx.rotate(-0.6 + beat * 1.1); ctx.beginPath(); ctx.ellipse(-1, -7, 4.5, 8, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
+    // Tail feathers.
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-15, -5); ctx.lineTo(-13.5, 0.5); ctx.lineTo(-15, 4.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#e39a2a'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+    if (!flap) [[-3, 8, -3.5, 11.5], [3, 8, 3.5, 11.5]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
+    // A round body and a pale tummy.
+    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 10, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 4, 7, 5, 0, 0, 7); ctx.fill();
+    // A little tuft on top.
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(1, -9); ctx.quadraticCurveTo(0, -15, 4, -16); ctx.quadraticCurveTo(3, -12, 5, -9.5); ctx.closePath(); ctx.fill();
+    // Near wing: folded at rest, beating in flight.
+    ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1);
+    if (flap) { ctx.rotate(0.3 - beat * 1.2); ctx.beginPath(); ctx.ellipse(-2, -6, 5, 8.5, 0.25, 0, 7); ctx.fill(); }
+    else { ctx.rotate(-0.3 - beat); ctx.beginPath(); ctx.ellipse(-2, 0, 6.5, 4.2, 0.2, 0, 7); ctx.fill(); }
+    ctx.restore();
+    // Beak, cheeks and big eyes with a shine.
+    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(10.5, -2.5); ctx.lineTo(15, -0.5); ctx.lineTo(10.5, 1.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,128,150,.55)'; ctx.beginPath(); ctx.ellipse(7.5, 2.2, 2.2, 1.4, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1a1a24';
+    ctx.beginPath(); ctx.arc(4.6, -3.2, 2.1, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(9, -3.2, 1.9, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(5.2, -3.9, 0.75, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(9.5, -3.9, 0.65, 0, 7); ctx.fill();
     ctx.restore(); ctx.globalAlpha = 1;
+  }
+  // A twig nest with speckled eggs. A bird sitting in it covers the eggs.
+  function drawNest(c, sitting, now) {
+    var s = cs;
+    ctx.save(); ctx.translate(c.x, c.y + s * 0.12);
+    ctx.globalAlpha = 0.22; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(0, s * 0.18, s * 0.42, s * 0.1, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#7a5230'; ctx.beginPath(); ctx.ellipse(0, s * 0.04, s * 0.4, s * 0.18, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#5c3b1f'; ctx.beginPath(); ctx.ellipse(0, -s * 0.02, s * 0.3, s * 0.11, 0, 0, 7); ctx.fill();
+    if (!sitting) [[-0.12, -0.06, -0.3], [0.1, -0.07, 0.25], [0, -0.1, 0]].forEach(function (e, i) {
+      ctx.save(); ctx.translate(e[0] * s, e[1] * s); ctx.rotate(e[2]);
+      ctx.fillStyle = ['#e8f2ff', '#cde7f7', '#f4ecd8'][i]; ctx.beginPath(); ctx.ellipse(0, 0, s * 0.085, s * 0.11, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(90,110,140,.45)'; [[-0.03, -0.03], [0.03, 0.02], [0, 0.05]].forEach(function (d) { ctx.beginPath(); ctx.arc(d[0] * s, d[1] * s, s * 0.012, 0, 7); ctx.fill(); });
+      ctx.restore();
+    });
+    ctx.strokeStyle = '#a8763f'; ctx.lineWidth = Math.max(1, s * 0.03); ctx.lineCap = 'round';
+    for (var i = 0; i < 7; i++) { var a = i * 0.9 + 0.3; ctx.beginPath(); ctx.moveTo(Math.cos(a) * s * 0.36, s * 0.04 + Math.sin(a) * s * 0.15); ctx.lineTo(Math.cos(a + 0.5) * s * 0.42, s * 0.05 + Math.sin(a + 0.5) * s * 0.17); ctx.stroke(); }
+    ctx.restore();
   }
   function drawLetter(x, y, s, ch, glow, now) {
     ctx.save(); ctx.translate(x, y);
@@ -696,6 +734,7 @@
   // Under the arrows: slots, goals and the slingshot.
   function drawSpecialsUnder(now, L, S) {
     (L.slots || []).forEach(function (sl) { var i = E.propAt(L, S, sl.y * L.w + sl.x); drawSlot(sl, i >= 0); });
+    (L.nests || []).forEach(function (n) { drawNest(px(n), E.propAt(L, S, n[1] * L.w + n[0]) >= 0, now); });
     (L.goals || []).forEach(function (g) { drawGoal(L, g, now); });
     if (L.sling) drawSling(L, S);
   }
@@ -713,7 +752,10 @@
       drawProp(p, c.x, c.y, now, { glow: held, face: p.face || 1 });
     });
     anims.forEach(function (an) {
-      if (an.b !== b || now < an.start) return;
+      // A part of a trip is drawn only while it runs: once the prop moves to the next board it is gone from this one.
+      // A prop that waits for its turn (knocked out of a nest) stays where it is until then.
+      if (an.b !== b || now > an.start + an.dur + 30) return;
+      if (now < an.start && !an.hold) return;
       var at = animAt(an, now), c = px([at.x, at.y]);
       var alpha = an.fadeOut && at.t > 0.6 ? Math.max(0, 1 - (at.t - 0.6) / 0.4) : 1;
       var dx = an.pts[an.pts.length - 1][0] - an.pts[0][0];
@@ -727,12 +769,30 @@
       drawProp({ kind: an.kind, color: an.color, ch: an.ch }, c.x, c.y - (an.fly ? cs * Math.sin(at.t * Math.PI) * 0.18 : 0), now, { turn: at.dist * 1.9 * (dx < 0 ? -1 : 1), face: dx < 0 ? -1 : 1, fly: an.fly });
       ctx.restore();
     });
-    fx.forEach(function (f) { if (f.b === b || f.kind === 'goal') drawSpecialFx(f, now); });
+    fx.forEach(function (f) { if (f.b === b || f.kind === 'goal' || f.kind === 'flyaway') drawSpecialFx(f, now); });
     if (aim && aim.b === b && S.loaded !== -1 && L.sling) drawAim(now, L, S);
+  }
+  // A bird that leaves the play area does not just vanish: it swoops out, turns, and flies big and flapping
+  // right across the screen before it is gone.
+  function drawFlyaway(f, now) {
+    var t = (now - f.start) / f.dur;
+    if (t < 0 || t > 1) return;
+    var out = [[0, -1], [1, 0], [0, 1], [-1, 0]][f.dir], right = f.dir === 1 || (f.dir !== 3 && f.x0 < vw / 2);
+    var p0 = [f.x0, f.y0], p1 = [f.x0 + out[0] * vw * 0.3, f.y0 + out[1] * vh * 0.2 - vh * 0.18];
+    var p2 = [vw * (right ? 0.55 : 0.45), vh * 0.12], p3 = [right ? -vw * 0.25 : vw * 1.25, vh * 0.3];
+    var e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2, u = 1 - e;
+    var bez = function (k) { return u * u * u * p0[k] + 3 * u * u * e * p1[k] + 3 * u * e * e * p2[k] + e * e * e * p3[k]; };
+    var x = bez(0), y = bez(1) + Math.sin(t * Math.PI * 6) * cs * 0.12;
+    var e2 = Math.min(1, e + 0.02), u2 = 1 - e2, nx = u2 * u2 * u2 * p0[0] + 3 * u2 * u2 * e2 * p1[0] + 3 * u2 * e2 * e2 * p2[0] + e2 * e2 * e2 * p3[0];
+    var size = cs * (0.45 + Math.sin(Math.min(1, t * 1.6) * Math.PI / 2) * 1.5);
+    ctx.save(); ctx.globalAlpha = t < 0.06 ? t / 0.06 : 1;
+    drawBird(x, y, size, f.color || '#3d8bf2', nx >= x ? 1 : -1, true, now);
+    ctx.restore(); ctx.globalAlpha = 1;
   }
   function drawSpecialFx(f, now) {
     var t = (now - f.start) / f.dur;
     if (t < 0 || t > 1) return;
+    if (f.kind === 'flyaway') { drawFlyaway(f, now); return; }
     var e = 1 - Math.pow(1 - t, 3);
     if (f.cell) f = Object.assign({}, f, { p: px(f.cell) });
     ctx.save();
@@ -744,6 +804,11 @@
         ctx.globalAlpha = 1 - t; ctx.fillStyle = i % 2 ? '#9a6234' : '#c48a54';
         ctx.save(); ctx.translate(g.x + Math.cos(a) * d, g.y + Math.sin(a) * d + e * e * cs * 0.4); ctx.rotate(a + t * 5); ctx.fillRect(-cs * 0.09, -cs * 0.025, cs * 0.18, cs * 0.05); ctx.restore();
       }
+    } else if (f.kind === 'eggs') {
+      // Cracked eggs and a splash of yolk.
+      ctx.globalAlpha = 1 - t * 0.6;
+      ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.ellipse(f.p.x, f.p.y + cs * 0.1, cs * (0.18 + e * 0.25), cs * (0.08 + e * 0.1), 0, 0, 7); ctx.fill();
+      for (var sh = 0; sh < 8; sh++) { var a5 = sh * 0.8, d5 = cs * (0.1 + e * 0.6); ctx.fillStyle = sh % 2 ? '#e8f2ff' : '#cde7f7'; ctx.save(); ctx.translate(f.p.x + Math.cos(a5) * d5, f.p.y - Math.abs(Math.sin(a5)) * d5 * 0.8 + e * e * cs * 0.3); ctx.rotate(a5 + t * 4); ctx.beginPath(); ctx.moveTo(-cs * 0.06, 0); ctx.lineTo(0, -cs * 0.07); ctx.lineTo(cs * 0.06, 0); ctx.closePath(); ctx.fill(); ctx.restore(); }
     } else if (f.kind === 'doomedWall') {
       if (!f.trip.done) drawWall(f.key);
     } else if (f.kind === 'doomed') {
@@ -830,20 +895,23 @@
       setCaption(p0.kind === 'letter' && (res.results[0].check.endDir === 0 || res.results[0].check.endDir === 2) ? 'Letters only move sideways.' : p0.kind === 'bird' && pu0.wall ? 'Only a bird thrown from the slingshot can break wood.' : 'Something is in the way: it cannot move there.');
       return;
     }
-    var birdTrips = (rt && rt.birds || []).slice();
-    res.pushed.forEach(function (pu) {
+    var birdTrips = (rt && rt.birds || []).slice(), chainDelay = 140;
+    res.pushed.forEach(function (pu, pi) {
       var p = anyProp(pu.id) || {};
       if (pu.kind === 'ball') {
-        var segs = rt && rt.ball ? rt.ball.segs : [{ b: b, path: pu.path }], last = rt && rt.ball ? rt.ball.result : 'moved';
+        var segs = rt && rt.ball ? rt.ball.segs : [{ b: b, path: pu.path }], last = rt && rt.ball ? rt.ball.result : 'moved', spot = rt && rt.ballSpot;
         specialSound('kick'); buzz(12);
-        startTrip({ segs: segs, kind: 'ball', id: pu.id, perCell: 62, delay: 140, fadeOut: last === 'out', onEnd: function (t) { ballLanded(last, t); } });
+        startTrip({ segs: segs, kind: 'ball', id: pu.id, perCell: 62, delay: 140, fadeOut: last === 'out', onEnd: function (t) { ballLanded(last, t, spot); } });
         return;
       }
       if (pu.kind === 'bird') {
-        var tr = pu.exit ? birdTrips.shift() : null;
+        var tr = pu.exit ? birdTrips.shift() : null, delay = pi === 0 ? 140 : chainDelay;
+        // A bird knocked out of a nest moves once the newcomer has reached the nest.
+        chainDelay = delay + Math.max(140, pathCells(pu.path) * 80);
         specialSound('slide');
-        startTrip({ segs: tr ? tr.segs : [{ b: b, path: pu.path }], kind: 'bird', id: pu.id, color: p.color, perCell: 80, delay: 140, fly: true, fadeOut: !!(tr && tr.result === 'lost'), onEnd: function () {
-          if (tr && tr.result === 'lost') setCaption('The bird flew away.');
+        startTrip({ segs: tr ? tr.segs : [{ b: b, path: pu.path }], kind: 'bird', id: pu.id, color: p.color, perCell: 80, delay: delay, fly: true, fadeOut: !!(tr && tr.result === 'lost'), onEnd: function (t) {
+          if (tr && tr.result === 'lost') { setCaption('The bird flew away.'); birdFlyaway(tr.segs, p.color, t); }
+          else if (pu.nest) nestCaption();
           else if (pu.loaded || (tr && tr.loaded)) { specialSound('chirp'); setCaption('The bird is on the slingshot. Tap the slingshot to throw it.'); }
           else if (pu.wall) setCaption('Only a bird thrown from the slingshot can break wood.');
           refresh(); if (inRoom()) coopNav();
@@ -855,7 +923,20 @@
       startTrip({ segs: [{ b: b, path: pu.path }], kind: 'letter', id: pu.id, ch: p.ch, perCell: 150, delay: 140, onEnd: function () { animFalls(0); } });
     });
   }
-  function ballLanded(last, now) {
+  // Where the last part of a trip leaves its board, in screen pixels, and in which direction.
+  function birdFlyaway(segs, color, now) {
+    var sg = segs[segs.length - 1], pts = sg.path, end = pts[pts.length - 1], prev = pts[pts.length - 2] || end;
+    var dir = end[0] > prev[0] ? 1 : end[0] < prev[0] ? 3 : end[1] < prev[1] ? 0 : 2, c = px(end);
+    specialFxAdd({ kind: 'flyaway', b: curIdx(), x0: c.x, y0: c.y, dir: dir, color: color, start: now, dur: 2200 });
+    [1567.98, 1975.53, 2349.3].forEach(function (f, i) { pluck(f, i * 0.09, 0.05, 0.3); });
+  }
+  function nestCaption() {
+    progress.tutorials = progress.tutorials || {};
+    setCaption(progress.tutorials.nestSeen ? 'The bird rests in the nest.' : 'The bird rests in the nest. Never let an arrow hit an empty nest: the eggs would break.');
+    progress.tutorials.nestSeen = 1; save('unwind.progress2', progress);
+    pluck(1318.5, 0, 0.06, 0.4);
+  }
+  function ballLanded(last, now, spot) {
     if (last === 'goal') {
       specialSound('whistle'); specialFxAdd({ kind: 'goal', b: curIdx(), dur: 1800 });
       [1, 1.25, 1.5, 2].forEach(function (x, i) { pluck(523.25 * x, 0.1 + i * 0.09, 0.1, 1.2); });
@@ -866,10 +947,10 @@
     if (last === 'out' || last === 'own') {
       collisions++;
       specialSound('out'); buzz(30);
-      setCaption(last === 'own' ? 'Own goal! That costs a life. The ball goes back to its spot.' : 'Out! That costs a life. The ball goes back to its spot.');
+      setCaption(last === 'own' ? 'Own goal! That costs a life. The ball goes back to where it was kicked from.' : 'Out! That costs a life. The ball goes back to where it was kicked from.');
       if (inRoom()) coopSyncLives(); refresh();
       if (state.lives === 0) { finish(false, 'lives'); return; }
-      var k = coop.room.kick;
+      var k = spot || coop.room.kick;
       if (coop.idx !== k.b) coopSwitch(k.b);
       specialFxAdd({ kind: 'pop', b: k.b, cell: [k.x, k.y], start: now + 380, dur: 700 });
     }
@@ -920,6 +1001,12 @@
     if (!r) return;
     if (r.noop) { setCaption('Something is right in front of it.'); pluck(220, 0, 0.07, 0.3); return; }
     specialSound('throw'); buzz(10);
+    // A bird resting in the nest it lands in waits there until the thrown bird arrives, then is knocked on.
+    var chainTrip = null;
+    if (r.chain) {
+      var ch = r.chain, q = anyProp(ch.slide.id) || {}, csegs = ch.trip ? ch.trip.segs : [{ b: ch.b, path: ch.slide.path }];
+      chainTrip = startTrip({ segs: csegs, kind: 'bird', id: ch.slide.id, color: q.color, perCell: 80, delay: 1e9, fly: true, fadeOut: !!(ch.trip && ch.trip.result === 'lost'), onEnd: function (t2) { if (ch.trip && ch.trip.result === 'lost') birdFlyaway(csegs, q.color, t2); else if (ch.slide.loaded) specialSound('chirp'); refresh(); } });
+    }
     var trip = startTrip({ segs: r.segs, kind: 'bird', id: r.id, color: color, perCell: 48, delay: 60, fly: true, linear: true, fadeOut: r.gone, onEnd: function (t) {
       if (r.broke) { specialFxAdd({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: t, dur: 700 }); specialSound('crack'); buzz(20); }
       if (r.destroyed) {
@@ -929,8 +1016,11 @@
         progress.tutorials = progress.tutorials || {};
         if (!progress.tutorials.birdHit) { progress.tutorials.birdHit = 1; save('unwind.progress2', progress); setCaption('A thrown bird breaks the first arrow it hits.'); }
       } else if (r.impact && !r.broke) specialFxAdd({ kind: 'pop', b: r.impact.b, cell: r.impact.p, dur: 500, start: t });
-      if (r.gone) setCaption('The bird flew away.');
+      if (r.gone) { setCaption('The bird flew away.'); birdFlyaway(r.segs, color, t); }
+      if (r.nest) nestCaption();
       if (r.loaded) specialSound('chirp');
+      // The bird that was resting in the nest is knocked on now.
+      if (chainTrip) chainTrip.segStart = t;
       refresh(); if (inRoom()) coopNav();
       if (inRoom() && coopAllWon()) { finish(true); return; }
       whenIdle(specialCheck);
@@ -972,7 +1062,7 @@
     line = Math.max(0, Math.min(n - 1, line));
     var L = room.boards[line];
     L.lives = 3; L.hints = 1;
-    L.caption = 'Line ' + (line + 1) + ' of ' + n + ': push the letters into their slots.';
+    L.caption = line === 1 && !(progress.tutorials && progress.tutorials.poemBackTip) ? 'Line 2 of ' + n + ': tap this message to go back to line 1.' : 'Line ' + (line + 1) + ' of ' + n + ': push the letters into their slots.';
     save('unwind.progress2', progress);
     begin({ id: P.id, mode: 'poem', poem: idx, line: line, n: n, lines: room.boards.map(function (B) { return B.line; }), level: L, title: P.title + ' · Line ' + (line + 1) + ' of ' + n, chapter: CHAPTERS[timeChapter()], sunY: 40 });
     state.safe = false; poemUndo = []; trips = []; propAnims = []; specialFx = []; aim = null; specialBusy = 0;
@@ -1013,10 +1103,22 @@
       else openPoem(next, c.poem);
     }, 3600);
   }
-  function poemHintSheet() {
+  // The hint button shows a move straight away, like on any other level.
+  function poemHint() {
+    if (ended || busy()) return;
+    if (hintsLeft <= 0) { setCaption('No hints left on this line.'); return; }
+    var sol = E.solveSpecial(current.level, state, 40000);
+    if (sol.solved && sol.first >= 0) {
+      hintArrow = sol.first; hintStart = performance.now(); hintsLeft--; hintsUsed++;
+      pluck(M.hz(M.THEMES[wantedTheme()].pent[7]), 0, 0.12, 1); focusArrow(hintArrow); track('hint_used', { poem: true });
+    } else setCaption('No winning moves are left on this line.');
+    refresh();
+  }
+  // Tapping the line's message: watch how it works, or go back to a line already written.
+  function poemCaptionSheet() {
     var c = current, pr = poemProgress(POEMS[c.poem].id);
-    var html = '<div class="row"><h2>Hint</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<div class="modes"><button id="phMove"' + (hintsLeft > 0 ? '' : ' disabled') + '><b>Show me a move</b><span>' + (hintsLeft > 0 ? 'One hint for this line.' : 'No hints left on this line.') + '</span></button></div>';
+    var html = '<div class="row"><h2>Line ' + (c.line + 1) + ' of ' + c.n + '</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+      '<div class="modes"><button id="phWatch"><b>▶ Watch how it works</b><span>The video for letters, slots and compass arrows.</span></button></div>';
     if (c.line > 0 && pr.written.slice(0, c.line).some(Boolean)) {
       html += '<div class="chapter">Go back to an earlier line</div><p class="note">The lines you have written stay written. Once you finish it, you come back here.</p><div class="modes">';
       for (var k = 0; k < c.line; k++) if (pr.written[k]) html += '<button data-pl="' + k + '"><b>Line ' + (k + 1) + '</b><span class="notr">' + c.lines[k].replace(/[{}]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></button>';
@@ -1024,16 +1126,8 @@
     }
     var s = sheet(html);
     s.querySelector('#x').onclick = closeSheet;
-    s.querySelector('#phMove').onclick = function () {
-      closeSheet();
-      var sol = E.solveSpecial(current.level, state, 40000);
-      if (sol.solved && sol.first >= 0) {
-        hintArrow = sol.first; hintStart = performance.now(); hintsLeft--; hintsUsed++;
-        pluck(M.hz(M.THEMES[wantedTheme()].pent[7]), 0, 0.12, 1); focusArrow(hintArrow); track('hint_used', { poem: true });
-      } else setCaption('No winning moves are left on this line.');
-      refresh();
-    };
-    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { openPoem(+b.getAttribute('data-pl'), c.poem); }; });
+    s.querySelector('#phWatch').onclick = function () { closeSheet(); showTutorial(levelDemos(), 0, false, 'play'); };
+    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { closeSheet(); openPoem(+b.getAttribute('data-pl'), c.poem); }; });
   }
   // Undo for a poem line: letters move, so the whole line is remembered before each move.
   function poemSnap() { poemUndo.push({ removed: state.removed.slice(), launches: state.launches, history: state.history.slice(), snaps: (state.snaps || []).slice(), props: state.props.map(function (p) { return Object.assign({}, p); }), ghostFlip: state.ghostFlip }); }
@@ -1045,12 +1139,74 @@
     rewinds++; boardLayer = null; hintArrow = -1;
     pluck(146.8, 0, 0.12, 0.7); refresh();
   }
+  /* A calm voice for the finished poem. It uses the device's own speech voices, in the game's language,
+     and prefers the most natural one installed. */
+  var poemVoice = null;
+  function pickVoice() {
+    var ss = window.speechSynthesis; if (!ss) return null;
+    var want = window.UnwindI18n.lang() === 'pt' ? 'pt' : 'en', vs = ss.getVoices().filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf(want) === 0; });
+    if (!vs.length) return null;
+    var score = function (v) {
+      var n = v.name.toLowerCase(), l = v.lang.toLowerCase(), sc = 0;
+      if (/natural|neural|premium|enhanced/.test(n)) sc += 6;
+      if (/google|microsoft|siri|samantha|daniel|serena|karen|moira|joana|catarina|raquel|duarte/.test(n)) sc += 3;
+      if (want === 'pt' && l === 'pt-pt') sc += 4;
+      if (want === 'en' && /en-gb|en-us/.test(l)) sc += 1;
+      if (v.localService) sc += 1;
+      return sc;
+    };
+    return vs.sort(function (a, b) { return score(b) - score(a); })[0];
+  }
+  try { if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = function () { poemVoice = pickVoice(); }; poemVoice = pickVoice(); } } catch (e) {}
+  function readAloud(text) {
+    if (!audioPrefs.sound || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    try {
+      var u = new SpeechSynthesisUtterance(text), v = poemVoice || pickVoice();
+      if (v) u.voice = v;
+      u.lang = v ? v.lang : window.UnwindI18n.lang() === 'pt' ? 'pt-PT' : 'en-GB';
+      u.rate = 0.78; u.pitch = 0.92; u.volume = Math.min(1, soundLevel() / 0.7);
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  // Waves on a quiet shore: soft filtered noise that swells and falls, with a low, slow chord under it.
+  function seaAmbience() {
+    var c = audio(); if (!c || (!audioPrefs.music && !audioPrefs.sound)) return function () {};
+    var out = c.createGain(), t = c.currentTime, nodes = [];
+    out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(audioPrefs.music ? 1 : 0.7, t + 3);
+    out.connect(audioPrefs.music ? musicBus : sfxBus);
+    var len = c.sampleRate * 4, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), last = 0;
+    // Brown-ish noise: smoother and warmer than plain hiss.
+    for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; }
+    [[420, 0.11, 0.075, 0], [1500, 0.05, 0.11, 2.1]].forEach(function (w) {
+      var src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+      var f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = w[0];
+      var g = c.createGain(); g.gain.value = w[1] * 0.6;
+      var lfo = c.createOscillator(), depth = c.createGain(); lfo.frequency.value = w[2]; depth.gain.value = w[1] * 0.5;
+      lfo.connect(depth); depth.connect(g.gain);
+      src.connect(f); f.connect(g); g.connect(out);
+      src.start(t, w[3]); lfo.start(t);
+      nodes.push(src, lfo);
+    });
+    [130.81, 196, 246.94, 329.63].forEach(function (fq, k) {
+      var o = c.createOscillator(), g = c.createGain(), trem = c.createOscillator(), td = c.createGain();
+      o.type = 'sine'; o.frequency.value = fq; g.gain.value = 0.012 - k * 0.002;
+      trem.frequency.value = 0.07 + k * 0.03; td.gain.value = 0.006; trem.connect(td); td.connect(g.gain);
+      o.connect(g); g.connect(out); o.start(t); trem.start(t);
+      nodes.push(o, trem);
+    });
+    return function () {
+      var e = c.currentTime;
+      out.gain.cancelScheduledValues(e); out.gain.setValueAtTime(out.gain.value, e); out.gain.linearRampToValueAtTime(0, e + 1.2);
+      setTimeout(function () { nodes.forEach(function (n) { try { n.stop(); } catch (er) {} }); try { out.disconnect(); } catch (er) {} }, 1400);
+    };
+  }
   // The finished poem, read out line by line over a night sea, with its own music.
   function poemFinale(done, replay) {
     var lines = replay;
     var el = document.createElement('div');
     el.id = 'poemEnd'; el.className = 'poemend notr';
-    el.innerHTML = '<canvas aria-hidden="true"></canvas><div class="pe-text">' + lines.map(function (ln, k) { return '<p style="animation-delay:' + (1.2 + k * 2.6) + 's">' + lineHtml(ln, true) + '</p>'; }).join('') + '<button class="primary" id="poemOk" style="animation-delay:' + (1.6 + lines.length * 2.6) + 's">' + window.UnwindI18n.t('Continue') + '</button></div>';
+    var GAP = 3.6;
+    el.innerHTML = '<canvas aria-hidden="true"></canvas><div class="pe-text">' + lines.map(function (ln, k) { return '<p style="animation-delay:' + (1.2 + k * GAP) + 's">' + lineHtml(ln, true) + '</p>'; }).join('') + '<button class="primary" id="poemOk" style="animation-delay:' + (1.6 + lines.length * GAP) + 's">' + window.UnwindI18n.t('Continue') + '</button></div>';
     document.body.appendChild(el);
     progress.tutorials = progress.tutorials || {}; progress.tutorials.poemRead = 1; save('unwind.progress2', progress);
     var cv = el.querySelector('canvas'), g = cv.getContext('2d'), alive = true, t0 = performance.now(), dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1080,9 +1236,13 @@
     // A slow chord for each line as it appears.
     var chords = [[261.63, 329.63, 392], [220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66], [261.63, 329.63, 392, 523.25]];
     duck(true);
-    var timers = lines.concat(['end']).map(function (_, k) { return setTimeout(function () { (chords[k] || chords[4]).forEach(function (f, j) { pluck(f, j * 0.18, 0.07, 2.6); }); }, 1200 + k * 2600); });
+    var timers = lines.concat(['end']).map(function (_, k) { return setTimeout(function () { (chords[k] || chords[4]).forEach(function (f, j) { pluck(f, j * 0.18, 0.05, 2.6); }); }, 1200 + k * GAP * 1000); });
+    // The sea underneath, and a voice reading each line as it appears.
+    var stopSea = seaAmbience();
+    lines.forEach(function (ln, k) { timers.push(setTimeout(function () { readAloud(ln.replace(/[{}]/g, '')); }, 1500 + k * GAP * 1000)); });
     el.querySelector('#poemOk').onclick = function () {
-      alive = false; timers.forEach(clearTimeout); duck(false);
+      alive = false; timers.forEach(clearTimeout); duck(false); stopSea();
+      try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
       el.classList.add('out'); setTimeout(function () { el.remove(); }, 600);
       if (done) done();
     };
@@ -1530,7 +1690,7 @@
   // Buttons at the edges and corners of the board, each pointing to a neighbouring board.
   function coopNav() {
     var el = $('coopNav');
-    if (!current || !current.coop || !coop || ended) { el.hidden = true; return; }
+    if (!current || !current.coop || !coop || ended) { el.hidden = true; boardMap(); return; }
     el.hidden = false;
     var b = coop.idx, W = cs * current.level.w, H = cs * current.level.h, html = '', wide = vw >= 760, ic = vw < 760 ? 18 : 22;
     var GLYPH = { '1,0': '→', '-1,0': '←', '0,1': '↓', '0,-1': '↑', '1,1': '↘', '-1,1': '↙', '1,-1': '↗', '-1,-1': '↖' };
@@ -1545,6 +1705,40 @@
     });
     el.innerHTML = html;
     el.querySelectorAll('[data-board]').forEach(function (btn) { btn.onclick = function () { audio(); coopSwitch(+btn.getAttribute('data-board')); }; });
+    boardMap();
+  }
+  // Boarding Up only: a small map in the lower left with every board as a circle, joined by lines,
+  // so the player sees how many boards there are on each side and which one they are on.
+  function boardMap() {
+    var el = $('boardMap');
+    var show = current && current.coop && coop && !ended && !coop.online && coop.room.boarding !== undefined && coop.room.kind !== 'poem' && coop.n > 1;
+    if (!show) { el.hidden = true; el.innerHTML = ''; return; }
+    var row = coop.room.layout === 'row', gap = 22, r = 6.5, pad = 10, pos = [], i;
+    for (i = 0; i < coop.n; i++) { var q = coopPos(i); pos.push([pad + q.c * gap, pad + q.r * gap]); }
+    var w = pad * 2 + (row ? (coop.n - 1) * gap : gap), h = pad * 2 + (row ? 0 : (Math.ceil(coop.n / 2) - 1) * gap);
+    var lines = '', dots = '';
+    for (i = 0; i < coop.n; i++) for (var j = i + 1; j < coop.n; j++) {
+      var a = coopPos(i), b = coopPos(j);
+      if (Math.abs(a.c - b.c) + Math.abs(a.r - b.r) === 1) lines += '<line x1="' + pos[i][0] + '" y1="' + pos[i][1] + '" x2="' + pos[j][0] + '" y2="' + pos[j][1] + '"/>';
+    }
+    for (i = 0; i < coop.n; i++) {
+      var here = i === coop.idx, done = coop.room.kind === 'football' ? false : !!coop.boards[i].state && E.isWon(coop.boards[i].state);
+      var ball = coop.room.kind === 'football' && coop.boards[i].state && coop.boards[i].state.props && coop.boards[i].state.props.some(function (p) { return p.kind === 'ball' && !p.gone; });
+      dots += '<circle class="' + (here ? 'here' : done ? 'done' : '') + '" cx="' + pos[i][0] + '" cy="' + pos[i][1] + '" r="' + (here ? r + 1.5 : r) + '"/>';
+      if (ball && !here) dots += '<circle class="ballDot" cx="' + pos[i][0] + '" cy="' + pos[i][1] + '" r="2.4"/>';
+    }
+    el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" aria-hidden="true">' + lines + dots + '</svg><span>' + (coop.idx + 1) + ' / ' + coop.n + '</span>';
+    el.setAttribute('aria-label', 'Board ' + (coop.idx + 1) + ' of ' + coop.n);
+    el.hidden = false;
+    placeBoardMap();
+  }
+  // It sits just above the level's message, whatever its height; on wide screens, in the corner.
+  function placeBoardMap() {
+    var el = $('boardMap'), cap = $('caption');
+    if (!el || el.hidden) return;
+    if (vw >= 760 || !cap.classList.contains('on')) { el.style.bottom = ''; return; }
+    var r = cap.getBoundingClientRect();
+    el.style.bottom = Math.round(window.innerHeight - r.top + 8) + 'px';
   }
   /* Pausing in a room: when half or more of the players pause, the game and clock stop for everyone until all are back.
      The host can end it when only one player is still paused. The other players are simulated here. */
@@ -1717,7 +1911,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-b';
+  var BUILD = '2026.11.25-c';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2206,6 +2400,7 @@
     var cap = $('caption'), lvl = current && current.level, watch = !style && !!text && !!lvl && (text === lvl.caption || text === HARD_FIRST) && levelDemos().length > 0;
     cap.removeAttribute('data-goto'); cap.classList.remove('goto');
     cap.textContent = text; cap.classList.toggle('on', !!text); cap.classList.toggle('watchable', watch);
+    placeBoardMap();
     if (watch) captionTipSoon(); else hideCaptionTip();
     cap.classList.toggle('icewarn', style === 'ice'); cap.classList.toggle('goldwarn', style === 'gold');
     if (style) for (var i = 0; i < 10; i++) {
@@ -3156,7 +3351,49 @@
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="' + (horizontal ? 1 : 0) + '" y2="' + (horizontal ? 0 : 1) + '">' + stops.map(function (st) { return '<stop offset="' + st[0] + '" stop-color="' + st[1] + '"/>'; }).join('') + '</linearGradient>';
   }
   function cloud(x, y, k, o) { return '<g class="drift' + (x % 2 ? ' b' : '') + '" opacity="' + (o || 0.9) + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" fill="#fff"><ellipse cx="0" cy="0" rx="46" ry="15"/><circle cx="-16" cy="-10" r="16"/><circle cx="10" cy="-15" r="21"/><circle cx="32" cy="-6" r="13"/></g></g>'; }
+  // The intro's coast at night: stars, the moon and its trail on the water, a headland with a lighthouse, and a
+  // fisherman in his little boat, rocking on the swell.
+  function coastScene() {
+    var stars = '', r = E.rng32(1234);
+    for (var i = 0; i < 70; i++) {
+      var sx = Math.round(r() * 1000), sy = Math.round(r() * 430), sr = (0.8 + r() * 1.8).toFixed(1);
+      stars += '<circle class="twinkle' + ['', ' b', ' c'][i % 3] + '" cx="' + sx + '" cy="' + sy + '" r="' + sr + '" fill="#fff"/>';
+    }
+    var trail = '';
+    for (var k = 0; k < 9; k++) {
+      var ty = 492 + k * 26, tw = 20 + k * 9;
+      trail += '<rect class="wave' + (k % 2 ? ' b' : '') + '" x="' + (612 - tw / 2) + '" y="' + ty + '" width="' + tw + '" height="4" rx="2" fill="#fff4d6" opacity="' + (0.55 - k * 0.045).toFixed(2) + '"/>';
+    }
+    var swells = '';
+    [[530, 0.16], [575, 0.12], [640, 0.1], [700, 0.08]].forEach(function (w, i) {
+      swells += '<path class="wave' + (i % 2 ? ' b' : '') + '" d="M-40 ' + w[0] + ' Q 120 ' + (w[0] - 8) + ' 260 ' + w[0] + ' T 560 ' + w[0] + ' T 860 ' + w[0] + ' T 1160 ' + w[0] + '" fill="none" stroke="#b8c6ff" stroke-width="2" opacity="' + w[1] + '"/>';
+    });
+    return svgWrap('<defs><linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1130"/><stop offset="1" stop-color="#2b3770"/></linearGradient>' +
+      '<linearGradient id="cSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2a5e"/><stop offset="1" stop-color="#0a1230"/></linearGradient>' +
+      '<radialGradient id="cGlow"><stop offset="0" stop-color="#fff4c8" stop-opacity=".38"/><stop offset="1" stop-color="#fff4c8" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="cLamp"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".8"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="cBeam" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#fff1c2" stop-opacity=".35"/><stop offset="1" stop-color="#fff1c2" stop-opacity="0"/></linearGradient></defs>' +
+      '<rect width="1000" height="490" fill="url(#cSky)"/>' + stars +
+      '<circle cx="612" cy="170" r="150" fill="url(#cGlow)"/><circle cx="612" cy="170" r="46" fill="#fbf6e4"/><circle cx="596" cy="158" r="9" fill="#e3e1d6" opacity=".7"/><circle cx="628" cy="186" r="6" fill="#e3e1d6" opacity=".6"/>' +
+      '<rect y="486" width="1000" height="314" fill="url(#cSea)"/>' + trail + swells +
+      // The headland on the right, with the lighthouse and its beam sweeping out to sea.
+      '<path d="M690 492 C730 452 790 440 840 446 C900 452 960 470 1040 476 L1040 520 L690 520 Z" fill="#141b3c"/>' +
+      '<path d="M712 492 L560 452 L560 512 Z" fill="url(#cBeam)"/>' +
+      '<g transform="translate(760 446)"><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/><circle cy="-84" r="48" fill="url(#cLamp)"/></g>' +
+      // The fisherman in his boat, gently rocking.
+      '<g class="sway"><g transform="translate(470 616)">' +
+      '<ellipse cy="16" rx="78" ry="8" fill="#0a1230" opacity=".7"/>' +
+      '<path d="M-70 -6 L70 -6 L54 14 L-54 14 Z" fill="#7a4b32"/><path d="M-70 -6 L70 -6 L66 0 L-66 0 Z" fill="#9a6644"/>' +
+      '<path d="M-8 -6 L-8 -30 Q -8 -38 0 -38 L8 -38 Q 14 -38 14 -30 L14 -6 Z" fill="#2c3a6b"/><circle cx="3" cy="-48" r="9" fill="#f2c9a6"/><path d="M-8 -50 Q 3 -64 14 -50 Z" fill="#c8a24a"/>' +
+      '<path d="M10 -30 L120 -96" stroke="#3a2a20" stroke-width="2.5" stroke-linecap="round"/><path d="M120 -96 Q 150 -40 156 14" stroke="#dfe6ff" stroke-width="1" fill="none" opacity=".7"/>' +
+      '<g transform="translate(156 14)"><circle r="5" fill="#fff"/><path d="M-5 -1.5 H5 M-5 1.8 H5" stroke="#d6283a" stroke-width="1.6"/></g>' +
+      '<g transform="translate(-52 -10)"><path d="M0 0 V-22" stroke="#3a2a20" stroke-width="2"/><rect x="-6" y="-34" width="12" height="13" rx="2" fill="#ffd27a"/><circle cy="-28" r="20" fill="url(#cLamp)"/></g>' +
+      '</g></g>' +
+      // Dark rocks along the near shore give the board a calm, deep backdrop.
+      '<path d="M-40 800 L-40 742 C60 724 140 736 220 730 C320 722 380 744 470 738 C560 732 640 718 740 728 C840 738 920 724 1040 732 L1040 800 Z" fill="#0c1130"/>');
+  }
   function seasonScene(season) {
+    if (season === 'coast') return coastScene();
     if (season === 'winter') {
       var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-5" y="-4" width="10" height="20" fill="#4a3528"/><path d="M0-96 20-66H9L30-36H13L38-2H-38L-13-36H-30L-9-66H-20Z" fill="#1f5a50"/><path d="M0-96 20-66H9L30-36H13L38-2H0Z" fill="#17473f"/><path d="M0-96 13-76 3-79-3-73-13-76ZM-22-50-9-54-3-47 7-53 22-50 13-36-3-41-13-36ZM-31-14-14-20-3-12 11-20 31-14 38-2H-38Z" fill="#fff"/></g>'; };
       var man = function (x, y, k, b2) { return '<g class="sway' + (b2 ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="10" rx="32" ry="7" fill="#b9d3e6" opacity=".8"/><circle cy="-16" r="26" fill="url(#wSnow)"/><circle cy="-52" r="19" fill="url(#wSnow)"/><circle cy="-80" r="14" fill="url(#wSnow)"/><circle cx="-5" cy="-83" r="2" fill="#1c2238"/><circle cx="5" cy="-83" r="2" fill="#1c2238"/><path d="M0-79 15-75 0-73Z" fill="#f08020"/><path d="M-6-74Q0-70 6-74" fill="none" stroke="#1c2238" stroke-width="1.500" stroke-dasharray="1.500 2"/><path d="M-14-68Q0-61 14-68V-62Q0-55-14-62Z" fill="#c8323c"/><path d="M6-62h8v20h-8Z" fill="#c8323c"/><path d="M6-48h8M6-44h8" stroke="#fff" stroke-width="1.500"/><rect x="-13" y="-108" width="26" height="17" rx="1" fill="#22243a"/><rect x="-13" y="-96" width="26" height="4" fill="#c8323c"/><rect x="-19" y="-92" width="38" height="4" rx="2" fill="#22243a"/><circle cy="-53" r="2.200" fill="#1c2238"/><circle cy="-43" r="2.200" fill="#1c2238"/><circle cy="-22" r="2.400" fill="#1c2238"/><path d="M-18-54-44-68M-34-63-42-58M-34-63-40-72M18-54 44-70M34-64 42-60M34-64 40-74" fill="none" stroke="#5a3e2a" stroke-width="2.800" stroke-linecap="round"/></g></g>'; };
@@ -3815,6 +4052,18 @@
     var rt = sk0 ? E.roomTap(roomLevels(), roomStates(), curIdx(), id, inRoom() ? coop.room.kick || { b: 0, x: 0, y: 0 } : { b: 0, x: 0, y: 0 }) : null, res = rt ? rt.res : E.tap(l, state, id);
     if (current.mode === 'poem' && !res.ok && !(res.pushed && res.pushed.some(function (pu) { return pu.moved; }))) poemUndo.pop();
     if (res.pushed) { specialPushed(rt, res, now); if (inRoom()) coopSyncLives(); refresh(); whenIdle(specialCheck); return; }
+    if (res.eggs) {
+      // The arrow reaches the nest and the eggs break: the level is lost.
+      var er = res.results.filter(function (r) { return r.check.nest; })[0], em = l.arrows[er.id];
+      bounces[er.id] = { start: now, reach: Math.max(0.14, er.check.dist - 0.62), pts: trackOf(em, er.check) };
+      var cell = er.check.at;
+      specialFxAdd({ kind: 'eggs', b: curIdx(), cell: cell, start: now + 180, dur: 900 });
+      collisions++; ended = true; refresh();
+      setTimeout(function () { thud(); pluck(196, 0, 0.12, 0.6); pluck(185, 0.12, 0.1, 0.8); buzz(40); }, 180);
+      setCaption('The eggs broke!');
+      setTimeout(function () { ended = false; finish(false, 'eggs'); }, 1300);
+      return;
+    }
     takeEarlyFlowers(now);
     if (res.notReady) {
       // Waiting arrows give a small shake and a soft sound. It costs nothing.
@@ -4176,6 +4425,12 @@
       return;
     }
     var timeUp = why === 'time';
+    if (why === 'eggs') {
+      var eg = sheet('<h2>The eggs broke!</h2><p>An arrow hit an empty nest. Rest a bird in the nest first, or keep arrows away from it.</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Choose another level</button>');
+      eg.querySelector('#again').onclick = function () { restart(); };
+      eg.querySelector('#toLevels').onclick = function () { levelsSheet(); };
+      return;
+    }
     if (why === 'stuck') {
       if (c.mode === 'poem') {
         var ps = sheet('<h2>No winning moves left</h2><p>This line can no longer be written. Try it again: the lines you have already written stay written.</p><button class="primary" id="again">Try this line again</button><button class="secondary" id="toLevels">Back to challenges</button>');
@@ -4436,6 +4691,7 @@
       if (k === 'football') delete here.red;
       // Birds break arrows from Woodland 1, but its demo waits for level 2 so the first level is not too much at once.
       var first = k === 'football' ? ['football'] : ['sling'].concat(coop.room.key !== 'sl1' ? ['birdbreak'] : []);
+      if (k === 'sling' && coop.boards.some(function (B) { return B.level.nests && B.level.nests.length; })) first.push('nest');
       return first.concat(Object.keys(here));
     }
     if (current.coop && coop) {
@@ -4670,6 +4926,9 @@
     birdbreak: { title: 'Birds break arrows', text: 'A thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.',
       def: { kind: 'sling', lives: 9, birdsBreak: true, boards: [{ w: 5, h: 4, sling: [2, 3], birds: [[2, 3]], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1']] }] },
       steps: [{ b: 0, tap: 0, say: 'These two arrows block each other' }, { b: 0, aim: true, say: 'Aim the slingshot at one of them' }, { b: 0, fire: 0, say: 'The bird breaks the arrow it hits' }, { b: 0, tap: 0, say: 'Now the other one can leave' }] },
+    nest: { title: 'Nests and eggs', text: 'A bird that slides into a nest rests there, like a stop sign, until an arrow pushes it on. A bird that slides in pushes the resting bird away and takes its place. A nest also blocks arrows: if an arrow hits an empty nest, the eggs break and the level is lost.',
+      def: { kind: 'sling', lives: 9, birdsBreak: true, boards: [{ w: 6, h: 6, nests: [[3, 2]], birds: [[2, 2], [3, 3]], walls: [[4, 2, 'r']], arrows: [['0,2 1,2'], ['3,5 3,4'], ['2,0 3,0']] }] },
+      steps: [{ b: 0, tap: 0, say: 'A bird that reaches a nest rests there' }, { b: 0, tap: 1, say: 'A new bird takes its place and pushes it on' }, { b: 0, tap: 0, say: 'An arrow pushes the resting bird away' }], end: 'Never let an arrow hit an empty nest' },
     poem: { title: 'The Poem', text: 'Fill every slot with its letter to write a line. Letters with nothing under them fall. A compass arrow that hits a letter pushes it one tile sideways and stays. Compass arrows still turn each time an arrow leaves. Finish a board to read the line, then the next board opens.',
       def: { kind: 'poem', lives: 9, boards: [{ w: 5, h: 4, word: 'OK', pt: 'OK', line: '', ptLine: '', letters: [[1, 1], [3, 1]], slots: [[1, 3], [2, 3]], arrows: [['1,2', { kind: 'compass', dir: 3 }], ['4,1', { kind: 'compass', dir: 2 }], ['3,2', { kind: 'compass', dir: 0 }]] }] },
       steps: [{ b: 0, tap: 0, say: 'An arrow leaves, so the letter falls into its slot' }, { b: 0, tap: 1, say: 'A compass arrow pushes a letter one tile sideways' }], end: 'Fill every slot to write the line' }
@@ -4686,6 +4945,20 @@
         at: -1, phaseEnd: 0, pending: false, flights: [], bounces: {}, anims: [], fx: [], aim: null, finished: 0 };
     };
     restart();
+    // Boards in a demo sit half a tile apart. A prop that crosses to the next board meets it in the middle of the gap,
+    // so it moves on smoothly instead of jumping back.
+    var demoSegs = function (segs) {
+      var L0 = run.room.boards[0], gap = run.room.boards.length > 1 ? 0.5 : 0;
+      return segs.map(function (sg, i) {
+        var path = sg.path.map(function (c) { return c.slice(); }), edge = function (c) {
+          if (c[0] >= L0.w) c[0] = L0.w - 0.5 + gap / 2; else if (c[0] < 0) c[0] = -0.5 - gap / 2;
+          if (c[1] >= L0.h) c[1] = L0.h - 0.5 + gap / 2; else if (c[1] < 0) c[1] = -0.5 - gap / 2;
+        };
+        if (i < segs.length - 1) edge(path[path.length - 1]);
+        if (i > 0) edge(path[0]);
+        return { b: sg.b, path: path, exit: sg.exit };
+      });
+    };
     var nextStep = function (now) {
       run.at++;
       if (run.at >= d.steps.length) { if (d.end && sayEl) sayEl.textContent = window.UnwindI18n.t(d.end); run.finished = now + (d.end ? 2200 : 1300); return; }
@@ -4702,7 +4975,8 @@
         run.aim = null;
         if (!r || r.noop) return;
         var keep = propAnims; propAnims = run.anims;
-        var end = animTrip(r.segs, { id: r.id, kind: 'bird', color: bird.color }, now, 70, { fadeOut: r.gone, fly: true, linear: true });
+        var end = animTrip(demoSegs(r.segs), { id: r.id, kind: 'bird', color: bird.color }, now, 70, { fadeOut: r.gone, fly: true, linear: true });
+        if (r.chain) { var cb = E.findProp(states[r.chain.b], r.chain.slide.id) || {}; animTrip(demoSegs(r.chain.trip ? r.chain.trip.segs : [{ b: r.chain.b, path: r.chain.slide.path }]), { id: r.chain.slide.id, kind: 'bird', color: cb.color }, end, 70, { fly: true, hold: true }); }
         propAnims = keep;
         if (r.broke) run.fx.push({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: end - 40, dur: 700 });
         if (r.destroyed) {
@@ -4729,11 +5003,15 @@
       res.results.forEach(function (r) { run.bounces[r.id + ':' + st.b] = { start: now, reach: Math.max(0.14, (r.check.dist || 1) - 0.62), pts: a.kind === 'compass' ? null : trackOf(a, r.check) }; });
       if (res.pushed) {
         var keep2 = propAnims; propAnims = run.anims;
-        var endAt = now + 140;
-        res.pushed.forEach(function (pu) {
-          var p = E.findProp(states[st.b], pu.id) || {};
-          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(rt.ball.segs, { id: pu.id, kind: 'ball' }, now + 140, 70, {}); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
-          else if (pu.kind === 'bird' && rt.birds && rt.birds.length) endAt = animTrip(rt.birds[0].segs, { id: pu.id, kind: 'bird', color: p.color }, now + 140, 70, { fadeOut: rt.birds[0].result === 'lost' });
+        var endAt = now + 140, birdTrips = (rt.birds || []).slice();
+        res.pushed.forEach(function (pu, pi) {
+          var p = E.findProp(states[st.b], pu.id) || {}, from = pi === 0 ? now + 140 : endAt;
+          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(demoSegs(rt.ball.segs), { id: pu.id, kind: 'ball' }, now + 140, 70, {}); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
+          else if (pu.kind === 'bird') {
+            // A bird knocked out of a nest starts once the newcomer is in.
+            var tr = pu.exit ? birdTrips.shift() : null;
+            endAt = animTrip(demoSegs(tr ? tr.segs : [{ b: st.b, path: pu.path }]), { id: pu.id, kind: 'bird', color: p.color }, from, 80, { fadeOut: !!(tr && tr.result === 'lost'), fly: true, hold: pi > 0 });
+          }
           else endAt = animTrip([{ b: st.b, path: pu.path }], { id: pu.id, kind: pu.kind, color: p.color, ch: p.ch }, now + 140, pu.kind === 'letter' ? 150 : 70, {});
         });
         (states[st.b].falls || []).forEach(function (f) {
@@ -4984,30 +5262,34 @@
   var capTipTimer = null;
   function captionTipSoon() {
     clearTimeout(capTipTimer);
-    if (progress.tutorials && progress.tutorials.captionTip) return;
+    // The poem's second line teaches that the message also leads back to earlier lines.
+    var tu = progress.tutorials || {}, poemBack = current && current.mode === 'poem' && current.line === 1 && !tu.poemBackTip;
+    if (!poemBack && tu.captionTip) return;
     capTipTimer = setTimeout(function tryTip() {
       var cap = $('caption');
       if (!cap.classList.contains('watchable') || ended || !current) return;
       if ($('sheetHost').firstChild || !$('intro').hidden || !$('loading').hidden) { capTipTimer = setTimeout(tryTip, 700); return; }
-      showCaptionTip();
+      showCaptionTip(poemBack ? { text: 'Tap this message to go back to an earlier line, or to watch how it works again.', key: 'poemBackTip' } : null);
     }, 1400);
   }
-  function showCaptionTip() {
+  function showCaptionTip(opt) {
     var tip = $('capTip');
     if (!tip) {
       tip = document.createElement('div'); tip.id = 'capTip'; tip.setAttribute('role', 'status');
-      tip.innerHTML = '<p><b>Tip</b> Tap this message any time to watch the video again.</p><button type="button">Got it</button>';
       document.body.appendChild(tip);
-      tip.querySelector('button').onclick = function (ev) { ev.stopPropagation(); dismissCaptionTip(); };
-      window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
     }
+    tip.setAttribute('data-key', opt && opt.key || 'captionTip');
+    tip.innerHTML = '<p><b>Tip</b> ' + (opt && opt.text || 'Tap this message any time to watch the video again.') + '</p><button type="button">Got it</button>';
+    tip.querySelector('button').onclick = function (ev) { ev.stopPropagation(); dismissCaptionTip(); };
+    window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
     var r = $('caption').getBoundingClientRect();
     tip.style.bottom = (window.innerHeight - r.top + 12) + 'px';
     tip.hidden = false; $('caption').classList.add('tipglow');
   }
   function hideCaptionTip() { clearTimeout(capTipTimer); if ($('capTip')) $('capTip').hidden = true; $('caption').classList.remove('tipglow'); }
   function dismissCaptionTip() {
-    progress.tutorials = progress.tutorials || {}; progress.tutorials.captionTip = 1; save('unwind.progress2', progress);
+    var key = $('capTip') && $('capTip').getAttribute('data-key') || 'captionTip';
+    progress.tutorials = progress.tutorials || {}; progress.tutorials[key] = 1; save('unwind.progress2', progress);
     hideCaptionTip();
   }
   // Tapping a level's explanation plays its demo again.
@@ -5015,6 +5297,8 @@
     if ($('capTip') && !$('capTip').hidden) dismissCaptionTip();
     var go = $('caption').getAttribute('data-goto');
     if (go !== null && current && current.coop) { coopSwitch(+go); return; }
+    // In the poem the message opens a small menu: the video, and the lines already written.
+    if (current && current.mode === 'poem' && !ended) { poemCaptionSheet(); return; }
     if (!$('caption').classList.contains('watchable') || ended || !current) return;
     showTutorial(current.set === 'hard' && current.index === 0 ? ['combo'] : levelDemos(), 0, false, 'play');
   });
@@ -5097,10 +5381,12 @@
         art: '<path d="M14 40V26L6 14M14 26l8-12" stroke="#6a4220" stroke-width="4" stroke-linecap="round"/><path d="M6 14Q14 22 22 14" stroke="#3a2c34" stroke-width="2"/><rect x="44" y="6" width="5" height="34" rx="2" fill="' + wood + '"/><ellipse cx="32" cy="22" rx="7" ry="5.5" fill="#3d8bf2"/><circle cx="36" cy="18" r="4" fill="#3d8bf2"/><path d="M39.5 17.5l3 1-3 1Z" fill="#f5a524"/>' },
       { key: 'birdbreak', title: 'Birds that break arrows', text: 'A thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch. A bird pushed by an arrow breaks nothing.',
         art: line('M30 23H50', ink) + head(56, 23, ink) + '<ellipse cx="16" cy="23" rx="7" ry="5.5" fill="#f2b035"/><circle cx="20" cy="19" r="4" fill="#f2b035"/><path d="M23.5 18.5l3 1-3 1Z" fill="#f5a524"/><path d="M28 14l4 5M28 32l4-5M26 23h5" stroke="#d4161f" stroke-width="2"/>' },
+      { key: 'nest', title: 'Nests and eggs', text: 'A bird that slides into a nest rests there until an arrow pushes it on, and a bird that slides in takes the resting bird\'s place. Nests block arrows: an arrow that hits an empty nest breaks the eggs and loses the level.',
+        art: '<ellipse cx="31" cy="30" rx="20" ry="9" fill="#7a5230"/><ellipse cx="31" cy="27" rx="14" ry="5" fill="#5c3b1f"/><ellipse cx="25" cy="23" rx="4.5" ry="6" fill="#e8f2ff"/><ellipse cx="31" cy="21" rx="4.5" ry="6" fill="#f4ecd8"/><ellipse cx="37" cy="23" rx="4.5" ry="6" fill="#cde7f7"/>' },
       { key: 'poem', title: 'The Poem: letters and slots', text: 'Fill every slot with its letter to write a line. Letters fall when nothing holds them up, and a compass arrow that hits a letter pushes it one tile sideways.',
         art: '<rect x="6" y="6" width="20" height="20" rx="4" fill="#fff6df" stroke="#b89566" stroke-width="1.5"/><text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" font-family="Georgia,serif" fill="#5a3a18" stroke="none">A</text><rect x="34" y="22" width="20" height="20" rx="4" stroke="' + ink + '" stroke-opacity=".5" stroke-dasharray="4 3" stroke-width="1.5"/><path d="M16 30v8m-4-4 4 4 4-4" stroke="' + ink + '" stroke-width="2"/>' }
     ];
-    var hereSp = {}; if (sk) { hereSp[sk === 'football' ? 'football' : sk === 'poem' ? 'poem' : 'sling'] = 1; if (sk === 'sling' && current.level.birdsBreak) hereSp.birdbreak = 1; }
+    var hereSp = {}; if (sk) { hereSp[sk === 'football' ? 'football' : sk === 'poem' ? 'poem' : 'sling'] = 1; if (sk === 'sling' && current.level.birdsBreak) hereSp.birdbreak = 1; if (sk === 'sling' && coop && coop.boards.some(function (B) { return B.level.nests && B.level.nests.length; })) hereSp.nest = 1; }
     html += '<details class="mpx"' + (sk ? ' open' : '') + '><summary>Boarding Up specials</summary>' + sp.map(function (it) {
       return '<div class="guide-item"><svg viewBox="0 0 62 46" aria-hidden="true">' + it.art + '</svg><div><h3>' + it.title + (hereSp[it.key] ? '<span class="onboard">On this board</span>' : '') + '</h3><p>' + it.text + '</p><button class="watch" data-watch="' + it.key + '">▶ Watch how it works</button></div></div>';
     }).join('') + '</details>';
@@ -5139,11 +5425,21 @@
     v = Math.round(v / 5) * 5;
     return '<label class="volbar"><span>' + label + '</span><input type="range" id="' + id + '" min="0" max="100" step="5" value="' + v + '" aria-label="' + label + '"><output class="notr" id="' + id + 'Pct">' + v + '%</output></label>';
   }
-  var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
+  var THEME_ORDER = ['first-light', 'still-water', 'high-sun', 'lantern-hour', 'night-swim', 'moonlit-coast', 'snowfall', 'meadow', 'sandbar', 'amber-leaves'];
 
   // ── Intro ────────────────────────────────────────────────────────────────
   // A night scene in the game's flat style: the camera starts on the moon, tilts down past the coast and a
   // fisherman in his boat, and comes to rest on the sea where the moon is reflected. Plays every time the game starts.
+  function tapToBegin(go) {
+    var el = document.createElement('div');
+    el.id = 'tapBegin'; el.setAttribute('role', 'button'); el.tabIndex = 0;
+    el.innerHTML = '<div class="tb-in"><p class="tb-title">Unwind</p><p class="tb-tap">Tap to begin</p></div>';
+    document.body.appendChild(el);
+    window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
+    var start = function () { el.removeEventListener('pointerdown', start); el.removeEventListener('keydown', start); audio(); go(); setTimeout(function () { el.remove(); }, 400); el.classList.add('out'); };
+    el.addEventListener('pointerdown', start); el.addEventListener('keydown', start);
+    el.focus();
+  }
   function playIntro(done) {
     var box = $('intro'), cv = box.querySelector('canvas'), g = cv.getContext('2d'), alive = true, t0 = 0;
     // Camera keyframes (ms, and how far down it looks in screen heights). Three pauses: the moon, one view with both
@@ -5184,10 +5480,13 @@
     var glints = [];
     for (i = 0; i < 74; i++) { var u0 = i / 73, n0 = 1 + Math.floor(u0 * 3.2 + rnd() * 0.8); for (var gj = 0; gj < n0; gj++) glints.push({ u: u0, x: rnd() * 2 - 1, l: 0.45 + rnd() * 0.75, p: rnd() * 6.28, s: 0.8 + rnd() * 1.8, d: rnd() * 6.28 }); }
     box.hidden = false; box.classList.remove('out');
+    // The intro has its own song; it starts now, and the level's music takes over when the intro ends.
+    introMusic = true; if (audio()) musicTick();
     var finish = function () {
       if (!alive) return;
       alive = false;
       box.classList.add('out');
+      introMusic = false; musicTick();
       setTimeout(function () { box.hidden = true; box.classList.remove('out'); if (done) done(); }, FADE);
       window.removeEventListener('keydown', onKey);
     };
@@ -5573,7 +5872,7 @@
   };
   $('bHint').onclick = function () {
     audio();
-    if (current && current.mode === 'poem') { poemHintSheet(); return; }
+    if (current && current.mode === 'poem') { poemHint(); return; }
     var l = current.level, sol = E.solve(l, state, l.big ? 6000 : 80000);
     if (E.effectsOf(l).length && sol.solved && sol.sequence.length && !E.canLaunch(l, state, sol.sequence[0])) {
       // The best arrow is frozen or waiting: point at a move that helps right now.
@@ -5628,6 +5927,8 @@
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
+    tutorial: function (k) { showTutorial([].concat(k), 0, false); },
+    boardMap: function () { var e = $('boardMap'); return e.hidden ? null : e.getBoundingClientRect().toJSON(); },
     tap: function (id) { onTap(id); },
     linked: function (id) { return stillLinked(current.level.arrows[id]); },
     point: function (id) {
@@ -5698,7 +5999,8 @@
   (function () {
     startMenu();
     // The intro plays every time the game starts.
-    if (!window.UNWIND_NO_INTRO && !/[?&]nointro=1/.test(location.search)) playIntro();
+    // Temporary until release: a "Tap to begin" screen first, so the intro starts with its music.
+    if (!window.UNWIND_NO_INTRO && !/[?&]nointro=1/.test(location.search)) tapToBegin(function () { playIntro(); });
   })();
   requestAnimationFrame(frame);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(document.body);

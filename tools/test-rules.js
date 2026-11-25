@@ -107,7 +107,15 @@ t('Boarding Up specials: every level is winnable, keepers never play, red cards 
  const fb=E.specialRoom('fb1');fb.boards.forEach(L=>{const S=E.newState(L);L.arrows.filter(a=>a.keeper).forEach(a=>{assert(!E.isReady(S,a));assert(E.tap(L,S,a.id).notReady)})});
  const L=E.prepare({w:4,h:2,lives:3,redStay:true,arrows:[{id:0,kind:'plain',cells:[[0,0],[1,0]],dir:1,red:1},{id:1,kind:'plain',cells:[[0,1],[1,1]],dir:1}]});const S=E.newState(L);E.tap(L,S,1);assert(E.isRedCarded(S,L.arrows[0]),'red card should stay');
  // A ball rolls until stopped and crosses into the next board; a bird is caught by an empty slingshot; letters only move sideways and fall.
- const r1=E.specialRoom('fb1'),st=r1.boards.map(x=>E.newState(x));const t1=E.roomTap(r1.boards,st,0,0,r1.kick);assert(t1.ball&&t1.ball.result==='moved'&&t1.ball.b===1);assert.deepEqual(E.findProp(st[1],0)&&[E.findProp(st[1],0).x,E.findProp(st[1],0).y],[1,3]);
+ const r1=E.specialRoom(null,'en',{kind:'football',w:5,h:5,goal:[1,2,3],kick:{b:0,x:3,y:3},lives:5,boards:[[['1,3 2,3']],[['3,3 3,4']]]}),st=r1.boards.map(x=>E.newState(x));const t1=E.roomTap(r1.boards,st,0,0,r1.kick);assert(t1.ball&&t1.ball.result==='moved'&&t1.ball.b===1);assert.deepEqual(E.findProp(st[1],0)&&[E.findProp(st[1],0).x,E.findProp(st[1],0).y],[2,3]);
+ // A ball kicked off the pitch comes back to the spot it was kicked from, even off an outer side edge.
+ const r2=E.specialRoom(null,'en',{kind:'football',w:5,h:5,goal:[1,2,3],kick:{b:0,x:2,y:2},lives:5,boards:[[['2,4 2,3']],[[]]].map(b=>b.filter(x=>x.length))}),st2=r2.boards.map(x=>E.newState(x));const t2=E.roomTap(r2.boards,st2,0,0,r2.kick);assert(t2.ball&&t2.ball.result==='out');assert(t2.ballSpot);const bp=E.findProp(st2[0],0);assert(bp&&bp.x===2&&bp.y===2,'ball back on its spot');
+ // Nests: a bird stops in a nest, a newcomer takes its place and knocks it on, and an arrow that hits an empty nest breaks the eggs.
+ const nr=E.specialRoom(null,'en',{kind:'sling',lives:4,birdsBreak:true,boards:[{w:6,h:6,nests:[[3,2]],birds:[[2,2],[3,3]],walls:[[4,2,'r']],arrows:[['0,2 1,2'],['3,5 3,4'],['2,0 3,0']]}]}),ns=[E.newState(nr.boards[0])];
+ E.roomTap(nr.boards,ns,0,0,null);assert.deepEqual([E.findProp(ns[0],0).x,E.findProp(ns[0],0).y],[3,2]);
+ const nt=E.roomTap(nr.boards,ns,0,1,null);assert.equal(nt.res.pushed.length,2);assert.deepEqual([E.findProp(ns[0],1).x,E.findProp(ns[0],1).y],[3,2]);assert.deepEqual([E.findProp(ns[0],0).x,E.findProp(ns[0],0).y],[3,1]);
+ E.roomTap(nr.boards,ns,0,0,null);assert.deepEqual([E.findProp(ns[0],1).x,E.findProp(ns[0],1).y],[4,2]);
+ assert(E.roomTap(nr.boards,ns,0,0,null).res.eggs,'an arrow hitting an empty nest breaks the eggs');
  // Every kickoff spot of every Matchday level can be won.
  Object.keys(E.SPECIALS).filter(k=>/^fb/.test(k)).forEach(k=>(E.SPECIALS[k].kicks||[0]).forEach((_,i)=>{const r=E.specialRoom(k,'en',null,{kick:i});assert(G.solve(r,1500000).best,k+' kick '+i)}));
  // The poem solver finds a first move on a fresh line and gives up on a line that can no longer be finished.

@@ -19,11 +19,12 @@ function moves(room, states) {
       const ns = states.map(cl);
       const r = E.roomTap(room.boards, ns, b, a.id, room.kick || { b: 0, x: 0, y: 0 });
       const res = r.res;
+      if (res.eggs) continue;
       let kind = res.ok ? 'launch' : res.pushed ? (res.pushed.some((p) => p.moved) ? 'push' : 'noop') : 'hit';
       if (kind === 'noop') continue;
       if (r.ball) kind = r.ball.result === 'moved' ? 'push' : r.ball.result;
       if (r.birds && r.birds.some((x) => x.result === 'lost')) kind = 'lost';
-      out.push({ b, id: a.id, kind, red: !!a.red, states: ns, cost: kind === 'hit' || kind === 'out' || kind === 'own' ? 1 : 0, goal: kind === 'goal', ball: r.ball });
+      out.push({ b, id: a.id, kind, red: !!a.red, states: ns, cost: kind === 'hit' || kind === 'out' || kind === 'own' ? 1 : 0, goal: kind === 'goal', ball: r.ball, pushRes: res.pushed });
     }
     if (L.sling && S.loaded !== -1) for (let d = 0; d < 4; d++) {
       const ns = states.map(cl);
@@ -223,7 +224,10 @@ function randSling(nb, seed, w, h) {
     }
     const nWalls = 1 + Math.floor(r() * 3);
     for (let i = 0; i < nWalls; i++) { const x = Math.floor(r() * (w - 1)), y = Math.floor(r() * (h - 1)); walls.push([x, y, r() < 0.5 ? 'r' : 'b']); }
-    boards.push({ w, h, sling, birds, walls, arrows });
+    const nests = [];
+    const nNests = process.env.NESTS ? (r() < 0.7 ? 1 : 2) : 0;
+    for (let i = 0; i < nNests; i++) for (let t = 0; t < 30; t++) { const x = Math.floor(r() * w), y = Math.floor(r() * h); if (free(x, y)) { used[y * w + x] = 1; nests.push([x, y]); break; } }
+    boards.push({ w, h, sling, birds, walls, arrows, nests });
   }
   if (!birdsTotal) return null;
   boards.forEach((bd) => { if (!bd.sling) delete bd.sling; });
@@ -243,6 +247,8 @@ function evalSling(def, minMoves) {
   const walls = throws.filter((m) => m.kind === 'wall').length, kills = throws.filter((m) => m.kind === 'kill').length;
   const crossed = path.some((m) => (m.throwRes && m.throwRes.to && m.throwRes.to.b !== m.b) || (m.ball && m.ball.b !== m.b));
   if (throws.length < (process.env.THROWS ? +process.env.THROWS : 2) || walls < 1 || kills < 1) return null;
+  // With nests on: a bird must rest in a nest on the way to the win.
+  if (process.env.NESTS && !path.some((m) => (m.throwRes && m.throwRes.nest) || (m.pushRes && m.pushRes.some((pu) => pu.nest)))) return null;
   return { room, moves: path.length, throws: throws.length, walls, kills, crossed, path: path.map(label), rate: randomRate(room, 200, 4) };
 }
 if (require.main === module && process.argv[2] === 'sl') {
@@ -252,7 +258,7 @@ if (require.main === module && process.argv[2] === 'sl') {
     const def = randSling(nb, seed, w, h);
     if (!def) continue;
     let res = null;
-    try { res = evalSling(def, minMoves); } catch (e) { continue; }
+    try { res = evalSling(def, minMoves); } catch (e) { if (process.env.DEBUG) console.error(e.stack); continue; }
     if (!res) continue;
     console.log('\nseed', seed, 'moves', res.moves, 'throws', res.throws, 'walls', res.walls, 'kills', res.kills, 'random', (res.rate * 100).toFixed(1) + '%');
     lab.show(res.room);
