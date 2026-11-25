@@ -97,9 +97,11 @@
     place(ROCK, Math.round(area * between(0.06, 0.22)), Math.floor(between(0, 4)));
     if (hard) place(BIG, Math.round(area * between(0.03, 0.09)), Math.floor(between(1, 4)), 2);
     place(WHIRL, Math.round(area * between(0.008, 0.045)), 0);
-    // The boat starts anywhere in the outer part of the sea, as long as it is not boxed in on the spot.
-    var starts = [], out = Math.ceil(c * 0.6);
-    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (G.grid[y * n + x] === WATER && cheb(x, y, c, c) >= out) starts.push([x, y]);
+    // The boat starts somewhere between halfway out and the edge: first a random distance, then a spot at that
+    // distance, so the edge is no more likely than anywhere else.
+    var starts = [], ring = Math.ceil(c / 2) + Math.floor(r() * (c - Math.ceil(c / 2) + 1));
+    var open = function (x, y) { var k = 0; for (var yy = y - 1; yy <= y + 1; yy++) for (var xx = x - 1; xx <= x + 1; xx++) if ((xx !== x || yy !== y) && xx >= 0 && yy >= 0 && xx < n && yy < n && G.grid[yy * n + xx] === WATER) k++; return k; };
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (G.grid[y * n + x] === WATER && cheb(x, y, c, c) === ring && open(x, y) >= 3) starts.push([x, y]);
     if (!starts.length) return null;
     var s = starts[Math.floor(r() * starts.length)];
     G.boat = { x: s[0], y: s[1] };
@@ -122,11 +124,12 @@
     }
     G.startFlares = Math.floor(between(0, 3));
     // Serpents are the one thing that is not left to chance: a set number for each size, starting away from the boat.
-    var nSerpents = [2, 3, 5][size] || 3;
+    var nSerpents = (hard ? [5, 8, 12] : [3, 5, 7])[size] || 5;
     for (i = 0; i < nSerpents; i++) {
       var p = take(function (x, y) { return cheb(x, y, s[0], s[1]) >= 5; });
       if (p) G.serpents.push({ x: p[0], y: p[1], frozen: false, id: i, hunt: null, goal: null });
     }
+    G.nextSerpent = G.serpents.length;
     return G;
   }
 
@@ -150,12 +153,29 @@
 
   /* ---------- Waves, wind and the lamp ---------- */
   // Every round the sea changes: a random share of the tiles carry a wave, each in a random direction.
-  // Never under the boat (it has to catch one next to it) and never under a barrel.
+  // Never under the boat or a barrel. Next to the boat there are always waves going at least two different
+  // ways (they may lead into a rock or off the map).
   function wavesFor(G) {
     var r = rngFor(G.seed, G.round, SALT.waves), w = [], share = 0.3 + r() * 0.22;
     for (var i = 0; i < G.n * G.n; i++) {
       var x = i % G.n, y = Math.floor(i / G.n), on = G.grid[i] === WATER && r() < share, d = Math.floor(r() * 4);
       w.push(on && barrelAt(G, x, y) < 0 && !(x === G.boat.x && y === G.boat.y) ? d : -1);
+    }
+    var near = [], dirs = {}, spare = [];
+    for (var yy = G.boat.y - 1; yy <= G.boat.y + 1; yy++) for (var xx = G.boat.x - 1; xx <= G.boat.x + 1; xx++) {
+      if (!inside(G, xx, yy) || (xx === G.boat.x && yy === G.boat.y) || G.grid[yy * G.n + xx] !== WATER) continue;
+      if (barrelAt(G, xx, yy) >= 0) { spare.push(yy * G.n + xx); continue; }
+      near.push(yy * G.n + xx);
+      if (w[yy * G.n + xx] >= 0) dirs[w[yy * G.n + xx]] = 1;
+    }
+    // Hemmed in by rocks, the boat may get a wave on a barrel tile too.
+    if (near.length < 2) near = near.concat(spare);
+    for (var t = 0; Object.keys(dirs).length < 2 && t < 24 && near.length; t++) {
+      var k = near[Math.floor(r() * near.length)], d2 = Math.floor(r() * 4);
+      if (dirs[d2]) continue;
+      if (w[k] >= 0 && Object.keys(dirs).length === 1 && dirs[w[k]] && near.filter(function (q) { return w[q] === w[k]; }).length === 1) continue;
+      w[k] = d2; dirs = {};
+      near.forEach(function (q) { if (w[q] >= 0) dirs[w[q]] = 1; });
     }
     return w;
   }
@@ -215,14 +235,11 @@
   function rememberBoat(G) { var v = boatView(G).cells; for (var k in v) G.boatSeen[k] = 1; }
 
   /* ---------- Actions ---------- */
-  // Waves the captain can catch: on any of the eight tiles around the boat.
+  // Waves the captain can use: any wave the captain can see (around the boat, further with a flare, or along the
+  // keeper's beam when it touches the boat). The boat moves the way that wave goes.
   function catchable(G) {
-    var out = [];
-    for (var y = G.boat.y - 1; y <= G.boat.y + 1; y++) for (var x = G.boat.x - 1; x <= G.boat.x + 1; x++) {
-      if (!inside(G, x, y) || (x === G.boat.x && y === G.boat.y)) continue;
-      var w = G.waves[y * G.n + x];
-      if (w >= 0) out.push({ x: x, y: y, dir: w });
-    }
+    var out = [], cells = boatView(G).cells;
+    for (var k in cells) { var i = +k, w = G.waves[i]; if (w >= 0) out.push({ x: i % G.n, y: Math.floor(i / G.n), dir: w }); }
     return out;
   }
   // How far a wave carries the boat in one move: one tile, or on Hard two tiles with the wind behind a raised sail,
@@ -238,17 +255,19 @@
     log.hits.push({ why: why, x: x, y: y, lives: G.lives });
     if (G.lives <= 0) G.ended = 'lost';
   }
-  // A serpent that touches the boat dives and comes up again somewhere far away in the dark.
-  function respawnSerpent(G, s, log) {
-    var r = rngFor(G.seed, G.round * 31 + s.id, SALT.respawn), best = null;
-    for (var t = 0; t < 120; t++) {
+  // A serpent that bites the boat dives and is gone. A new one appears somewhere at random in the dark
+  // (never right next to the boat).
+  function replaceSerpent(G, s, log) {
+    var r = rngFor(G.seed, G.round * 31 + s.id, SALT.respawn), spot = null;
+    for (var t = 0; t < 200 && !spot; t++) {
       var x = Math.floor(r() * G.n), y = Math.floor(r() * G.n);
-      if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.c, G.c) <= 1 || serpentAt(G, x, y) >= 0 || barrelAt(G, x, y) >= 0) continue;
-      if (cheb(x, y, G.boat.x, G.boat.y) >= 5) { best = [x, y]; break; }
-      if (!best) best = [x, y];
+      if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.c, G.c) <= 1 || serpentAt(G, x, y) >= 0 || barrelAt(G, x, y) >= 0 || cheb(x, y, G.boat.x, G.boat.y) < 3) continue;
+      spot = [x, y];
     }
-    log.dives.push({ id: s.id, from: [s.x, s.y], to: best });
-    if (best) { s.x = best[0]; s.y = best[1]; }
+    G.serpents.splice(G.serpents.indexOf(s), 1);
+    var fresh = spot ? { x: spot[0], y: spot[1], frozen: false, id: G.nextSerpent++, hunt: null, goal: null } : null;
+    if (fresh) G.serpents.push(fresh);
+    log.dives.push({ id: s.id, from: [s.x, s.y], to: spot, newId: fresh ? fresh.id : -1 });
   }
   function sailBoat(G, dir, log) {
     var steps = stepsFor(G, dir), start = [G.boat.x, G.boat.y], path = [start.slice()], whirls = 0;
@@ -269,7 +288,7 @@
       if (si >= 0) {
         hurt(G, log, 'serpent', nx, ny);
         log.bump = [nx, ny];
-        respawnSerpent(G, G.serpents[si], log);
+        replaceSerpent(G, G.serpents[si], log);
         break;
       }
       G.boat.x = nx; G.boat.y = ny; path.push([nx, ny]); steps--;
@@ -311,8 +330,9 @@
     return -1;
   }
   function moveSerpents(G, log) {
-    var reach = G.hard ? 2 : 1;
-    G.serpents.forEach(function (s) {
+    var reach = G.hard ? 3 : 2;
+    G.serpents.slice().forEach(function (s) {
+      if (G.serpents.indexOf(s) < 0) return;
       if (s.frozen || G.ended) return;
       var r = rngFor(G.seed, G.round * 17 + s.id, SALT.serpent);
       if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= 1) { s.hunt = [G.boat.x, G.boat.y]; log.spotted = (log.spotted || []).concat([s.id]); }
@@ -325,7 +345,7 @@
       var dir = target ? firstStep(G, s, target[0], target[1]) : -1;
       if (dir < 0) { s.goal = null; s.hunt = null; var opts = []; for (var k = 0; k < 4; k++) if (serpentOk(G, s.x + DX[k], s.y + DY[k])) opts.push(k); if (!opts.length) return; dir = opts[Math.floor(r() * opts.length)]; }
       var path = [[s.x, s.y]];
-      // On Hard serpents move two tiles, always in a straight line.
+      // Serpents move two tiles (three on Hard), always in a straight line.
       for (var i = 0; i < reach; i++) {
         var nx = s.x + DX[dir], ny = s.y + DY[dir], onBoat = nx === G.boat.x && ny === G.boat.y;
         if (!onBoat && (!serpentOk(G, nx, ny) || serpentAt(G, nx, ny) >= 0)) break;
@@ -333,8 +353,7 @@
         if (onBoat) {
           log.serpents.push({ id: s.id, path: path });
           hurt(G, log, 'serpent', nx, ny);
-          s.hunt = null; s.goal = null;
-          respawnSerpent(G, s, log);
+          replaceSerpent(G, s, log);
           return;
         }
         if (s.hunt && s.hunt[0] === nx && s.hunt[1] === ny) break;
@@ -403,7 +422,7 @@
       G.waited = act.a === 'wait';
       if (act.a === 'move') {
         var x = act.x | 0, y = act.y | 0;
-        if (cheb(x, y, G.boat.x, G.boat.y) > 1 || !inside(G, x, y)) return { ok: false, why: 'far' };
+        if (!inside(G, x, y) || !boatView(G).cells[y * G.n + x]) return { ok: false, why: 'far' };
         var w = G.waves[y * G.n + x];
         if (w < 0) return { ok: false, why: 'nowave' };
         sailBoat(G, w, log);
