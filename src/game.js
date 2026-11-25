@@ -86,8 +86,6 @@
   }
   var introMusic = false;
   function wantedTheme() {
-    // The intro always plays its own song, the coast at night.
-    if (introMusic) return M.THEMES.map(function (t) { return t.id; }).indexOf('moonlit-coast');
     if (audioPrefs.theme !== 'auto') {
       var i = M.THEMES.map(function (t) { return t.id; }).indexOf(audioPrefs.theme);
       if (i >= 0) return i;
@@ -129,6 +127,8 @@
   function seasonSound(fn) { if (!audioPrefs.sound) return; var c = audio(); if (c) M[fn](c, sfxBus, c.currentTime + 0.01); }
   function musicTick() {
     if (!ac || ac.state !== 'running' || !audioPrefs.music) return;
+    // The intro has its own piece, written to its length; the themes wait until it ends.
+    if (introMusic) return;
     var want = wantedTheme(), cycling = cycleOn() && audioPrefs.theme === 'auto';
     // Open Water's rotation: silent during the gap, and nothing plays past the end of the song.
     if (cycling && (bgCycle.gapUntil || (want === playingTheme && musicBar >= M.patternBars(playingTheme)))) return;
@@ -611,11 +611,30 @@
   // big shiny eyes and orange feet. In flight both wings beat and the feet tuck in.
   function drawBird(x, y, s, color, face, flap, now) {
     var k = s / 24;
-    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k);
-    var beat = reduced ? 0 : flap ? Math.sin(now / 38) : Math.sin(now / 700) * 0.08;
+    // Flapping: a quick downstroke and a slower upstroke, about three beats a second. The body rises a little on
+    // each downstroke, as a small bird does.
+    var wing = 0, bob = 0;
+    if (flap && !reduced) {
+      var ph = (now / 340) % 1, ez = function (u) { return u * u * (3 - 2 * u); };
+      wing = ph < 0.38 ? 1 - ez(ph / 0.38) : ez((ph - 0.38) / 0.62);
+      bob = ph < 0.38 ? -ez(ph / 0.38) * 1.4 : -1.4 + ez((ph - 0.38) / 0.62) * 1.4;
+    }
+    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k); ctx.translate(0, bob);
+    var rest = reduced ? 0 : Math.sin(now / 700) * 0.08;
     var dark = mixColor(color, '#1d1d2a', 0.28), light = mixColor(color, '#ffffff', 0.62);
-    // Far wing, behind the body, only while flying.
-    if (flap) { ctx.fillStyle = dark; ctx.save(); ctx.translate(-1, -3); ctx.rotate(-0.6 + beat * 1.1); ctx.beginPath(); ctx.ellipse(-1, -7, 4.8, 8.5, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
+    // A wing in flight: a rounded wing with three feather tips, hinged at the shoulder. Up is wing = 1, down is 0.
+    var flyWing = function (fill, dx, dy, lift, sc) {
+      // Hinged at the shoulder, behind the eyes; it sweeps from below the body (down) to raised back (up).
+      var a = -0.5 + lift * 1.45;
+      ctx.fillStyle = fill; ctx.save(); ctx.translate(dx, dy); ctx.rotate(a); ctx.scale(sc, sc * (0.6 + 0.4 * Math.abs(Math.cos(a))));
+      ctx.beginPath(); ctx.moveTo(2, -3.4);
+      ctx.bezierCurveTo(-4, -7.2, -11, -6.4, -15.5, -2.6);
+      ctx.quadraticCurveTo(-13, -1.2, -15.2, 0.4); ctx.quadraticCurveTo(-12.4, 1.2, -13.6, 2.8); ctx.quadraticCurveTo(-10.4, 3, -10.6, 4.6);
+      ctx.bezierCurveTo(-6, 5, -1.5, 4.4, 2, 3); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    };
+    // Far wing, behind the body, only while flying; it beats a touch behind the near one.
+    if (flap) flyWing(mixColor(dark, '#1d1d2a', 0.2), -1, -4, reduced ? 0.5 : Math.min(1, wing * 1.05 + 0.05), 0.85);
     // A fan of three tail feathers.
     ctx.fillStyle = dark;
     [[-0.55, 8.5], [-0.15, 9.5], [0.25, 8.5]].forEach(function (f) { ctx.save(); ctx.translate(-8, 0); ctx.rotate(Math.PI + f[0]); ctx.beginPath(); ctx.ellipse(f[1] * 0.55, 0, f[1] * 0.62, 2.9, 0, 0, 7); ctx.fill(); ctx.restore(); });
@@ -631,10 +650,8 @@
     ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 10.2, 0, 0, 7); ctx.fill();
     ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 4.2, 7.2, 5, 0, 0, 7); ctx.fill();
     // Near wing: folded at rest, beating in flight.
-    ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1);
-    if (flap) { ctx.rotate(0.3 - beat * 1.2); ctx.beginPath(); ctx.ellipse(-2, -6, 5.2, 9, 0.25, 0, 7); ctx.fill(); }
-    else { ctx.rotate(-0.3 - beat); ctx.beginPath(); ctx.ellipse(-2, 0, 6.8, 4.4, 0.2, 0, 7); ctx.fill(); }
-    ctx.restore();
+    if (flap) flyWing(dark, -3, -1.5, reduced ? 0.5 : wing, 1);
+    else { ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1); ctx.rotate(-0.3 - rest); ctx.beginPath(); ctx.ellipse(-2, 0, 6.8, 4.4, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
     // A big two-part beak.
     ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(9.5, -4); ctx.quadraticCurveTo(15, -3.6, 19, 0); ctx.lineTo(9.5, 0.6); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e08a1a'; ctx.beginPath(); ctx.moveTo(9.5, 0.6); ctx.lineTo(17, 0.6); ctx.quadraticCurveTo(13, 3.6, 9.5, 3); ctx.closePath(); ctx.fill();
@@ -766,11 +783,12 @@
       if (now < an.start && !an.hold) return;
       var at = animAt(an, now), c = px([at.x, at.y]), total = pathCells(an.pts), alpha = 1;
       // Fades go by distance: the last stretch of a prop leaving, the first stretch of one arriving.
-      if (an.fadeOut || an.edgeOut) alpha = Math.min(alpha, Math.max(0, Math.min(1, (total - at.dist) / 0.7)));
-      if (an.edgeIn) alpha = Math.min(alpha, Math.max(0, Math.min(1, at.dist / 0.7)));
+      if (an.fadeOut) alpha = Math.min(alpha, Math.max(0, Math.min(1, (total - at.dist) / 0.7)));
       var dx = an.pts[an.pts.length - 1][0] - an.pts[0][0];
       ctx.save(); ctx.globalAlpha = alpha;
-      ctx.beginPath(); ctx.rect(ox - cs * 1.2, oy - cs * 1.2, L.w * cs + cs * 2.4, L.h * cs + cs * 2.4); ctx.clip();
+      // A prop crossing to another board is cut off exactly at the board's edge, so it slides out (and in) bit by bit.
+      var edgeClip = an.edgeOut || an.edgeIn, m = edgeClip ? 0.15 : 1.2;
+      ctx.beginPath(); ctx.rect(ox - cs * m, oy - cs * m, L.w * cs + cs * m * 2, L.h * cs + cs * m * 2); ctx.clip();
       if (an.kind === 'ball' && !reduced) {
         // A short streak behind a rolling ball.
         var back = animAt({ pts: an.pts, start: an.start, dur: an.dur, easeOut: an.easeOut }, now - 70), bc = px([back.x, back.y]);
@@ -782,21 +800,51 @@
     fx.forEach(function (f) { if (f.b === b || f.kind === 'goal' || f.kind === 'flyaway') drawSpecialFx(f, now); });
     if (aim && aim.b === b && S.loaded !== -1 && L.sling) drawAim(now, L, S);
   }
-  // A bird that leaves the play area does not just vanish: it swoops out, turns, and flies big and flapping
-  // right across the screen before it is gone.
+  /* A bird that leaves the play area does not just vanish: it flies off over the whole screen, big and flapping,
+     along one of several flight paths picked at random. Each path takes the time t (0 to 1) and returns where the
+     bird is, in screen pixels, and how big it is. */
+  var FLIGHTS = [
+    // A swoop: out, a wide turn, and across the screen to the far side.
+    function (f, t) {
+      var o = flyOut(f), right = f.dir === 1 || (f.dir !== 3 && f.x0 < vw / 2);
+      return bez4(t, [f.x0, f.y0], [f.x0 + o[0] * vw * 0.3, f.y0 + o[1] * vh * 0.2 - vh * 0.18], [vw * (right ? 0.55 : 0.45), vh * 0.12], [right ? -vw * 0.25 : vw * 1.25, vh * 0.3]);
+    },
+    // A loop the loop, then away up past the top corner.
+    function (f, t) {
+      var o = flyOut(f), cx = Math.max(vw * 0.25, Math.min(vw * 0.75, f.x0 + o[0] * vw * 0.12)), cy = Math.max(vh * 0.3, f.y0 - vh * 0.22), r = Math.min(vw, vh) * 0.17;
+      if (t < 0.22) { var u = t / 0.22; return [f.x0 + (cx - f.x0) * u, f.y0 + (cy + r - f.y0) * u]; }
+      if (t < 0.68) { var a = Math.PI / 2 + (t - 0.22) / 0.46 * Math.PI * 2 * (o[0] < 0 ? 1 : -1); return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; }
+      var v = (t - 0.68) / 0.32, side = o[0] < 0 ? -1 : 1;
+      return [cx + side * v * vw * 0.8, cy + r - v * v * (cy + r + vh * 0.25)];
+    },
+    // A happy flutter straight up, weaving from side to side.
+    function (f, t) {
+      var x = f.x0 + Math.sin(t * Math.PI * 5) * vw * 0.08 * Math.min(1, t * 3), y = f.y0 - t * t * (f.y0 + vh * 0.25) - t * vh * 0.1;
+      return [Math.max(vw * 0.1, Math.min(vw * 0.9, x)), y];
+    },
+    // A widening spiral up and away.
+    function (f, t) {
+      var cx = vw * 0.5 + (f.x0 - vw * 0.5) * (1 - t), cy = f.y0 - t * (f.y0 + vh * 0.2), r = Math.min(vw, vh) * (0.05 + t * 0.32), a = t * Math.PI * 4.5;
+      return [cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.45];
+    },
+    // A dip towards the water, then a long glide up across the screen.
+    function (f, t) {
+      var right = f.dir === 3 ? false : f.dir === 1 ? true : f.x0 < vw / 2;
+      return bez4(t, [f.x0, f.y0], [f.x0 + (right ? -1 : 1) * vw * 0.1, Math.min(vh * 0.92, f.y0 + vh * 0.3)], [vw * (right ? 0.6 : 0.4), vh * 0.75], [right ? vw * 1.25 : -vw * 0.25, -vh * 0.1]);
+    }
+  ];
+  function flyOut(f) { return [[0, -1], [1, 0], [0, 1], [-1, 0]][f.dir]; }
+  function bez4(t, p0, p1, p2, p3) {
+    var e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2, u = 1 - e;
+    return [0, 1].map(function (k) { return u * u * u * p0[k] + 3 * u * u * e * p1[k] + 3 * u * e * e * p2[k] + e * e * e * p3[k]; });
+  }
   function drawFlyaway(f, now) {
     var t = (now - f.start) / f.dur;
     if (t < 0 || t > 1) return;
-    var out = [[0, -1], [1, 0], [0, 1], [-1, 0]][f.dir], right = f.dir === 1 || (f.dir !== 3 && f.x0 < vw / 2);
-    var p0 = [f.x0, f.y0], p1 = [f.x0 + out[0] * vw * 0.3, f.y0 + out[1] * vh * 0.2 - vh * 0.18];
-    var p2 = [vw * (right ? 0.55 : 0.45), vh * 0.12], p3 = [right ? -vw * 0.25 : vw * 1.25, vh * 0.3];
-    var e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2, u = 1 - e;
-    var bez = function (k) { return u * u * u * p0[k] + 3 * u * u * e * p1[k] + 3 * u * e * e * p2[k] + e * e * e * p3[k]; };
-    var x = bez(0), y = bez(1) + Math.sin(t * Math.PI * 6) * cs * 0.12;
-    var e2 = Math.min(1, e + 0.02), u2 = 1 - e2, nx = u2 * u2 * u2 * p0[0] + 3 * u2 * u2 * e2 * p1[0] + 3 * u2 * e2 * e2 * p2[0] + e2 * e2 * e2 * p3[0];
+    var path = FLIGHTS[f.pattern || 0], p = path(f, t), q = path(f, Math.min(1, t + 0.01));
     var size = cs * (0.45 + Math.sin(Math.min(1, t * 1.6) * Math.PI / 2) * 1.5);
     ctx.save(); ctx.globalAlpha = t < 0.06 ? t / 0.06 : 1;
-    drawBird(x, y, size, f.color || '#3d8bf2', nx >= x ? 1 : -1, true, now);
+    drawBird(p[0], p[1], size, f.color || '#3d8bf2', q[0] >= p[0] ? 1 : -1, true, now);
     ctx.restore(); ctx.globalAlpha = 1;
   }
   function drawSpecialFx(f, now) {
@@ -942,7 +990,7 @@
   function birdFlyaway(segs, color, now) {
     var sg = segs[segs.length - 1], pts = sg.path, end = pts[pts.length - 1], prev = pts[pts.length - 2] || end;
     var dir = end[0] > prev[0] ? 1 : end[0] < prev[0] ? 3 : end[1] < prev[1] ? 0 : 2, c = px(end);
-    specialFxAdd({ kind: 'flyaway', b: curIdx(), x0: c.x, y0: c.y, dir: dir, color: color, start: now, dur: 2200 });
+    specialFxAdd({ kind: 'flyaway', b: curIdx(), x0: c.x, y0: c.y, dir: dir, color: color, start: now, dur: 2400, pattern: Math.floor(Math.random() * FLIGHTS.length) });
     [1567.98, 1975.53, 2349.3].forEach(function (f, i) { pluck(f, i * 0.09, 0.05, 0.3); });
   }
   function nestCaption() {
@@ -1940,7 +1988,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-d';
+  var BUILD = '2026.11.25-e';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3410,7 +3458,9 @@
       // The beam starts at the lamp and sweeps slowly over the sea. The clear circle centres its layer on the lamp,
       // so the layer turns around the lamp itself.
       '<g class="sweep"><circle cx="760" cy="362" r="470" fill="#000" opacity="0"/><path d="M760 362 L300 398 A470 470 0 0 1 306 476 Z" fill="url(#cBeam)"/></g>' +
-      '<g transform="translate(760 446)"><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/></g><circle class="glowpulse" cx="760" cy="362" r="54" fill="url(#cLamp)"/>' +
+      '<g transform="translate(760 446)"><path d="M-17 14 L-17 1 Q-17 -3 -13 -3 H13 Q17 -3 17 1 L17 14 Z" fill="#4a4f78"/><path d="M-17 2 H17" stroke="#5d6390" stroke-width="2"/><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/></g><circle class="glowpulse" cx="760" cy="362" r="54" fill="url(#cLamp)"/>' +
+      // A small rise of the headland in front, so the lighthouse's stone base sits firmly in the ground.
+      '<path d="M712 470 C730 456 744 452 760 452 C776 452 792 455 812 466 L812 480 L712 480 Z" fill="#141b3c"/>' +
       // The fisherman in his boat, gently rocking.
       '<g class="sway"><g transform="translate(470 616)">' +
       '<ellipse cy="16" rx="78" ry="8" fill="#0a1230" opacity=".7"/>' +
@@ -4976,20 +5026,9 @@
         at: -1, phaseEnd: 0, pending: false, flights: [], bounces: {}, anims: [], fx: [], aim: null, finished: 0 };
     };
     restart();
-    // A prop that crosses to the next board fades out as it leaves the first one, is gone for a quarter of a second,
-    // then fades in at the edge of the next one.
-    var demoSegs = function (segs) {
-      var L0 = run.room.boards[0];
-      return segs.map(function (sg, i) {
-        var path = sg.path.map(function (c) { return c.slice(); }), edge = function (c) {
-          if (c[0] >= L0.w) c[0] = L0.w - 0.15; else if (c[0] < 0) c[0] = -0.85;
-          if (c[1] >= L0.h) c[1] = L0.h - 0.15; else if (c[1] < 0) c[1] = -0.85;
-        };
-        if (i < segs.length - 1) edge(path[path.length - 1]);
-        if (i > 0) edge(path[0]);
-        return { b: sg.b, path: path, exit: sg.exit };
-      });
-    };
+    // A prop that crosses to the next board slides out past the first board's edge, is gone for a quarter of a second,
+    // then slides in over the edge of the next one. Its path already runs one tile past each edge.
+    var demoSegs = function (segs) { return segs; };
     var nextStep = function (now) {
       run.at++;
       if (run.at >= d.steps.length) { if (d.end && sayEl) sayEl.textContent = window.UnwindI18n.t(d.end); run.finished = now + (d.end ? 2200 : 1300); return; }
@@ -5037,13 +5076,13 @@
         var endAt = now + 140, birdTrips = (rt.birds || []).slice();
         res.pushed.forEach(function (pu, pi) {
           var p = E.findProp(states[st.b], pu.id) || {}, from = pi === 0 ? now + 140 : endAt;
-          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(demoSegs(rt.ball.segs), { id: pu.id, kind: 'ball' }, now + 140, 70, { edges: true, gap: 250 }); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
+          if (pu.kind === 'ball' && rt.ball) { endAt = animTrip(demoSegs(rt.ball.segs), { id: pu.id, kind: 'ball' }, now + 140, 105, { edges: true, gap: 250, hold: true }); if (rt.ball.result === 'goal') run.fx.push({ kind: 'goalmini', b: rt.ball.segs[rt.ball.segs.length - 1].b, start: endAt, dur: 1600 }); }
           else if (pu.kind === 'bird') {
             // A bird knocked out of a nest starts once the newcomer is in.
             var tr = pu.exit ? birdTrips.shift() : null;
-            endAt = animTrip(demoSegs(tr ? tr.segs : [{ b: st.b, path: pu.path }]), { id: pu.id, kind: 'bird', color: p.color }, from, 80, { fadeOut: !!(tr && tr.result === 'lost'), fly: true, hold: pi > 0, edges: true, gap: 250 });
+            endAt = animTrip(demoSegs(tr ? tr.segs : [{ b: st.b, path: pu.path }]), { id: pu.id, kind: 'bird', color: p.color }, from, 80, { fadeOut: !!(tr && tr.result === 'lost'), fly: true, hold: true, edges: true, gap: 250 });
           }
-          else endAt = animTrip([{ b: st.b, path: pu.path }], { id: pu.id, kind: pu.kind, color: p.color, ch: p.ch }, now + 140, pu.kind === 'letter' ? 150 : 70, {});
+          else endAt = animTrip([{ b: st.b, path: pu.path }], { id: pu.id, kind: pu.kind, color: p.color, ch: p.ch }, now + 140, pu.kind === 'letter' ? 150 : 70, { hold: true });
         });
         (states[st.b].falls || []).forEach(function (f) {
           var p = E.findProp(states[st.b], f.id);
@@ -5512,11 +5551,20 @@
     for (i = 0; i < 74; i++) { var u0 = i / 73, n0 = 1 + Math.floor(u0 * 3.2 + rnd() * 0.8); for (var gj = 0; gj < n0; gj++) glints.push({ u: u0, x: rnd() * 2 - 1, l: 0.45 + rnd() * 0.75, p: rnd() * 6.28, s: 0.8 + rnd() * 1.8, d: rnd() * 6.28 }); }
     box.hidden = false; box.classList.remove('out');
     // The intro has its own song; it starts now, and the level's music takes over when the intro ends.
-    introMusic = true; if (audio()) musicTick();
+    introMusic = true;
+    var introBus = null, c0 = audio();
+    if (c0 && audioPrefs.music) {
+      // Any theme already playing (when the intro is replayed from Settings) fades out first.
+      if (sectionBus) { var oldBus = sectionBus; oldBus.gain.cancelScheduledValues(c0.currentTime); oldBus.gain.setTargetAtTime(0, c0.currentTime, 0.2); setTimeout(function () { try { oldBus.disconnect(); } catch (e) {} }, 1500); sectionBus = null; playingTheme = -1; }
+      introBus = c0.createGain(); introBus.gain.value = 0.85; introBus.connect(duckBus);
+      M.introPiece(c0, introBus, c0.currentTime + 0.15);
+    }
     var finish = function () {
       if (!alive) return;
       alive = false;
       box.classList.add('out');
+      // The piece ends with the intro; if it is skipped, it fades out quickly.
+      if (introBus && ac) { var ib = introBus; ib.gain.cancelScheduledValues(ac.currentTime); ib.gain.setTargetAtTime(0, ac.currentTime, 0.25); setTimeout(function () { try { ib.disconnect(); } catch (e) {} }, 2500); introBus = null; }
       introMusic = false; musicTick();
       setTimeout(function () { box.hidden = true; box.classList.remove('out'); if (done) done(); }, FADE);
       window.removeEventListener('keydown', onKey);
@@ -5959,6 +6007,14 @@
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     tutorial: function (k) { showTutorial([].concat(k), 0, false); },
+    // Draws a row of birds at fixed moments of the flap onto a fresh canvas and returns it as an image.
+    birdFrames: function (n) {
+      var cv = document.createElement('canvas'), keep = ctx; cv.width = 120 * n; cv.height = 130; ctx = cv.getContext('2d');
+      ctx.fillStyle = '#f3e6e0'; ctx.fillRect(0, 0, cv.width, cv.height);
+      for (var i = 0; i < n; i++) drawBird(60 + i * 120, 70, 70, '#3d8bf2', 1, true, i * 340 / n);
+      var url = cv.toDataURL(); ctx = keep; return url;
+    },
+    flyaway: function (k, dir) { specialFxAdd({ kind: 'flyaway', b: curIdx(), x0: vw * 0.7, y0: vh * 0.5, dir: dir === undefined ? 1 : dir, color: '#3d8bf2', start: performance.now(), dur: 2400, pattern: k }); },
     boardMap: function () { var e = $('boardMap'); return e.hidden ? null : e.getBoundingClientRect().toJSON(); },
     tap: function (id) { onTap(id); },
     linked: function (id) { return stillLinked(current.level.arrows[id]); },

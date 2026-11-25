@@ -2,6 +2,7 @@
 // reaches the page is swapped here, so a new sentence only needs a new line in this list.
 window.UnwindI18n = (function () {
   var PT = {
+    'The lighthouse at night: slow, warm piano over the sea': 'O farol à noite: piano lento e quente sobre o mar',
     'Intro': 'Introdução',
     'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.': 'Um ninho! Um pássaro que deslize para lá fica a descansar. Para o pássaro no ninho e depois leva-o até à fisga.',
     'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.': 'Três tabuleiros e três pássaros. Alguns pássaros só estorvam, e um ninho guarda um pássaro onde precisas dele.',

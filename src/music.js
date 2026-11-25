@@ -102,10 +102,11 @@
       chords: [[48,64,67,72],[45,60,64,69],[41,60,65,69],[43,59,62,67],[48,64,67,72],[40,59,64,67],[41,57,60,65],[43,55,59,65],[45,60,64,72],[41,57,65,69],[38,57,62,65],[43,55,62,71]],
       melody: [[[0,76],[1,79],[2.5,84]],[[0.5,81],[2,79]],[[0,77],[1,81],[2,84],[3,81]],[[0,79],[2,74]],[[0,76],[1.5,79],[3,84]],[[0.5,83],[2,79]],[[0,77],[1.5,76],[3,74]],[[0,74],[1,77],[2,79]],[[0,81],[1.5,84],[3,88]],[[0.5,84],[2,81]],[[0,77],[1,81],[2.5,77]],[[0,79],[1.5,74],[3,71]]],
       pent: [60,62,64,67,69,72,74,76,79,81,84] },
-    // The intro's song: a slow lullaby by the sea at night, with a rolling harp and a soft piano tune.
-    { id: 'moonlit-coast', trim: 1.25, name: 'Moonlit Coast', mood: 'Night coast: a gentle harp lullaby by the sea', bpm: 66, beats: 3, style: 'coast',
-      chords: [[38,57,62,66],[35,54,59,62],[31,55,59,62],[33,57,61,64],[42,57,62,66],[40,55,59,64],[43,55,59,67],[45,57,61,64]],
-      melody: [[[0,74],[1,76],[2,78]],[[0,79],[2,78]],[[0,74],[1.5,71]],[[0,73],[2,76]],[[0,78],[1,79],[2,81]],[[0,79],[1.5,76]],[[0,74],[1,76],[2,79]],[[0,78],[2,73]]],
+    // The lighthouse at night: a very slow, warm piano over a soft low pad, with lots of space, and now and then a far-off
+    // bell, like the lighthouse keeping watch.
+    { id: 'moonlit-coast', trim: 0.89, name: 'Moonlit Coast', mood: 'The lighthouse at night: slow, warm piano over the sea', bpm: 54, beats: 4, style: 'coast',
+      chords: [[38,57,61,66],[35,57,62,66],[31,54,59,62],[33,52,57,62],[42,57,61,64],[43,54,57,62],[40,54,59,62],[45,52,57,61]],
+      melody: [[[0,76],[1,78],[2.5,81]],[[0,78],[2,74]],[[0,79],[2,78]],[[0,76],[2.5,74]],[[0,76],[1,78],[2.5,83]],[[0,81],[2,78]],[[0,79],[1.5,78],[3,76]],[[0,73],[2,76]]],
       pent: [50,52,54,57,59,62,64,66,69,71,74] }
   ];
 
@@ -196,12 +197,15 @@
       });
     },
     coast: function (ctx, dest, th, chord, melody, t, beat, len) {
-      // A deep, slow swell like the tide, a harp rolling up and down the chord, and a quiet piano tune.
-      swell(ctx, dest, hz(chord[0]), t, 0.08, len * 1.08, 0.7, 480);
-      [[0, 1], [0.5, 2], [1, 3], [1.5, 2], [2, 1], [2.5, 3]].forEach(function (p) {
-        voice(ctx, dest, hz(chord[p[1]] + 12), t + p[0] * beat, 0.034, beat * 2.6, 0.004, STEEL);
+      // A soft low pad that breathes in and out like the tide, under slow piano chords that are left to ring.
+      swell(ctx, dest, hz(chord[0]), t, 0.07, len * 1.2, 1.6, 360);
+      swell(ctx, dest, hz(chord[0] + 7), t + 0.2, 0.026, len * 1.15, 2, 520);
+      [[0, 1, 0.04], [0.5, 2, 0.03], [1, 3, 0.03], [2.5, 2, 0.026]].forEach(function (p) {
+        voice(ctx, dest, hz(chord[p[1]]), t + p[0] * beat, p[2], beat * 4.5, 0.02, FELT);
       });
-      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.075, beat * 2.4, 0.03, FELT); });
+      if (melody) melody.forEach(function (n) { voice(ctx, dest, hz(n[1]), t + n[0] * beat, 0.07, beat * 4, 0.025, FELT); });
+      // The lighthouse bell, far away, every other bar.
+      if (chord === th.chords[0] || chord === th.chords[4]) voice(ctx, dest, hz(chord[3] + 24), t + 3 * beat, 0.014, 3.5, 0.004, BELL);
     },
     amber: function (ctx, dest, th, chord, melody, t, beat, len) {
       swell(ctx, dest, hz(chord[0] + 12), t, 0.075, len * 1.02, 0.5, 620);
@@ -281,6 +285,40 @@
     else bars[th.style](ctx, dest, th, chord, melody, t, beat, len);
     return len;
   }
+  /* The intro's own piece, written to the intro's timeline (25.3 s, then a short fade):
+     0-3.9 s the moon: a soft pad and a few stars; 3.9-9.6 s down to the coast: a harp starts rolling and the tune
+     begins; 9.6-14.4 s the coast and the boat: the tune answers itself, warmer; 14.4-19.4 s down to the sea: the
+     harmony climbs; 19.4 s the title: the home chord blooms with a bell, and the piece rings out to the end. */
+  function introPiece(ctx, dest, t0) {
+    var HARP = STEEL, at = function (s) { return t0 + s; };
+    var pad = function (notes, s, dur, vol) { notes.forEach(function (m, i) { swell(ctx, dest, hz(m), at(s) + i * 0.05, (i ? 0.03 : 0.06) * (vol || 1), dur, Math.min(1.6, dur * 0.35), i ? 900 : 420); }); };
+    var harp = function (notes, s, span, vol) { var step = span / notes.length; notes.forEach(function (m, i) { voice(ctx, dest, hz(m), at(s + i * step), vol || 0.03, 2.6, 0.004, HARP); }); };
+    var tune = function (list, vol) { list.forEach(function (n) { voice(ctx, dest, hz(n[1]), at(n[0]), vol || 0.085, n[2] || 2.4, 0.02, FELT); }); };
+    var star = function (m, s, vol) { voice(ctx, dest, hz(m), at(s), vol || 0.022, 2.2, 0.003, CELESTA); };
+    // The moon: a hushed D major pad, and stars twinkling high up.
+    pad([38, 57, 64, 66], 0, 4.6, 0.85);
+    [[86, 0.5], [93, 1.3], [90, 2.0], [95, 2.7], [88, 3.3]].forEach(function (p) { star(p[0], p[1]); });
+    // Down to the coast: G, D/F#, Em7, A. The harp rolls and the tune begins.
+    var c2 = [[3.9, [43, 55, 59, 62, 66]], [5.3, [42, 54, 57, 62, 66]], [6.8, [40, 55, 59, 62, 67]], [8.2, [45, 57, 61, 64, 69]]];
+    c2.forEach(function (c, i) { pad([c[1][0], c[1][2], c[1][3]], c[0], 1.9, 0.8); harp(c[1].slice(1).concat([c[1][3] + 12]), c[0], 1.2, 0.028 + i * 0.002); });
+    tune([[4.4, 78], [5.0, 81], [5.6, 83, 2], [6.3, 81], [7.0, 78, 1.6], [7.5, 76], [8.4, 76], [8.9, 78], [9.3, 73, 1.6]]);
+    // The coast and the boat: Bm, G, D, A. The tune answers, a little higher.
+    var c3 = [[9.6, [35, 54, 59, 62, 66]], [10.8, [43, 55, 59, 62, 67]], [12.0, [38, 57, 62, 66, 69]], [13.2, [45, 57, 61, 64, 69]]];
+    c3.forEach(function (c) { pad([c[1][0], c[1][2], c[1][4]], c[0], 1.6, 0.9); harp(c[1].slice(1).concat([c[1][2] + 12, c[1][3] + 12]), c[0], 1.1, 0.03); });
+    tune([[9.7, 81], [10.3, 83], [10.8, 86, 1.8], [11.5, 83], [12.0, 81, 1.8], [12.7, 78], [13.2, 76], [13.7, 78], [14.1, 81, 1.4]]);
+    // Down to the sea: the harmony climbs, G, A, Bm, Asus, A, and the harp runs grow.
+    var c4 = [[14.4, [43, 55, 59, 62, 67, 71]], [15.4, [45, 57, 61, 64, 69, 73]], [16.4, [47, 59, 62, 66, 71, 74]], [17.4, [45, 57, 62, 64, 69, 74]], [18.4, [45, 57, 61, 64, 69, 73]]];
+    c4.forEach(function (c, i) { pad([c[1][0], c[1][2], c[1][3]], c[0], 1.25, 0.9 + i * 0.08); harp(c[1].slice(1).concat([c[1][3] + 12]), c[0], 0.9, 0.03 + i * 0.004); });
+    tune([[14.5, 79], [15.0, 78], [15.5, 76, 1], [16.0, 78], [16.5, 83, 1.2], [17.5, 81], [18.0, 79], [18.5, 81, 1.4]], 0.08);
+    // The title: the home chord blooms, a bell rings, and a last soft phrase fades out with the intro.
+    pad([38, 50, 57, 62, 66, 69], 19.4, 6.8, 1.1);
+    harp([62, 66, 69, 74, 78, 81, 86], 19.4, 1.1, 0.034);
+    voice(ctx, dest, hz(86), at(19.45), 0.05, 4.5, 0.004, BELL);
+    voice(ctx, dest, hz(74), at(19.5), 0.06, 4, 0.004, BELL);
+    tune([[20.6, 81, 2.4], [21.6, 78, 2.4], [22.8, 76, 2.2], [23.8, 74, 3]], 0.07);
+    [[93, 21.2], [90, 22.4], [95, 23.4], [86, 24.4]].forEach(function (p) { star(p[0], p[1], 0.016); });
+    return 26.2;
+  }
   // Three quiet little victory pieces, each with its own melody and instrument. Returns the length in seconds.
   var GUITAR = [[1, 1], [2, 0.28, 0.5], [3, 0.09, 0.25]];
   var CELESTA = [[1, 1], [4, 0.1, 0.25]];
@@ -325,5 +363,5 @@
       o.onended = function () { g.disconnect(); depth.disconnect(); };
     });
   }
-  return { patternBars: patternBars, patternSeconds: patternSeconds, redCardSound: redCardSound, igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar };
+  return { patternBars: patternBars, patternSeconds: patternSeconds, redCardSound: redCardSound, igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar, introPiece: introPiece };
 });
