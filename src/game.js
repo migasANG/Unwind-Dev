@@ -544,7 +544,7 @@
     var t = start;
     segs.forEach(function (sg, i) {
       var len = pathCells(sg.path), dur = Math.max(140, len * perCell), last = i === segs.length - 1;
-      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly, hold: i === 0 && opts && opts.hold, edgeOut: !last && opts && opts.edges, edgeIn: i > 0 && opts && opts.edges });
+      propAnims.push({ b: sg.b, id: p.id, kind: p.kind, color: p.color, ch: p.ch, pts: sg.path, start: t, dur: dur, fast: opts && opts.fast, easeOut: last && !(opts && opts.linear), fadeOut: last && opts && opts.fadeOut, gravity: opts && opts.gravity, fly: p.kind === 'bird' && opts && opts.fly, hold: i === 0 && opts && opts.hold, edgeOut: !last && opts && opts.edges, edgeIn: i > 0 && opts && opts.edges });
       // Between boards the prop is gone for a moment before it comes in on the next one.
       t += dur + (!last && opts && opts.gap ? opts.gap : 0);
     });
@@ -581,7 +581,7 @@
   function tripAnims(now, b) {
     return trips.filter(function (o) { return o.segs[o.i].b === b; }).map(function (o) {
       var sg = o.segs[o.i], last = o.i === o.segs.length - 1, waiting = now < o.segStart;
-      return { b: b, id: o.id, kind: o.kind, color: o.color, ch: o.ch, pts: sg.path, start: waiting ? now : o.segStart, dur: waiting ? 1e9 : segDur(o, sg), easeOut: last && !o.linear && !o.gravity, fadeOut: last && o.fadeOut, gravity: o.gravity, fly: o.fly };
+      return { b: b, id: o.id, kind: o.kind, color: o.color, ch: o.ch, pts: sg.path, start: waiting ? now : o.segStart, dur: waiting ? 1e9 : segDur(o, sg), easeOut: last && !o.linear && !o.gravity, fadeOut: last && o.fadeOut, gravity: o.gravity, fly: o.fly, fast: o.fast };
     });
   }
   function busy() { return performance.now() < specialBusy || trips.length > 0; }
@@ -615,7 +615,8 @@
     // each downstroke, as a small bird does.
     var wing = 0, bob = 0;
     if (flap && !reduced) {
-      var ph = (now / 340) % 1, ez = function (u) { return u * u * (3 - 2 * u); };
+      // Thrown birds (flap === 2) beat their wings faster still.
+      var ph = (now / (flap === 2 ? 170 : 250)) % 1, ez = function (u) { return u * u * (3 - 2 * u); };
       wing = ph < 0.38 ? 1 - ez(ph / 0.38) : ez((ph - 0.38) / 0.62);
       bob = ph < 0.38 ? -ez(ph / 0.38) * 1.4 : -1.4 + ez((ph - 0.38) / 0.62) * 1.4;
     }
@@ -625,7 +626,7 @@
     // A wing in flight: a rounded wing with three feather tips, hinged at the shoulder. Up is wing = 1, down is 0.
     var flyWing = function (fill, dx, dy, lift, sc) {
       // Hinged at the shoulder, behind the eyes; it sweeps from below the body (down) to raised back (up).
-      var a = -0.5 + lift * 1.45;
+      var a = -0.8 + lift * 2.05;
       ctx.fillStyle = fill; ctx.save(); ctx.translate(dx, dy); ctx.rotate(a); ctx.scale(sc, sc * (0.6 + 0.4 * Math.abs(Math.cos(a))));
       ctx.beginPath(); ctx.moveTo(2, -3.4);
       ctx.bezierCurveTo(-4, -7.2, -11, -6.4, -15.5, -2.6);
@@ -634,7 +635,7 @@
       ctx.restore();
     };
     // Far wing, behind the body, only while flying; it beats a touch behind the near one.
-    if (flap) flyWing(mixColor(dark, '#1d1d2a', 0.2), -1, -4, reduced ? 0.5 : Math.min(1, wing * 1.05 + 0.05), 0.85);
+    if (flap) flyWing(mixColor(dark, '#1d1d2a', 0.2), -1, -4, reduced ? 0.5 : Math.min(1, wing * 1.05 + 0.05), 0.95);
     // A fan of three tail feathers.
     ctx.fillStyle = dark;
     [[-0.55, 8.5], [-0.15, 9.5], [0.25, 8.5]].forEach(function (f) { ctx.save(); ctx.translate(-8, 0); ctx.rotate(Math.PI + f[0]); ctx.beginPath(); ctx.ellipse(f[1] * 0.55, 0, f[1] * 0.62, 2.9, 0, 0, 7); ctx.fill(); ctx.restore(); });
@@ -650,7 +651,7 @@
     ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11.5, 10.2, 0, 0, 7); ctx.fill();
     ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 4.2, 7.2, 5, 0, 0, 7); ctx.fill();
     // Near wing: folded at rest, beating in flight.
-    if (flap) flyWing(dark, -3, -1.5, reduced ? 0.5 : wing, 1);
+    if (flap) flyWing(dark, -3, -1.5, reduced ? 0.5 : wing, 1.12);
     else { ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1); ctx.rotate(-0.3 - rest); ctx.beginPath(); ctx.ellipse(-2, 0, 6.8, 4.4, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
     // A big two-part beak.
     ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(9.5, -4); ctx.quadraticCurveTo(15, -3.6, 19, 0); ctx.lineTo(9.5, 0.6); ctx.closePath(); ctx.fill();
@@ -693,7 +694,8 @@
   }
   function drawProp(p, x, y, now, extra) {
     if (p.kind === 'ball') drawBall(x, y, cs * 0.3, extra && extra.turn);
-    else if (p.kind === 'bird') drawBird(x, y - cs * 0.04, cs * 0.5, p.color || '#3d8bf2', extra && extra.face || 1, extra && extra.fly, now);
+    // The bird fills as much of its tile as it can (beak to tail is about 0.95 of a tile) without spilling over.
+    else if (p.kind === 'bird') drawBird(x, y - cs * 0.05, cs * 0.6, p.color || '#3d8bf2', extra && extra.face || 1, extra && extra.fly ? (extra.fast ? 2 : 1) : false, now);
     else drawLetter(x, y, cs, p.ch, extra && extra.glow, now);
   }
   function wallSeg(key) {
@@ -773,7 +775,7 @@
       if (p.gone || moving[p.id] || (hideBall && p.kind === 'ball')) return;
       var c = px([p.x, p.y]), held = p.kind === 'letter' && L.slotAt && L.slotAt[p.y * L.w + p.x] === p.ch;
       // A bird on the slingshot sits small in its band, so the slingshot stays easy to see.
-      if (p.kind === 'bird' && p.loaded) { drawBird(c.x, c.y - cs * 0.2, cs * 0.3, p.color || '#3d8bf2', 1, false, now); return; }
+      if (p.kind === 'bird' && p.loaded) { drawBird(c.x, c.y - cs * 0.2, cs * 0.36, p.color || '#3d8bf2', 1, false, now); return; }
       drawProp(p, c.x, c.y, now, { glow: held, face: p.face || 1 });
     });
     anims.forEach(function (an) {
@@ -794,7 +796,7 @@
         var back = animAt({ pts: an.pts, start: an.start, dur: an.dur, easeOut: an.easeOut }, now - 70), bc = px([back.x, back.y]);
         ctx.globalAlpha = 0.25 * alpha; ctx.strokeStyle = '#fff'; ctx.lineWidth = cs * 0.3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bc.x, bc.y); ctx.lineTo(c.x, c.y); ctx.stroke(); ctx.globalAlpha = alpha;
       }
-      drawProp({ kind: an.kind, color: an.color, ch: an.ch }, c.x, c.y - (an.fly ? cs * Math.sin(at.t * Math.PI) * 0.18 : 0), now, { turn: at.dist * 1.9 * (dx < 0 ? -1 : 1), face: dx < 0 ? -1 : 1, fly: an.fly });
+      drawProp({ kind: an.kind, color: an.color, ch: an.ch }, c.x, c.y - (an.fly ? cs * Math.sin(at.t * Math.PI) * 0.18 : 0), now, { turn: at.dist * 1.9 * (dx < 0 ? -1 : 1), face: dx < 0 ? -1 : 1, fly: an.fly, fast: an.fast });
       ctx.restore();
     });
     fx.forEach(function (f) { if (f.b === b || f.kind === 'goal' || f.kind === 'flyaway') drawSpecialFx(f, now); });
@@ -1079,7 +1081,7 @@
       var ch = r.chain, q = anyProp(ch.slide.id) || {}, csegs = ch.trip ? ch.trip.segs : [{ b: ch.b, path: ch.slide.path }];
       chainTrip = startTrip({ segs: csegs, kind: 'bird', id: ch.slide.id, color: q.color, perCell: 80, delay: 1e9, fly: true, fadeOut: !!(ch.trip && ch.trip.result === 'lost'), onEnd: function (t2) { if (ch.trip && ch.trip.result === 'lost') birdFlyaway(csegs, q.color, t2); else if (ch.slide.loaded) specialSound('chirp'); refresh(); } });
     }
-    var trip = startTrip({ segs: r.segs, kind: 'bird', id: r.id, color: color, perCell: 48, delay: 60, fly: true, linear: true, fadeOut: r.gone, onEnd: function (t) {
+    var trip = startTrip({ segs: r.segs, kind: 'bird', id: r.id, color: color, perCell: 60, delay: 60, fly: true, fast: true, linear: true, fadeOut: r.gone, onEnd: function (t) {
       if (r.broke) { specialFxAdd({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: t, dur: 700 }); specialSound('crack'); buzz(20); }
       if (r.destroyed) {
         var m2 = levels[r.destroyed.b].arrows[r.destroyed.id];
@@ -1988,7 +1990,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-e';
+  var BUILD = '2026.11.25-f';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -3363,7 +3365,7 @@
   }
   // A scene is split into stacked pieces, each cropped to what it shows. Moving pieces then glide on their own
   // layer, so the browser never has to repaint the whole picture. It looks identical, in the same stacking order.
-  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel,.sweep,.glowpulse';
+  var SCENE_MOVERS = '.drift,.flit,.twinkle,.crab,.wave,.sway,.squirrel,.sweep,.glowpulse,.fishj,.fring';
   function bakeScene(bg, season) {
     bg.innerHTML = seasonScene(season);
     var src = bg.querySelector('svg');
@@ -3430,6 +3432,42 @@
   function cloud(x, y, k, o) { return '<g class="drift' + (x % 2 ? ' b' : '') + '" opacity="' + (o || 0.9) + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')" fill="#fff"><ellipse cx="0" cy="0" rx="46" ry="15"/><circle cx="-16" cy="-10" r="16"/><circle cx="10" cy="-15" r="21"/><circle cx="32" cy="-6" r="13"/></g></g>'; }
   // The intro's coast at night: stars, the moon and its trail on the water, a headland with a lighthouse, and a
   // fisherman in his little boat, rocking on the swell.
+  /* The lighthouse, shared by the coast background and the intro. Its base is at (0, 0) and it stands about
+     110 units tall; the stone base reaches 14 units below the ground line so it sits firmly in the hill.
+     The lamp's centre is at (0, -85). Every part overlaps the one below it, so nothing floats. */
+  function lighthouseArt() {
+    return '<path d="M-17 14 V1 Q-17 -3 -13 -3 H13 Q17 -3 17 1 V14 Z" fill="#4a4f78"/><path d="M-17 2 H17" stroke="#5d6390" stroke-width="2"/>' +
+      // The tower, slightly tapered, with two red bands and a little door and window.
+      '<path d="M-12.5 0 L-8.5 -76 H8.5 L12.5 0 Z" fill="#e9e4f4"/><path d="M-12.5 0 L-8.5 -76 H-4 L-6 0 Z" fill="#d3cde6"/>' +
+      '<path d="M-11.6 -16 L-11.1 -26 H11.1 L11.6 -16 Z M-10.2 -44 L-9.7 -54 H9.7 L10.2 -44 Z" fill="#c0394b"/>' +
+      '<path d="M-3 0 V-8 Q0 -11 3 -8 V0 Z" fill="#3a3f66"/><rect x="-2" y="-38" width="4" height="6" rx="2" fill="#ffd27a"/>' +
+      // The gallery: a dark walkway with a railing, wider than the tower top it rests on.
+      '<rect x="-14" y="-79" width="28" height="4.5" rx="1.5" fill="#3a3f66"/>' +
+      '<path d="M-13 -79 V-84 M-6.5 -79 V-84 M0 -79 V-84 M6.5 -79 V-84 M13 -79 V-84 M-13.5 -84 H13.5" stroke="#3a3f66" stroke-width="1.4" stroke-linecap="round"/>' +
+      // The lamp room: glass with dark frames, sitting on the gallery.
+      '<rect x="-8.5" y="-93" width="17" height="15" rx="1.5" fill="#3a3f66"/><rect x="-6.5" y="-91.5" width="13" height="12" rx="1" fill="#ffe9a8"/>' +
+      '<path d="M-2.2 -91.5 V-79.5 M2.2 -91.5 V-79.5" stroke="#d9b867" stroke-width="1"/>' +
+      // A rounded red roof with a small vent ball on top, overlapping the lamp room.
+      '<path d="M-11 -92 Q-10 -101 0 -104 Q10 -101 11 -92 Z" fill="#c0394b"/><rect x="-11.5" y="-93.5" width="23" height="3" rx="1.5" fill="#9e2c3c"/>' +
+      '<circle cy="-106" r="2.2" fill="#9e2c3c"/>';
+  }
+  var lighthouseImg = null;
+  function lighthouseImage() {
+    if (!lighthouseImg) { lighthouseImg = new Image(); lighthouseImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -110 40 126" width="160" height="504">' + lighthouseArt() + '</svg>'); }
+    return lighthouseImg;
+  }
+  /* Fish leaping out of the sea at night, in several spots. Each fish has its own place in a 16-second cycle, so one
+     or two jump at a time. A ring spreads where it leaves the water and where it dives back in. */
+  function coastFish() {
+    var spots = [[110, 556, 1, 0], [250, 520, -1, 2.6], [330, 612, 1, 5.0], [660, 548, -1, 5.3], [858, 528, 1, 8.1], [905, 642, -1, 10.6], [190, 690, 1, 12.9], [770, 600, 1, 13.2]];
+    var fish = 'M-11 0 Q-4 -6 7 -3.2 Q11 -2 12 0 Q11 2 7 3.2 Q-4 6 -11 0 Z M-10 0 L-17 -5 L-15.5 0 L-17 5 Z M-1 -4.4 L3 -8 L5 -3.8 Z';
+    return spots.map(function (f) {
+      var x = f[0], y = f[1], dir = f[2], k = (0.55 + (y - 490) / 300).toFixed(2), d = f[3], span = 56 * k;
+      var ring = function (rx, dl) { return '<ellipse class="fring" style="animation-delay:' + dl.toFixed(2) + 's" cx="' + rx.toFixed(1) + '" cy="' + y + '" rx="' + (14 * k).toFixed(1) + '" ry="' + (4 * k).toFixed(1) + '" fill="none" stroke="#c4d0ff" stroke-width="1.6"/>'; };
+      return ring(x, -d) + ring(x + dir * span, -d + 1.12) +
+        '<g class="fishj' + (dir < 0 ? ' l' : '') + '" style="animation-delay:' + (-d).toFixed(2) + 's;--k:' + k + '"><path transform="translate(' + x + ' ' + y + ') scale(' + (dir * k) + ' ' + k + ')" d="' + fish + '" fill="#05081c"/></g>';
+    }).join('');
+  }
   function coastScene() {
     var stars = '', r = E.rng32(1234);
     for (var i = 0; i < 70; i++) {
@@ -3457,19 +3495,28 @@
       '<path d="M690 492 C730 452 790 440 840 446 C900 452 960 470 1040 476 L1040 520 L690 520 Z" fill="#141b3c"/>' +
       // The beam starts at the lamp and sweeps slowly over the sea. The clear circle centres its layer on the lamp,
       // so the layer turns around the lamp itself.
-      '<g class="sweep"><circle cx="760" cy="362" r="470" fill="#000" opacity="0"/><path d="M760 362 L300 398 A470 470 0 0 1 306 476 Z" fill="url(#cBeam)"/></g>' +
-      '<g transform="translate(760 446)"><path d="M-17 14 L-17 1 Q-17 -3 -13 -3 H13 Q17 -3 17 1 L17 14 Z" fill="#4a4f78"/><path d="M-17 2 H17" stroke="#5d6390" stroke-width="2"/><path d="M-12 0 L-8 -76 H8 L12 0 Z" fill="#e9e4f4"/><path d="M-11 -18 H11 M-10 -44 H10" stroke="#c0394b" stroke-width="9"/><rect x="-11" y="-92" width="22" height="16" rx="3" fill="#3a3f66"/><rect x="-7" y="-89" width="14" height="10" rx="2" fill="#ffe9a8"/><path d="M-13 -92 L0 -104 L13 -92 Z" fill="#c0394b"/></g><circle class="glowpulse" cx="760" cy="362" r="54" fill="url(#cLamp)"/>' +
+      '<g class="sweep"><circle cx="760" cy="361" r="470" fill="#000" opacity="0"/><path d="M760 361 L300 397 A470 470 0 0 1 306 475 Z" fill="url(#cBeam)"/></g>' +
+      '<g transform="translate(760 446)">' + lighthouseArt() + '</g><circle class="glowpulse" cx="760" cy="361" r="54" fill="url(#cLamp)"/>' +
       // A small rise of the headland in front, so the lighthouse's stone base sits firmly in the ground.
       '<path d="M712 470 C730 456 744 452 760 452 C776 452 792 455 812 466 L812 480 L712 480 Z" fill="#141b3c"/>' +
       // The fisherman in his boat, gently rocking.
       '<g class="sway"><g transform="translate(470 616)">' +
       '<ellipse cy="16" rx="78" ry="8" fill="#0a1230" opacity=".7"/>' +
       '<path d="M-70 -6 L70 -6 L54 14 L-54 14 Z" fill="#7a4b32"/><path d="M-70 -6 L70 -6 L66 0 L-66 0 Z" fill="#9a6644"/>' +
-      '<path d="M-8 -6 L-8 -30 Q -8 -38 0 -38 L8 -38 Q 14 -38 14 -30 L14 -6 Z" fill="#2c3a6b"/><circle cx="3" cy="-48" r="9" fill="#f2c9a6"/><path d="M-8 -50 Q 3 -64 14 -50 Z" fill="#c8a24a"/>' +
-      '<path d="M10 -30 L120 -96" stroke="#3a2a20" stroke-width="2.5" stroke-linecap="round"/><path d="M120 -96 Q 150 -40 156 14" stroke="#dfe6ff" stroke-width="1" fill="none" opacity=".7"/>' +
-      '<g transform="translate(156 14)"><circle r="5" fill="#fff"/><path d="M-5 -1.5 H5 M-5 1.8 H5" stroke="#d6283a" stroke-width="1.6"/></g>' +
+      // The fisherman leans back a little when he strikes.
+      '<g class="lean"><path d="M-8 -6 L-8 -30 Q -8 -38 0 -38 L8 -38 Q 14 -38 14 -30 L14 -6 Z" fill="#2c3a6b"/><circle cx="3" cy="-48" r="9" fill="#f2c9a6"/><path d="M-8 -50 Q 3 -64 14 -50 Z" fill="#c8a24a"/></g>' +
+      // Rod, line and float turn together around his hands; the clear square centres them on the hands.
+      '<g transform="translate(10 -30)"><g class="rodbend"><rect x="-200" y="-200" width="400" height="400" fill="none"/>' +
+      '<path d="M0 0 L110 -66" stroke="#3a2a20" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<g class="floatdip"><path d="M110 -66 Q 140 -10 146 44" stroke="#dfe6ff" stroke-width="1" fill="none" opacity=".7"/>' +
+      '<g transform="translate(146 44)"><circle r="5" fill="#fff"/><path d="M-5 -1.5 H5 M-5 1.8 H5" stroke="#d6283a" stroke-width="1.6"/></g></g>' +
+      '<ellipse class="biteRing" cx="146" cy="48" rx="12" ry="3.5" fill="none" stroke="#dfe6ff" stroke-width="1.5"/></g></g>' +
+      // He thinks he has a bite... and then, nothing.
+      '<g class="bubble bang" transform="translate(16 -84)"><path d="M-11 -12 H11 Q15 -12 15 -8 V6 Q15 10 11 10 H2 L-3 16 L-3 10 H-11 Q-15 10 -15 6 V-8 Q-15 -12 -11 -12 Z" fill="#fffaf0"/><path d="M0 -7 V2" stroke="#c0394b" stroke-width="3.4" stroke-linecap="round"/><circle cy="6" r="1.9" fill="#c0394b"/></g>' +
+      '<g class="bubble huh" transform="translate(16 -84)"><path d="M-11 -12 H11 Q15 -12 15 -8 V6 Q15 10 11 10 H2 L-3 16 L-3 10 H-11 Q-15 10 -15 6 V-8 Q-15 -12 -11 -12 Z" fill="#fffaf0"/><path d="M-3.6 -4.6 Q-3.6 -8.6 0 -8.6 Q4 -8.6 4 -5.2 Q4 -2.6 0.6 -1.4 V1.2" stroke="#3a3f66" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="0.6" cy="5.6" r="1.7" fill="#3a3f66"/></g>' +
       '<g transform="translate(-52 -10)"><path d="M0 0 V-22" stroke="#3a2a20" stroke-width="2"/><rect x="-6" y="-34" width="12" height="13" rx="2" fill="#ffd27a"/><circle cy="-28" r="20" fill="url(#cLamp)"/></g>' +
       '</g></g>' +
+      coastFish() +
       // Dark rocks along the near shore give the board a calm, deep backdrop.
       '<path d="M-40 800 L-40 742 C60 724 140 736 220 730 C320 722 380 744 470 738 C560 732 640 718 740 728 C840 738 920 724 1040 732 L1040 800 Z" fill="#0c1130"/>');
   }
@@ -5045,7 +5092,7 @@
         run.aim = null;
         if (!r || r.noop) return;
         var keep = propAnims; propAnims = run.anims;
-        var end = animTrip(demoSegs(r.segs), { id: r.id, kind: 'bird', color: bird.color }, now, 70, { fadeOut: r.gone, fly: true, linear: true, edges: true, gap: 250 });
+        var end = animTrip(demoSegs(r.segs), { id: r.id, kind: 'bird', color: bird.color }, now, 80, { fadeOut: r.gone, fly: true, fast: true, linear: true, edges: true, gap: 250 });
         if (r.chain) { var cb = E.findProp(states[r.chain.b], r.chain.slide.id) || {}; animTrip(demoSegs(r.chain.trip ? r.chain.trip.segs : [{ b: r.chain.b, path: r.chain.slide.path }]), { id: r.chain.slide.id, kind: 'bird', color: cb.color }, end, 70, { fly: true, hold: true }); }
         propAnims = keep;
         if (r.broke) run.fx.push({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: end - 40, dur: 700 });
@@ -5549,7 +5596,7 @@
     // The glitter of the moon's path: rows of small light flecks, more and longer the closer they are.
     var glints = [];
     for (i = 0; i < 74; i++) { var u0 = i / 73, n0 = 1 + Math.floor(u0 * 3.2 + rnd() * 0.8); for (var gj = 0; gj < n0; gj++) glints.push({ u: u0, x: rnd() * 2 - 1, l: 0.45 + rnd() * 0.75, p: rnd() * 6.28, s: 0.8 + rnd() * 1.8, d: rnd() * 6.28 }); }
-    box.hidden = false; box.classList.remove('out');
+    box.hidden = false; box.classList.remove('out'); lighthouseImage();
     // The intro has its own song; it starts now, and the level's music takes over when the intro ends.
     introMusic = true;
     var introBus = null, c0 = audio();
@@ -5563,9 +5610,11 @@
       if (!alive) return;
       alive = false;
       box.classList.add('out');
-      // The piece ends with the intro; if it is skipped, it fades out quickly.
-      if (introBus && ac) { var ib = introBus; ib.gain.cancelScheduledValues(ac.currentTime); ib.gain.setTargetAtTime(0, ac.currentTime, 0.25); setTimeout(function () { try { ib.disconnect(); } catch (e) {} }, 2500); introBus = null; }
-      introMusic = false; musicTick();
+      // At the natural end the piece has already come home and is ringing out; it is let go gently, and the level's
+      // music starts a moment later. If the intro is skipped, it fades out quickly.
+      var natural = (performance.now() - t0) >= TOTAL - 50;
+      if (introBus && ac) { var ib = introBus; ib.gain.cancelScheduledValues(ac.currentTime); ib.gain.setTargetAtTime(0, ac.currentTime, natural ? 0.5 : 0.25); setTimeout(function () { try { ib.disconnect(); } catch (e) {} }, 3000); introBus = null; }
+      setTimeout(function () { introMusic = false; musicTick(); }, natural ? 1400 : 300);
       setTimeout(function () { box.hidden = true; box.classList.remove('out'); if (done) done(); }, FADE);
       window.removeEventListener('keydown', onKey);
     };
@@ -5677,17 +5726,21 @@
           g.globalAlpha = 1;
         });
         // Lighthouse and its slow beam
-        var lx = W * 0.88, lb = hy - S * 0.105, lh = S * 0.15, lw = S * 0.032;
+        // The same lighthouse as the coast background, standing on the headland, its beam starting at the lamp.
+        var lx = W * 0.88, lb = hy - S * 0.108, lk = S * 0.17 / 85, lampY = lb - 85 * lk;
         // The beam sweeps gently over the water and the horizon, never far up into the sky.
         var ang = Math.PI - 0.07 + Math.sin(sec * 0.55) * 0.19;
-        var beam = g.createRadialGradient(lx, lb - lh, 0, lx, lb - lh, S * 0.8);
+        var beam = g.createRadialGradient(lx, lampY, 0, lx, lampY, S * 0.8);
         beam.addColorStop(0, 'rgba(255,226,150,.38)'); beam.addColorStop(1, 'rgba(255,226,150,0)');
-        g.fillStyle = beam; g.beginPath(); g.moveTo(lx, lb - lh);
-        g.arc(lx, lb - lh, S * 0.8, ang - 0.13, ang + 0.13); g.closePath(); g.fill();
-        g.fillStyle = '#e7ecff'; g.beginPath(); g.moveTo(lx - lw * 0.65, lb); g.lineTo(lx - lw * 0.45, lb - lh); g.lineTo(lx + lw * 0.45, lb - lh); g.lineTo(lx + lw * 0.65, lb); g.closePath(); g.fill();
-        g.fillStyle = '#c2476d'; [0.25, 0.62].forEach(function (f) { g.fillRect(lx - lw * 0.62 + f * lw * 0.1, lb - lh * f - lh * 0.09, lw * 1.24 - f * lw * 0.2, lh * 0.12); });
-        g.fillStyle = '#ffd27a'; round(lx - lw * 0.42, lb - lh - lw * 0.75, lw * 0.84, lw * 0.75, lw * 0.15);
-        g.fillStyle = '#161d45'; g.beginPath(); g.moveTo(lx - lw * 0.62, lb - lh - lw * 0.72); g.lineTo(lx, lb - lh - lw * 1.4); g.lineTo(lx + lw * 0.62, lb - lh - lw * 0.72); g.closePath(); g.fill();
+        g.fillStyle = beam; g.beginPath(); g.moveTo(lx, lampY);
+        g.arc(lx, lampY, S * 0.8, ang - 0.13, ang + 0.13); g.closePath(); g.fill();
+        var lhImg = lighthouseImage();
+        if (lhImg.complete && lhImg.naturalWidth) g.drawImage(lhImg, lx - 20 * lk, lb - 110 * lk, 40 * lk, 126 * lk);
+        var lamp = g.createRadialGradient(lx, lampY, 0, lx, lampY, 26 * lk);
+        lamp.addColorStop(0, 'rgba(255,233,168,' + (0.55 + 0.15 * Math.sin(sec * 2)) + ')'); lamp.addColorStop(1, 'rgba(255,233,168,0)');
+        g.fillStyle = lamp; g.beginPath(); g.arc(lx, lampY, 26 * lk, 0, 7); g.fill();
+        // A rise of the headland in front, so the stone base sits in the ground.
+        g.fillStyle = '#131a40'; g.beginPath(); g.moveTo(lx - 40 * lk, lb + 9 * lk); g.bezierCurveTo(lx - 24 * lk, lb + 1 * lk, lx - 12 * lk, lb, lx, lb); g.bezierCurveTo(lx + 12 * lk, lb, lx + 24 * lk, lb + 1 * lk, lx + 40 * lk, lb + 8 * lk); g.lineTo(lx + 40 * lk, lb + 30 * lk); g.lineTo(lx - 40 * lk, lb + 30 * lk); g.closePath(); g.fill();
       }
       // The fisherman in his boat, rocking gently with a warm lantern.
       var bx = W * (W < H ? 0.42 : 0.34), by = near(horizon + H * 0.3);
@@ -6011,7 +6064,7 @@
     birdFrames: function (n) {
       var cv = document.createElement('canvas'), keep = ctx; cv.width = 120 * n; cv.height = 130; ctx = cv.getContext('2d');
       ctx.fillStyle = '#f3e6e0'; ctx.fillRect(0, 0, cv.width, cv.height);
-      for (var i = 0; i < n; i++) drawBird(60 + i * 120, 70, 70, '#3d8bf2', 1, true, i * 340 / n);
+      for (var i = 0; i < n; i++) drawBird(60 + i * 120, 70, 70, '#3d8bf2', 1, true, i * 250 / n);
       var url = cv.toDataURL(); ctx = keep; return url;
     },
     flyaway: function (k, dir) { specialFxAdd({ kind: 'flyaway', b: curIdx(), x0: vw * 0.7, y0: vh * 0.5, dir: dir === undefined ? 1 : dir, color: '#3d8bf2', start: performance.now(), dur: 2400, pattern: k }); },

@@ -310,14 +310,16 @@
     var c4 = [[14.4, [43, 55, 59, 62, 67, 71]], [15.4, [45, 57, 61, 64, 69, 73]], [16.4, [47, 59, 62, 66, 71, 74]], [17.4, [45, 57, 62, 64, 69, 74]], [18.4, [45, 57, 61, 64, 69, 73]]];
     c4.forEach(function (c, i) { pad([c[1][0], c[1][2], c[1][3]], c[0], 1.25, 0.9 + i * 0.08); harp(c[1].slice(1).concat([c[1][3] + 12]), c[0], 0.9, 0.03 + i * 0.004); });
     tune([[14.5, 79], [15.0, 78], [15.5, 76, 1], [16.0, 78], [16.5, 83, 1.2], [17.5, 81], [18.0, 79], [18.5, 81, 1.4]], 0.08);
-    // The title: the home chord blooms, a bell rings, and a last soft phrase fades out with the intro.
-    pad([38, 50, 57, 62, 66, 69], 19.4, 6.8, 1.1);
+    // The title: the home chord blooms, a bell rings, and a last soft phrase comes home to D just before the intro
+    // ends, so everything has rung out by the time the picture fades.
+    pad([38, 50, 57, 62, 66, 69], 19.4, 5.7, 1.1);
     harp([62, 66, 69, 74, 78, 81, 86], 19.4, 1.1, 0.034);
-    voice(ctx, dest, hz(86), at(19.45), 0.05, 4.5, 0.004, BELL);
-    voice(ctx, dest, hz(74), at(19.5), 0.06, 4, 0.004, BELL);
-    tune([[20.6, 81, 2.4], [21.6, 78, 2.4], [22.8, 76, 2.2], [23.8, 74, 3]], 0.07);
-    [[93, 21.2], [90, 22.4], [95, 23.4], [86, 24.4]].forEach(function (p) { star(p[0], p[1], 0.016); });
-    return 26.2;
+    voice(ctx, dest, hz(86), at(19.45), 0.05, 3.8, 0.004, BELL);
+    voice(ctx, dest, hz(74), at(19.5), 0.06, 3.6, 0.004, BELL);
+    tune([[20.5, 81, 1.8], [21.3, 78, 1.8], [22.1, 76, 1.6], [22.9, 74, 2.3]], 0.07);
+    voice(ctx, dest, hz(50), at(22.9), 0.05, 2.3, 0.02, FELT);
+    [[93, 21.0], [90, 22.0], [86, 23.2]].forEach(function (p) { star(p[0], p[1], 0.016); });
+    return 25.3;
   }
   // Three quiet little victory pieces, each with its own melody and instrument. Returns the length in seconds.
   var GUITAR = [[1, 1], [2, 0.28, 0.5], [3, 0.09, 0.25]];
