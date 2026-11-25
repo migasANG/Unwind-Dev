@@ -35,7 +35,7 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .cardbox.tallbox>.card{height:100%}
 .cardbox.hasclose{margin-top:52px;max-height:calc(100% - 52px)}
 .cardbox.tallbox.hasclose{height:min(calc(100% - 52px),860px)}
-.cardbox>.close{position:absolute;top:-50px;right:6px;margin:0;z-index:4;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 10px color-mix(in srgb,var(--ink) 28%,transparent)}
+.cardbox>.close{position:absolute;top:-50px;right:0;margin:0;z-index:4;border-radius:50%;background:var(--card);color:var(--ink);box-shadow:0 2px 10px color-mix(in srgb,var(--ink) 28%,transparent)}
 .sheet.side .cardbox,.sheet.side .cardbox.hasclose,.sheet.side .cardbox.tallbox.hasclose{margin-top:0;height:100%;width:90vw;max-width:350px;max-height:none;animation:slidein .32s cubic-bezier(.2,.8,.3,1) both}
 .sheet.side .cardbox>.card{width:100%;height:100%}
 .sheet.side .cardbox>.close{top:calc(14px + env(safe-area-inset-top,0px));right:-46px}
@@ -219,8 +219,8 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 @keyframes pbee{0%,100%{transform:translate(0,0)}12%{transform:translate(calc(22px*var(--k)*var(--s,1)),calc(-14px*var(--k)*var(--s,1)))}25%{transform:translate(calc(48px*var(--k)*var(--s,1)),calc(4px*var(--k)*var(--s,1)))}40%{transform:translate(calc(30px*var(--k)*var(--s,1)),calc(18px*var(--k)*var(--s,1)))}55%{transform:translate(calc(-6px*var(--k)*var(--s,1)),calc(-10px*var(--k)*var(--s,1)))}72%{transform:translate(calc(-30px*var(--k)*var(--s,1)),calc(8px*var(--k)*var(--s,1)))}86%{transform:translate(calc(-12px*var(--k)*var(--s,1)),calc(16px*var(--k)*var(--s,1)))}}
 .pbwl{animation:pbwl .17s ease-in-out infinite alternate}.pbwr{animation:pbwr .17s ease-in-out infinite alternate}
 @keyframes pbwl{from{transform:rotate(17deg)}to{transform:rotate(-17deg)}}@keyframes pbwr{from{transform:rotate(-17deg)}to{transform:rotate(17deg)}}
-.pwingup{animation:pwingup .42s ease-in-out infinite alternate}
-@keyframes pwingup{from{transform:scaleY(1)}to{transform:scaleY(-.75)}}
+.pstrip{animation:pstrip .25s steps(12) infinite}
+@keyframes pstrip{to{transform:translateX(-1440px)}}
 .pbird{animation:pbird 40s linear infinite;opacity:0}
 @keyframes pbird{0%{transform:translate(0,0);opacity:0}4%{opacity:1}25%{transform:translate(calc(var(--fx)*.25*var(--s,1)*1px),calc(-30*var(--s,1)*1px))}50%{transform:translate(calc(var(--fx)*.5*var(--s,1)*1px),calc(10*var(--s,1)*1px))}75%{transform:translate(calc(var(--fx)*.75*var(--s,1)*1px),calc(-20*var(--s,1)*1px))}96%{opacity:1}100%{transform:translate(calc(var(--fx)*var(--s,1)*1px),0);opacity:0}}
 .pfire{animation:pfire 3s ease-in-out infinite alternate}
@@ -562,7 +562,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbwl,.pbwr,.pbird,.pwingup,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
+@media (prefers-reduced-motion:reduce){.capfx,#caption.on.icewarn,#caption.on.goldwarn,.crableg,.crabclaw,#seasonBadge .chip.pop,.drift,.flit,.twinkle,.crab,.squirrel,.tailwag,.wave,.sway,.sweep,.glowpulse,.fishj,.fring,.pdrift,.psmoke,.pglow,.pfall,.prise,.pflutter,.pbutter,.pwingl,.pwingr,.pbee,.pbwl,.pbwr,.pbird,.pstrip,.pfire,.pgust,.rodbend,.floatdip,.biteRing,.lean,.bubble,#sky,#sky2,#sun,.sheet,.smoke,.boat,.rise,.fly,#timer.low,#hearts svg.lost,.winhearts svg,.sheet.side .card{transition:none;animation:none}.rise,.smoke,.pfall,.prise,.pflutter,.pgust,.pbird,.psmoke{display:none}}
 </style>
 
 <div id="sky"></div><div id="sky2"></div><div id="sun"></div><div id="seasonBg" class="scenebg" hidden></div>

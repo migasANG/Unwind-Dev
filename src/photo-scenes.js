@@ -27,6 +27,15 @@
     img.src = photoUrl(season, port);
     ['big', 'small'].forEach(function (c) { var s = new Image(); s.src = 'bg/' + season + '-cloud-' + c + '.webp'; });
   }
+  // Twelve frames of a Fowl Play bird's wingbeat (one beat lasts 250 ms), side by side in one picture.
+  var birdStrips = {};
+  function photoBirdStrip(color) {
+    if (birdStrips[color]) return birdStrips[color];
+    var cv = document.createElement('canvas'), keep = ctx; cv.width = 120 * 12; cv.height = 110;
+    ctx = cv.getContext('2d');
+    try { for (var i = 0; i < 12; i++) drawBird(52 + i * 120, 58, 60, color, 1, true, i * 250 / 12); } finally { ctx = keep; }
+    return (birdStrips[color] = cv.toDataURL());
+  }
   function photoPreloadAll() { SEASON_ORDER.forEach(function (s) { photoLoad(s); }); }
   function photoScene(season) {
     var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? 1440 : 2560, H = port ? 3120 : 1440;
@@ -109,18 +118,16 @@
         '<circle cx="5.8" cy="-2" r="1.4" fill="#000"/><circle cx="9" cy="-2" r="1.4" fill="#000"/></g></g>';
     } else if (season === 'summer') {
       // Birds crossing the sky, pollen floating up in the warm air, and fireflies glowing in the bushes.
-      // A small flock of swallows: dark blue backs, cream bellies, a red throat and forked tails, flapping as they go.
-      var swallow = function (dx, dy, k2, d) {
-        var wing = function (c, sc) { return '<g transform="translate(-1 -3) scale(' + sc + ')"><g class="pwingup" style="animation-delay:' + d + 's"><path d="M0 0C-4-10-1-19 8-23 6-14 9-6 6 0Z" fill="' + c + '"/></g></g>'; };
-        return '<g transform="translate(' + dx + ' ' + dy + ') scale(' + k2 + ')">' + wing('#25304d', 0.8) +
-          '<path d="M-11-1-28-8-21-.5-29 6-11 2Z" fill="#26314e"/><ellipse rx="13" ry="6.5" fill="#2f3b5c"/><ellipse cx="3" cy="2.6" rx="8.5" ry="3.4" fill="#f3e4cf"/>' +
-          '<circle cx="12" cy="-2.5" r="5.6" fill="#2f3b5c"/><circle cx="14.2" cy="1" r="2.4" fill="#d9603b"/><circle cx="13.9" cy="-3.6" r="1.4" fill="#fff"/><circle cx="14.3" cy="-3.6" r=".75" fill="#111"/>' +
-          '<path d="M17.2-2.6 21.6-1.4 17.2-.2Z" fill="#f0a83a"/>' + wing('#3c4b74', 1) + '</g>';
-      };
-      [[0.12, 3, 34], [0.24, 2, 47]].forEach(function (fl, j) {
-        var by2 = H * (port ? fl[0] + 0.04 : fl[0]), bs = 1.6 * U, birds = '';
-        var spots2 = [[0, 0, 1], [-52, -26, 0.85], [-64, 26, 0.9]];
-        for (var q = 0; q < fl[1]; q++) birds += swallow(spots2[q][0], spots2[q][1], spots2[q][2], (-q * 0.17 - j * 0.3).toFixed(2));
+      // A few of the Fowl Play birds, flapping just as they do on the board. Their wingbeat is drawn once into a
+      // strip of frames with the same drawing code, then stepped through like a flipbook.
+      [[0.12, 3, 34, 0], [0.24, 2, 47, 3]].forEach(function (fl, j) {
+        var by2 = H * (port ? fl[0] + 0.04 : fl[0]), bs = 0.55 * U, birds = '';
+        var spots2 = [[0, 0, 1], [-120, -60, 0.85], [-140, 60, 0.9]];
+        for (var q = 0; q < fl[1]; q++) {
+          var strip = photoBirdStrip(E.BIRD_COLORS ? E.BIRD_COLORS[(fl[3] + q) % 5] : ['#3d8bf2', '#f2b035', '#4fb06d', '#e8669a', '#9b6bd8'][(fl[3] + q) % 5]);
+          birds += '<g transform="translate(' + spots2[q][0] + ' ' + spots2[q][1] + ') scale(' + spots2[q][2] + ')"><svg x="-60" y="-55" width="120" height="110" viewBox="0 0 120 110" overflow="hidden">' +
+            '<image class="pstrip" style="animation-delay:' + (-q * 0.08 - j * 0.11).toFixed(2) + 's" href="' + strip + '" width="' + (120 * 12) + '" height="110"/></svg></g>';
+        }
         out += '<g class="pbird" style="--fx:' + Math.round(W * 1.35) + ';animation-duration:' + fl[2] + 's;animation-delay:' + (-j * 19) + 's"><g transform="translate(' + f(-W * 0.15) + ' ' + f(by2) + ') scale(' + f(bs) + ')">' + birds + '</g></g>';
       });
       out += photoSheet('prise', 34, W, H, r, function (x, y, a) { return '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f((1.6 + a * 1.6) * U) + '" fill="#fff6c8" opacity="' + f(0.45 + a * 0.4) + '"/>'; }, '--g:120;animation-duration:38s');
