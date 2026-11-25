@@ -484,6 +484,32 @@
     out.to = out.gone ? null : { b: land.b, x: land.x, y: land.y }; out.stays = still;
     return out;
   }
+  // A search for the poem: launches and pushes that change something, until every slot holds its letter.
+  // Returns the first move of a shortest way, or solved: false once every reachable position has been tried.
+  function solveSpecial(level, state, limit) {
+    var copy = function (S) { return { removed: S.removed.slice(), launches: S.launches, lives: null, props: S.props.map(function (p) { return Object.assign({}, p); }), broken: Object.assign({}, S.broken), loaded: S.loaded, redStay: S.redStay, history: [], frozen: {}, burning: {}, snaps: [], ghostFlip: S.ghostFlip || 0, arrowsRef: level.arrows }; };
+    var keyOf = function (S) { var k = ''; for (var i = 0; i < S.removed.length; i++) k += S.removed[i] ? '1' : '0'; S.props.forEach(function (p) { if (!p.gone) k += '|' + p.id + ':' + p.x + ',' + p.y; }); return k; };
+    var start = copy(state);
+    if (slotsDone(level, start)) return { solved: true, first: -1, exhausted: true };
+    var seen = {}, queue = [{ S: start, first: -1 }], head = 0;
+    seen[keyOf(start)] = 1;
+    while (head < queue.length) {
+      if (head > (limit || 20000)) return { solved: false, first: -1, exhausted: false };
+      var cur = queue[head++];
+      for (var i = 0; i < level.arrows.length; i++) {
+        var a = level.arrows[i];
+        if (cur.S.removed[a.id] || !isReady(cur.S, a)) continue;
+        var S = copy(cur.S), res = tap(level, S, a.id);
+        if (!res.ok && !(res.pushed && res.pushed.some(function (pu) { return pu.moved; }))) continue;
+        var first = cur.first === -1 ? a.id : cur.first;
+        if (slotsDone(level, S)) return { solved: true, first: first, exhausted: true };
+        var k = keyOf(S);
+        if (seen[k]) continue;
+        seen[k] = 1; queue.push({ S: S, first: first });
+      }
+    }
+    return { solved: false, first: -1, exhausted: true };
+  }
   // After an out or an own goal the ball goes back to the centre spot.
   function resetBall(boards, states, kick) {
     var ball = null;
@@ -1295,26 +1321,39 @@
   }
   var SPECIALS = {
     // Matchday: a row of boards and one ball. Score on the right; the goal on the left is your own.
-    fb1: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 1, x: 2, y: 2 }, lives: 5, boards: [
-      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
-      [['0,2 1,2'], ['2,0 2,1'], ['4,4 4,3'], ['0,4 1,4']],
-      [['1,0 2,0', { red: 1 }], ['2,4 2,3'], ['0,1 1,1'], ['0,4 1,4'], ['3,4 3,3', { red: 2 }]]
+    fb1: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 0, x: 3, y: 3 }, { b: 0, x: 3, y: 1 }], lives: 5, boards: [
+      [['1,3 2,3'], ['1,1 2,1'], ['0,4 0,3', { red: 2 }]],
+      [['2,3 2,4'], ['2,0 2,1'], ['4,4 3,4']],
+      [['3,1 3,0'], ['3,3 3,4', { red: 1 }], ['0,4 1,4'], ['1,0 0,0']]
     ] },
-    fb2: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 1, x: 2, y: 2 }, lives: 5, boards: [
+    fb2: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 4, y: 3 }, { b: 2, x: 2, y: 3 }, { b: 1, x: 2, y: 3 }], lives: 5, boards: [
       [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
       [['2,0 2,1'], ['3,4 2,4', { red: 2 }], ['0,3 1,3'], ['4,2 3,2'], ['4,0 4,1']],
       [['3,3 4,3', { red: 1 }], ['0,3 1,3'], ['2,0 3,0'], ['1,1 1,0']],
       [['1,3 1,4'], ['2,4 2,3', { red: 2 }], ['2,0 1,0'], ['4,0 4,1', { red: 1 }]]
     ] },
-    fb3: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 2, x: 2, y: 2 }, lives: 5, boards: [
+    fb3: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kicks: [{ b: 1, x: 3, y: 1 }, { b: 3, x: 3, y: 2 }, { b: 1, x: 4, y: 1 }], lives: 5, boards: [
       [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
       [['1,2 1,3'], ['2,4 2,3'], ['1,0 2,0', { red: 2 }], ['0,1 1,1'], ['4,4 4,3']],
       [['4,2 3,2'], ['2,1 2,0', { red: 1 }], ['0,4 1,4'], ['0,0 1,0']],
       [['1,1 2,1', { red: 2 }], ['4,1 4,2'], ['0,3 1,3'], ['3,4 3,3'], ['4,0 3,0']],
       [['4,1 4,0'], ['2,1 3,1', { red: 2 }], ['3,4 3,3', { red: 1 }], ['0,4 1,4'], ['1,0 0,0']]
     ] },
+    fb4: { kind: 'football', w: 6, h: 6, goal: [2, 3, 4], kicks: [{ b: 2, x: 3, y: 3 }], lives: 5, boards: [
+      [['3,0 4,0'], ['5,5 4,5'], ['3,5 3,4']],
+      [['2,5 2,4'], ['1,1 2,1', { red: 2 }], ['0,2 1,2'], ['4,5 5,5'], ['4,0 4,1'], ['1,3 1,4']],
+      [['3,2 3,1', { red: 1 }], ['3,0 4,0'], ['2,0 2,1'], ['1,5 2,5', { red: 2 }], ['0,4 1,4'], ['4,4 4,5', { red: 1 }], ['5,3 4,3']],
+      [['2,0 1,0'], ['2,4 2,3', { red: 2 }], ['5,0 5,1', { red: 1 }], ['0,5 1,5'], ['3,5 4,5']]
+    ] },
+    fb5: { kind: 'football', w: 7, h: 7, goal: [2, 3, 4], kicks: [{ b: 3, x: 4, y: 4 }], lives: 5, boards: [
+      [['5,2 5,1']],
+      [['6,1 5,1', { red: 2 }]],
+      [['2,4 2,5'], ['3,6 3,5'], ['2,1 3,1', { red: 2 }], ['1,2 2,2'], ['5,6 6,6'], ['5,0 5,1', { red: 1 }], ['5,2 5,3', { red: 2 }]],
+      [['6,4 5,4'], ['2,2 2,3', { red: 2 }], ['1,5 2,5'], ['0,0 1,0'], ['4,6 5,6']],
+      [['4,2 4,1', { red: 1 }], ['4,0 5,0'], ['3,0 3,1'], ['2,5 3,5', { red: 2 }], ['1,4 2,4'], ['5,4 5,5', { red: 1 }], ['0,6 1,6']]
+    ] },
     // Woodland: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
-    sl1: { kind: 'sling', lives: 4, boards: [
+    sl1: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [4, 1], birds: [[4, 3]], walls: [[1, 1, 'r']], arrows: [['4,5 4,4'], ['0,1 1,1'], ['0,4 1,4'], ['5,3 5,2'], ['2,3 2,2']] }
     ] },
     sl2: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
@@ -1326,6 +1365,15 @@
       { w: 6, h: 6, sling: [2, 1], birds: [[2, 3]], walls: [[2, 1, 'b']], arrows: [['2,5 2,4'], ['5,5 4,5 3,5', { phase: true }], ['0,4 0,5']] },
       { w: 6, h: 6, walls: [], arrows: [['2,0 2,1'], ['2,4 2,3'], ['1,3 1,2'], ['4,0 4,1'], ['4,4 4,3'], ['0,5 1,5', { ghostPhase: 0 }]] }
     ] },
+    sl4: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+      { w: 7, h: 6, sling: [2, 3], birds: [[4, 3]], walls: [[2, 1, 'b']], arrows: [['6,3 5,3'], ['2,0 2,1'], ['5,5 4,5 3,5', { phase: true }], ['0,0 0,1']] },
+      { w: 7, h: 6, sling: [2, 1], walls: [[3, 1, 'r']], arrows: [['3,2 3,3'], ['3,5 3,4'], ['2,5 2,4'], ['0,1 1,1'], ['1,2 1,3', { ghostPhase: 1 }], ['5,5 6,5']] }
+    ] },
+    sl5: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+      { w: 6, h: 6, sling: [2, 1], birds: [[5,  4]], walls: [[2, 0, 'b'], [3, 0, 'b']], arrows: [['1,3 1,4', { phase: true }], ['2,3 3,3'], ['5,1 5,2 5,3'], ['4,4 3,4'], ['3,1 3,0']] },
+      { w: 6, h: 6, sling: [4, 2], birds: [[4,  3]], walls: [[0, 1, 'r']], arrows: [['0,0 1,0 2,0', { phase: true }], ['5,1 4,1', { ghostPhase: 0 }], ['2,4 1,4', { ghostPhase: 0 }], ['3,0 4,0', { ghostPhase: 0 }], ['4,5 4,4'], ['2,2 2,3']] },
+      { w: 6, h: 6, sling: [2, 2], birds: [[2,  3]], walls: [[2, 2, 'r'], [4, 4, 'b'], [0, 3, 'b']], arrows: [['4,2 4,3'], ['3,4 3,3', { phase: true }], ['5,5 5,4', { phase: true }], ['0,3 1,3']] }
+    ] },
     // The Poem: one level, one board per line. Compass arrows push letters into their slots; letters fall.
     poem: { kind: 'poem', lives: 5, boards: [
       { w: 5, h: 5, word: 'SEA', pt: 'MAR', line: 'Breathe out, and let the {SEA}', ptLine: 'Respira, e deixa o {MAR}', letters: [[2,  2,  0],  [2,  0,  1],  [3,  2,  2]], slots: [[1,  4],  [2,  4],  [3,  4]], arrows: [['4,1', { kind: 'compass', dir: 0 }], ['4,2', { kind: 'compass', dir: 1 }], ['3,3', { kind: 'compass', dir: 2 }], ['3,1', { kind: 'compass', dir: 0 }], ['2,1', { kind: 'compass', dir: 3 }], ['2,3', { kind: 'compass', dir: 2 }]] },
@@ -1336,10 +1384,13 @@
   };
   var BIRD_COLORS = ['#3d8bf2', '#f2b035', '#4fb06d', '#e8669a', '#9b6bd8'];
   // Builds a room of boards for a special level. lang picks the poem's word.
-  function specialRoom(key, lang, def) {
+  function specialRoom(key, lang, def, opts) {
     var d = def || SPECIALS[key], boards = [], base = { lives: d.lives, hints: 0, timeLimit: null, season: null, flowers: null, mirrors: [], special: d.kind };
     var arrowsOf = function (list) { return list.map(function (a, i) { return specArrow(i, a[0], a[1]); }); };
     if (d.kind === 'football') {
+      // Each try can start the ball on a different spot; every spot listed is known to be winnable.
+      var kicks = d.kicks || [d.kick], pick = opts && opts.kick !== undefined ? opts.kick : 0;
+      d = Object.assign({}, d, { kick: kicks[Math.max(0, Math.min(kicks.length - 1, pick))] });
       var n = d.boards.length, ym = d.goal[Math.floor(d.goal.length / 2)];
       d.boards.forEach(function (list, b) {
         var arrows = arrowsOf(list), goals = [];
@@ -1349,7 +1400,7 @@
         var props = b === d.kick.b ? [{ id: 0, kind: 'ball', x: d.kick.x, y: d.kick.y }] : [];
         boards.push(prepare(Object.assign({ w: d.w, h: d.h, arrows: arrows, props: props, goals: goals, redStay: true }, base)));
       });
-      return { kind: d.kind, key: key, boards: boards, groups: [], kick: d.kick, lives: d.lives, n: n, layout: 'row' };
+      return { kind: d.kind, key: key, boards: boards, groups: [], kick: d.kick, kicks: kicks, lives: d.lives, n: n, layout: 'row' };
     }
     var bird = 0;
     d.boards.forEach(function (bd) {
@@ -1374,7 +1425,7 @@
     TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, paired: paired, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     SPECIALS: SPECIALS, specialRoom: specialRoom, BIRD_COLORS: BIRD_COLORS,
-    edgeKey: edgeKey, wallOn: wallOn, propAt: propAt, slideProp: slideProp, pushMoves: pushMoves, settle: settle, slotsDone: slotsDone, findProp: findProp, anyMove: anyMove, carry: carry, throwBird: throwBird, resetBall: resetBall, roomTap: roomTap,
+    edgeKey: edgeKey, wallOn: wallOn, propAt: propAt, slideProp: slideProp, pushMoves: pushMoves, settle: settle, slotsDone: slotsDone, findProp: findProp, anyMove: anyMove, carry: carry, throwBird: throwBird, solveSpecial: solveSpecial, resetBall: resetBall, roomTap: roomTap,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
 });

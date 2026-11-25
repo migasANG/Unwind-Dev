@@ -107,7 +107,11 @@ t('Boarding Up specials: every level is winnable, keepers never play, red cards 
  const fb=E.specialRoom('fb1');fb.boards.forEach(L=>{const S=E.newState(L);L.arrows.filter(a=>a.keeper).forEach(a=>{assert(!E.isReady(S,a));assert(E.tap(L,S,a.id).notReady)})});
  const L=E.prepare({w:4,h:2,lives:3,redStay:true,arrows:[{id:0,kind:'plain',cells:[[0,0],[1,0]],dir:1,red:1},{id:1,kind:'plain',cells:[[0,1],[1,1]],dir:1}]});const S=E.newState(L);E.tap(L,S,1);assert(E.isRedCarded(S,L.arrows[0]),'red card should stay');
  // A ball rolls until stopped and crosses into the next board; a bird is caught by an empty slingshot; letters only move sideways and fall.
- const r1=E.specialRoom('fb1'),st=r1.boards.map(x=>E.newState(x));const t1=E.roomTap(r1.boards,st,1,0,r1.kick);assert(t1.ball&&t1.ball.result==='moved'&&t1.ball.b===2);assert.deepEqual(E.findProp(st[2],0)&&[E.findProp(st[2],0).x,E.findProp(st[2],0).y],[2,2]);
+ const r1=E.specialRoom('fb1'),st=r1.boards.map(x=>E.newState(x));const t1=E.roomTap(r1.boards,st,0,0,r1.kick);assert(t1.ball&&t1.ball.result==='moved'&&t1.ball.b===1);assert.deepEqual(E.findProp(st[1],0)&&[E.findProp(st[1],0).x,E.findProp(st[1],0).y],[1,3]);
+ // Every kickoff spot of every Matchday level can be won.
+ Object.keys(E.SPECIALS).filter(k=>/^fb/.test(k)).forEach(k=>(E.SPECIALS[k].kicks||[0]).forEach((_,i)=>{const r=E.specialRoom(k,'en',null,{kick:i});assert(G.solve(r,1500000).best,k+' kick '+i)}));
+ // The poem solver finds a first move on a fresh line and gives up on a line that can no longer be finished.
+ const pl2=E.specialRoom('poem').boards[0],ps2=E.newState(pl2);assert(E.solveSpecial(pl2,ps2,40000).solved);
  const sl=E.specialRoom('sl1'),ss=[E.newState(sl.boards[0])];E.roomTap(sl.boards,ss,0,0,null);assert.equal(ss[0].loaded,0,'bird should be on the slingshot');
  const th=E.throwBird(sl.boards,ss,0,3);assert(th.broke&&!th.gone);assert.equal(ss[0].loaded,-1);
  const po=E.specialRoom('poem'),pl=po.boards[0],ps=E.newState(pl);assert.equal(E.settle(pl,ps).length,0,'letters start at rest');

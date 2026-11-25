@@ -200,3 +200,63 @@ if (require.main === module && process.argv[2] === 'po') {
     console.log('  ' + JSON.stringify({ w, h, letters: bd.letters, slots: bd.slots, arrows: bd.arrows }));
   }
 }
+
+// ---------- Woodland boards ----------
+function randSling(nb, seed, w, h) {
+  const r = E.rng32(seed), boards = [];
+  let birdsTotal = 0;
+  for (let b = 0; b < nb; b++) {
+    const used = {}, arrows = [], walls = [], birds = [];
+    const free = (x, y) => x >= 0 && y >= 0 && x < w && y < h && !used[y * w + x];
+    let sling = null;
+    if (b === 0 || r() < 0.6) { const sx = 1 + Math.floor(r() * (w - 2)), sy = 1 + Math.floor(r() * (h - 2)); sling = [sx, sy]; used[sy * w + sx] = 1; }
+    const nBirds = b === 0 ? 1 : r() < 0.5 ? 1 : 0;
+    for (let i = 0; i < nBirds; i++) for (let t = 0; t < 30; t++) { const x = Math.floor(r() * w), y = Math.floor(r() * h); if (free(x, y)) { used[y * w + x] = 1; birds.push([x, y]); birdsTotal++; break; } }
+    const want = 4 + Math.floor(r() * 3);
+    for (let t = 0; t < 120 && arrows.length < want; t++) {
+      const d = Math.floor(r() * 4), len = 2 + (r() < 0.25 ? 1 : 0), hx = Math.floor(r() * w), hy = Math.floor(r() * h), cells = [];
+      for (let i = len - 1; i >= 0; i--) cells.push([hx - E.DX[d] * i, hy - E.DY[d] * i]);
+      if (cells.some((c) => !free(c[0], c[1]))) continue;
+      cells.forEach((c) => { used[c[1] * w + c[0]] = 1; });
+      const k = r(), opts = k < 0.15 ? { phase: true } : k < 0.3 ? { ghostPhase: Math.floor(r() * 2) } : undefined;
+      arrows.push(opts ? [cells.map((c) => c.join(',')).join(' '), opts] : [cells.map((c) => c.join(',')).join(' ')]);
+    }
+    const nWalls = 1 + Math.floor(r() * 3);
+    for (let i = 0; i < nWalls; i++) { const x = Math.floor(r() * (w - 1)), y = Math.floor(r() * (h - 1)); walls.push([x, y, r() < 0.5 ? 'r' : 'b']); }
+    boards.push({ w, h, sling, birds, walls, arrows });
+  }
+  if (!birdsTotal) return null;
+  boards.forEach((bd) => { if (!bd.sling) delete bd.sling; });
+  const def = { kind: 'sling', lives: 4, birdsBreak: true, boards };
+  // Few free launches at the start, so the birds have real work to do.
+  E.SPECIALS.__q = def;
+  const room = E.specialRoom('__q');
+  if (room.boards.some((L) => E.legalMoves(L, E.newState(L)).length > (process.env.FREE ? +process.env.FREE : 2))) return null;
+  return def;
+}
+function evalSling(def, minMoves) {
+  E.SPECIALS.__s = def;
+  const room = E.specialRoom('__s');
+  const s = solve(room, 120000);
+  if (!s.best || s.best.cost > 0 || s.best.path.length < minMoves) return null;
+  const path = s.best.path, throws = path.filter((m) => m.fire !== undefined);
+  const walls = throws.filter((m) => m.kind === 'wall').length, kills = throws.filter((m) => m.kind === 'kill').length;
+  const crossed = path.some((m) => (m.throwRes && m.throwRes.to && m.throwRes.to.b !== m.b) || (m.ball && m.ball.b !== m.b));
+  if (throws.length < (process.env.THROWS ? +process.env.THROWS : 2) || walls < 1 || kills < 1) return null;
+  return { room, moves: path.length, throws: throws.length, walls, kills, crossed, path: path.map(label), rate: randomRate(room, 200, 4) };
+}
+if (require.main === module && process.argv[2] === 'sl') {
+  const [, , , nArg, fromArg, countArg, minArg, wArg, hArg] = process.argv;
+  const nb = +nArg || 2, from = +fromArg || 1, count = +countArg || 500, minMoves = +minArg || 12, w = +wArg || 6, h = +hArg || 6;
+  for (let seed = from; seed < from + count; seed++) {
+    const def = randSling(nb, seed, w, h);
+    if (!def) continue;
+    let res = null;
+    try { res = evalSling(def, minMoves); } catch (e) { continue; }
+    if (!res) continue;
+    console.log('\nseed', seed, 'moves', res.moves, 'throws', res.throws, 'walls', res.walls, 'kills', res.kills, 'random', (res.rate * 100).toFixed(1) + '%');
+    lab.show(res.room);
+    console.log('  ' + res.path.join(' '));
+    console.log('  ' + JSON.stringify(def.boards));
+  }
+}

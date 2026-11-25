@@ -274,7 +274,19 @@
     if (!reduced) {
       var copy = document.createElement('canvas');
       copy.className = 'boardfade'; copy.width = board.width; copy.height = board.height;
-      copy.getContext('2d').drawImage(board, 0, 0);
+      var cg = copy.getContext('2d');
+      cg.drawImage(board, 0, 0);
+      // Compass arrows keep turning through the fade: cut them out of the old picture, so only the live
+      // board shows them, instead of a frozen copy over a turning one.
+      if (current && current.level && state) {
+        cg.globalCompositeOperation = 'destination-out';
+        current.level.arrows.forEach(function (a) {
+          if (a.kind !== 'compass' || state.removed[a.id]) return;
+          var c = px(a.cells[0]);
+          cg.beginPath(); cg.arc(c.x * boardDpr, c.y * boardDpr, cs * 0.56 * boardDpr, 0, 7); cg.fill();
+        });
+        cg.globalCompositeOperation = 'source-over';
+      }
       board.parentNode.insertBefore(copy, board.nextSibling);
       requestAnimationFrame(function () { copy.style.opacity = '0'; });
       setTimeout(function () { copy.remove(); }, BG_FADE + 60);
@@ -479,22 +491,25 @@
     { set: 'match', title: 'Matchday 1', special: 'fb1', caption: 'Kick the ball into the goal on the right. The goal on the left is your own.' },
     { set: 'match', title: 'Matchday 2', special: 'fb2', caption: 'Red cards that run out stay on the pitch for good. Clear the way in time.' },
     { set: 'match', title: 'Matchday 3', special: 'fb3', caption: 'Five boards. Sometimes the way forward starts by going back.' },
+    { set: 'match', title: 'Matchday 4', special: 'fb4', caption: 'Bigger pitches. The ball starts in attack, but the way to goal begins back in midfield.' },
+    { set: 'match', title: 'Matchday 5', special: 'fb5', caption: 'Five big boards. Switch lanes twice, and mind your own goal.' },
     { set: 'wood', title: 'Woodland 1', special: 'sl1', caption: 'Push the bird onto the slingshot, then throw it at the wooden wall.' },
-    { set: 'wood', title: 'Woodland 2', special: 'sl2', caption: 'A thrown bird now breaks the first arrow it hits. Birds can slide to other boards.' },
-    { set: 'wood', title: 'Woodland 3', special: 'sl3', caption: 'Three boards and two birds. One wall is in the way of the slingshot itself.' },
-    { set: 'poem', title: 'The Poem', special: 'poem', caption: 'Push the letters into their slots to write a line of the poem.' }
+    { set: 'wood', title: 'Woodland 2', special: 'sl2', caption: 'A thrown bird breaks the first arrow it hits. Birds can slide to other boards.' },
+    { set: 'wood', title: 'Woodland 3', special: 'sl3', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
+    { set: 'wood', title: 'Woodland 4', special: 'sl4', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
+    { set: 'wood', title: 'Woodland 5', special: 'sl5', caption: 'Three boards and three birds. Some birds are only in the way.' }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
-    ['wood', 'Woodland', 'Push birds onto the slingshot with arrows, then throw them to break wooden walls. From level 2, a thrown bird also breaks the first arrow it hits. Clear every arrow to win.'],
-    ['poem', 'The Poem', 'One level, one board for each line. Compass arrows push the letters sideways, and letters with nothing under them fall. Fill every slot to write the line, and read the whole poem at the end.']];
+    ['wood', 'Woodland', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Clear every arrow to win.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
     if (b.special) {
       withLoading(function () {
         openCoopRoom(function () {
-          var room = E.specialRoom(b.special, window.UnwindI18n.lang());
+          var def = E.SPECIALS[b.special], kicks = def.kicks ? def.kicks.length : 1;
+          var room = E.specialRoom(b.special, window.UnwindI18n.lang(), null, { kick: Math.floor(Math.random() * kicks) });
           room.title = b.title; room.boarding = i; room.caption = b.caption;
           room.boards.forEach(function (l, k) { l.caption = room.kind === 'poem' ? (k ? 'Line ' + (k + 1) + ' of ' + room.n + ': fill every slot to write it.' : b.caption) : b.caption; });
           return room;
@@ -511,10 +526,13 @@
 
   /* ---------- Boarding Up specials: Matchday (a football), Woodland (birds and a slingshot) and The Poem ---------- */
   // Moving balls, birds and letters are drawn from these, so a prop slides along its real path, board by board.
-  var propAnims = [], specialFx = [], aim = null, specialBusy = 0, poemCard = null;
-  function special() { return current && current.coop && coop && coop.room && coop.room.kind ? coop.room.kind : ''; }
-  function roomLevels() { return coop.boards.map(function (B) { return B.level; }); }
-  function roomStates() { coop.boards[coop.idx].state = state; return coop.boards.map(function (B) { return B.state; }); }
+  var propAnims = [], specialFx = [], aim = null, specialBusy = 0, trips = [], poemUndo = [];
+  function special() { return current && current.level && current.level.special ? current.level.special : ''; }
+  function inRoom() { return !!(current && current.coop && coop); }
+  function roomLevels() { return inRoom() ? coop.boards.map(function (B) { return B.level; }) : [current.level]; }
+  function roomStates() { if (!inRoom()) return [state]; coop.boards[coop.idx].state = state; return coop.boards.map(function (B) { return B.state; }); }
+  function curIdx() { return inRoom() ? coop.idx : 0; }
+  function anyProp(id) { var st = roomStates(); for (var i = 0; i < st.length; i++) { var p = E.findProp(st[i], id); if (p) return p; } return null; }
   function pathCells(pts) { var d = 0; for (var i = 1; i < pts.length; i++) d += Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]); return d; }
   // Queues a prop's trip across one or more boards. Returns when it ends.
   function animTrip(segs, p, start, perCell, opts) {
@@ -538,7 +556,30 @@
     var end = an.pts[an.pts.length - 1];
     return { x: end[0], y: end[1], t: t, dist: total };
   }
-  function busy() { return performance.now() < specialBusy; }
+  /* A trip moves a ball, bird or letter along its path, one board at a time. When the next part of the path is
+     on another board, the view moves there first, and the prop only carries on once that board is in view. */
+  function startTrip(o) { o.i = 0; o.segStart = performance.now() + (o.delay || 0); o.done = false; trips.push(o); return o; }
+  function segDur(o, sg) { return o.durFn ? o.durFn(sg) : Math.max(140, pathCells(sg.path) * o.perCell); }
+  function tickTrips(now) {
+    trips.forEach(function (o) {
+      if (o.done || now < o.segStart + segDur(o, o.segs[o.i])) return;
+      if (o.i + 1 < o.segs.length) {
+        o.i++;
+        var nb = o.segs[o.i].b;
+        if (inRoom() && nb !== coop.idx) { coopSwitch(nb); o.segStart = now + 440; } else o.segStart = now;
+      } else { o.done = true; if (o.onEnd) o.onEnd(now); }
+    });
+    trips = trips.filter(function (o) { return !o.done; });
+  }
+  // What the trips look like on board b right now, in the same shape as timed animations.
+  function tripAnims(now, b) {
+    return trips.filter(function (o) { return o.segs[o.i].b === b; }).map(function (o) {
+      var sg = o.segs[o.i], last = o.i === o.segs.length - 1, waiting = now < o.segStart;
+      return { b: b, id: o.id, kind: o.kind, color: o.color, ch: o.ch, pts: sg.path, start: waiting ? now : o.segStart, dur: waiting ? 1e9 : segDur(o, sg), easeOut: last && !o.linear && !o.gravity, fadeOut: last && o.fadeOut, gravity: o.gravity, fly: o.fly };
+    });
+  }
+  function busy() { return performance.now() < specialBusy || trips.length > 0; }
+  function whenIdle(fn) { var c = current; var tick = function () { if (current !== c || ended) return; if (busy()) setTimeout(tick, 80); else fn(); }; setTimeout(tick, 60); }
 
   /* Drawing */
   var LETTER_INK = '#5a3a18';
@@ -560,26 +601,22 @@
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.42, r * 0.22, r * 0.12, -0.6, 0, 7); ctx.fill();
     ctx.restore(); ctx.globalAlpha = 1;
   }
-  // A little songbird seen from the side: round head, a wing, a tail and a short beak.
+  // A little round bird drawn like the bees: flat colours, no outlines, two dot eyes, and a wing that beats.
   function drawBird(x, y, s, color, face, flap, now) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -1 : 1, 1);
-    var bob = flap ? Math.sin(now / 45) : Math.sin(now / 520) * 0.3;
-    ctx.globalAlpha = flap ? 0.12 : 0.2; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(0, s * 0.62, s * 0.5, s * 0.12, 0, 0, 7); ctx.fill();
-    ctx.globalAlpha = 1; ctx.lineJoin = 'round';
-    var dark = mixColor(color, '#1d1d2a', 0.35), light = mixColor(color, '#ffffff', 0.55);
-    // Tail
-    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-s * 0.42, -s * 0.02); ctx.lineTo(-s * 0.8, -s * 0.22); ctx.lineTo(-s * 0.74, s * 0.1); ctx.closePath(); ctx.fill();
-    // Body and head
-    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(-s * 0.05, s * 0.08, s * 0.46, s * 0.34, -0.15, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(s * 0.3, -s * 0.2, s * 0.25, 0, 7); ctx.fill();
-    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(s * 0.06, s * 0.2, s * 0.28, s * 0.17, -0.1, 0, 7); ctx.fill();
-    // Wing, which beats in flight
-    ctx.fillStyle = dark; ctx.save(); ctx.translate(-s * 0.08, -s * 0.02); ctx.rotate(-0.25 - bob * 0.55);
-    ctx.beginPath(); ctx.ellipse(-s * 0.1, 0, s * 0.3, s * 0.15, 0.25, 0, 7); ctx.fill(); ctx.restore();
-    // Beak and eye
-    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(s * 0.52, -s * 0.24); ctx.lineTo(s * 0.72, -s * 0.17); ctx.lineTo(s * 0.52, -s * 0.1); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#1d1d2a'; ctx.beginPath(); ctx.arc(s * 0.36, -s * 0.25, s * 0.055, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s * 0.375, -s * 0.265, s * 0.02, 0, 7); ctx.fill();
+    var k = s / 24;
+    ctx.save(); ctx.translate(x, y); ctx.scale(face < 0 ? -k : k, k); ctx.globalAlpha = 1;
+    var lift = reduced ? 0 : flap ? Math.sin(now / 45) * 0.7 : Math.sin(now / 700) * 0.06;
+    var dark = mixColor(color, '#1d1d2a', 0.3), light = mixColor(color, '#ffffff', 0.6);
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-8, -1); ctx.lineTo(-15, -6); ctx.lineTo(-14, 3); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    if (!flap) [[-3, 7, -4, 11], [3, 7, 3.5, 11]].forEach(function (f) { ctx.beginPath(); ctx.moveTo(f[0], f[1]); ctx.lineTo(f[2], f[3]); ctx.stroke(); });
+    ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 11, 9, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = light; ctx.beginPath(); ctx.ellipse(2.5, 3.5, 7, 4.6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1); ctx.rotate(-0.35 - lift); ctx.beginPath(); ctx.ellipse(-2, -3, 6.5, 4, 0.2, 0, 7); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(10, -3.5); ctx.lineTo(15.5, -1); ctx.lineTo(10, 1.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(4.8, -3, 1.4, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -3, 1.4, 0, 7); ctx.fill();
     ctx.restore(); ctx.globalAlpha = 1;
   }
   function drawLetter(x, y, s, ch, glow, now) {
@@ -667,10 +704,12 @@
     Object.keys(L.wallAt || {}).forEach(function (k) { if (!S.broken[k]) drawWall(k); });
     var moving = {};
     anims.forEach(function (an) { if (now < an.start + an.dur + 30) moving[an.id] = 1; });
+    if (anims === propAnims || anims.live) trips.forEach(function (o) { moving[o.id] = 1; });
     (S.props || []).forEach(function (p) {
       if (p.gone || moving[p.id]) return;
       var c = px([p.x, p.y]), held = p.kind === 'letter' && L.slotAt && L.slotAt[p.y * L.w + p.x] === p.ch;
-      if (p.kind === 'bird' && p.loaded) c.y -= cs * 0.06;
+      // A bird on the slingshot sits small in its band, so the slingshot stays easy to see.
+      if (p.kind === 'bird' && p.loaded) { drawBird(c.x, c.y - cs * 0.2, cs * 0.3, p.color || '#3d8bf2', 1, false, now); return; }
       drawProp(p, c.x, c.y, now, { glow: held, face: p.face || 1 });
     });
     anims.forEach(function (an) {
@@ -705,9 +744,11 @@
         ctx.globalAlpha = 1 - t; ctx.fillStyle = i % 2 ? '#9a6234' : '#c48a54';
         ctx.save(); ctx.translate(g.x + Math.cos(a) * d, g.y + Math.sin(a) * d + e * e * cs * 0.4); ctx.rotate(a + t * 5); ctx.fillRect(-cs * 0.09, -cs * 0.025, cs * 0.18, cs * 0.05); ctx.restore();
       }
+    } else if (f.kind === 'doomedWall') {
+      if (!f.trip.done) drawWall(f.key);
     } else if (f.kind === 'doomed') {
       // An arrow a bird is about to break stays in sight until the bird reaches it.
-      if (now < f.hitAt) { setStroke(f.color, Math.max(3, cs * 0.17), 1); var res = strokeWindow(f.pts, 0, f.len); chevron(res.end, res.tan, cs * 0.24); }
+      if (f.trip ? !f.trip.done : now < f.hitAt) { setStroke(f.color, Math.max(3, cs * 0.17), 1); var res = strokeWindow(f.pts, 0, f.len); chevron(res.end, res.tan, cs * 0.24); }
     } else if (f.kind === 'impact') {
       ctx.globalAlpha = 1 - t; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(f.p.x, f.p.y, cs * (0.2 + e * 0.7), 0, 7); ctx.fill();
       for (var k = 0; k < 10; k++) { var a4 = k * 0.63 + 0.3, d4 = cs * (0.2 + e * 1.2); ctx.fillStyle = k % 2 ? (f.color || '#d4161f') : colors.ink; ctx.save(); ctx.translate(f.p.x + Math.cos(a4) * d4, f.p.y + Math.sin(a4) * d4); ctx.rotate(a4 + t * 6); ctx.fillRect(-cs * 0.06, -cs * 0.03, cs * 0.12, cs * 0.06); ctx.restore(); }
@@ -775,203 +816,238 @@
     o.connect(g); g.connect(sfxBus); o.start(t); lfo.start(t); o.stop(t + len + 0.05); lfo.stop(t + len + 0.05);
   }
   function specialFxAdd(f) { f.start = f.start || performance.now(); f.dur = f.dur || 600; specialFx.push(f); }
-  // After the view follows a prop to another board, the board on screen changes once its trip has ended.
-  function followTo(b, at, why) {
-    setTimeout(function () { if (!coop || ended || b === coop.idx) return; coopSwitch(b); if (why) setCaption(why); }, Math.max(0, at - performance.now()) + 120);
-  }
   // A push: the arrow nudges forward and back, and the prop slides, rolls or steps. No life is lost.
   function specialPushed(rt, res, now) {
-    var l = current.level, b = coop.idx, end = now;
+    var l = current.level, b = curIdx();
     res.results.forEach(function (r) {
       var m = l.arrows[r.id];
       bounces[r.id] = { start: now, reach: Math.max(0.14, r.check.dist - 0.62), pts: m.kind === 'compass' ? null : trackOf(m, r.check) };
     });
     var moved = res.pushed.some(function (pu) { return pu.moved; });
     if (!moved) {
-      var pu0 = res.pushed[0], p0 = E.findProp(state, pu0.id) || {};
+      var pu0 = res.pushed[0], p0 = anyProp(pu0.id) || {};
       nudges[res.results[0].id] = now + 360; pluck(220, 0, 0.07, 0.3);
-      setCaption(p0.kind === 'letter' && (pu0.path && (res.results[0].check.endDir === 0 || res.results[0].check.endDir === 2)) ? 'Letters only move sideways.' : 'Something is in the way: it cannot move there.');
+      setCaption(p0.kind === 'letter' && (res.results[0].check.endDir === 0 || res.results[0].check.endDir === 2) ? 'Letters only move sideways.' : p0.kind === 'bird' && pu0.wall ? 'Only a bird thrown from the slingshot can break wood.' : 'Something is in the way: it cannot move there.');
       return;
     }
-    var hitAt = now + 140;
+    var birdTrips = (rt && rt.birds || []).slice();
     res.pushed.forEach(function (pu) {
-      var p = E.findProp(state, pu.id) || { id: pu.id, kind: pu.kind };
-      if (pu.kind === 'ball' && rt.ball) {
-        var segs = rt.ball.segs, last = rt.ball.result;
-        var ball = { id: pu.id, kind: 'ball' };
-        end = animTrip(segs, ball, hitAt, 62, { fadeOut: last === 'out' });
+      var p = anyProp(pu.id) || {};
+      if (pu.kind === 'ball') {
+        var segs = rt && rt.ball ? rt.ball.segs : [{ b: b, path: pu.path }], last = rt && rt.ball ? rt.ball.result : 'moved';
         specialSound('kick'); buzz(12);
-        if (last === 'goal') {
-          setTimeout(function () { specialSound('whistle'); specialFxAdd({ kind: 'goal', b: coop.idx, dur: 1800 }); [1, 1.25, 1.5, 2].forEach(function (x, i) { pluck(523.25 * x, 0.1 + i * 0.09, 0.1, 1.2); }); }, Math.max(0, end - performance.now()));
-          followTo(segs[segs.length - 1].b, end - 400);
-          specialBusy = end + 2400;
-          setTimeout(function () { if (!ended) finish(true); }, Math.max(0, end - performance.now()) + 1500);
-        } else if (last === 'out' || last === 'own') {
-          collisions++;
-          setTimeout(function () {
-            specialSound('out'); buzz(30);
-            setCaption(last === 'own' ? 'Own goal! That costs a life. The ball goes back to the centre spot.' : 'Out! That costs a life. The ball goes back to the centre spot.');
-            if (current.coop) coopSyncLives(); refresh();
-            var k = coop.room.kick;
-            specialFxAdd({ kind: 'pop', b: k.b, p: null, cell: [k.x, k.y], dur: 700 });
-            if (state.lives === 0) finish(false, 'lives');
-            else followTo(k.b, performance.now() + 300);
-          }, Math.max(0, end - performance.now()));
-          // The ball is shown leaving, so it reappears on the centre spot only once that is over.
-          propAnims.push({ b: coop.room.kick.b, id: pu.id, kind: 'ball', pts: [[coop.room.kick.x, coop.room.kick.y], [coop.room.kick.x, coop.room.kick.y]], start: end, dur: 300, hold: true });
-          specialBusy = end + 200;
-        } else {
-          var to = segs[segs.length - 1].b;
-          if (to !== b) followTo(to, end, 'The ball rolled on to board ' + (to + 1) + '.');
-          specialBusy = end;
-        }
+        startTrip({ segs: segs, kind: 'ball', id: pu.id, perCell: 62, delay: 140, fadeOut: last === 'out', onEnd: function (t) { ballLanded(last, t); } });
         return;
       }
       if (pu.kind === 'bird') {
-        var bird = { id: pu.id, kind: 'bird', color: p.color };
-        var trip = (rt.birds || []).filter(function (x) { return x.segs[0].path[0][0] === pu.from[0] && x.segs[0].path[0][1] === pu.from[1]; })[0];
-        if (pu.exit && trip) {
-          end = animTrip(trip.segs, bird, hitAt, 70, { fadeOut: trip.result === 'lost' });
-          if (trip.result === 'lost') setTimeout(function () { setCaption('The bird flew away.'); }, Math.max(0, end - performance.now()));
-          else if (trip.b !== b) followTo(trip.b, end, 'The bird slid on to board ' + (trip.b + 1) + '.');
-          if (trip.loaded) setTimeout(function () { specialSound('chirp'); setCaption('The bird is on the slingshot. Tap the slingshot to throw it.'); }, Math.max(0, end - performance.now()));
-        } else {
-          end = animTrip([{ b: b, path: pu.path }], bird, hitAt, 70, {});
-          if (pu.loaded) setTimeout(function () { specialSound('chirp'); setCaption('The bird is on the slingshot. Tap the slingshot to throw it.'); }, Math.max(0, end - performance.now()));
-        }
+        var tr = pu.exit ? birdTrips.shift() : null;
         specialSound('slide');
-        specialBusy = end;
+        startTrip({ segs: tr ? tr.segs : [{ b: b, path: pu.path }], kind: 'bird', id: pu.id, color: p.color, perCell: 80, delay: 140, fly: true, fadeOut: !!(tr && tr.result === 'lost'), onEnd: function () {
+          if (tr && tr.result === 'lost') setCaption('The bird flew away.');
+          else if (pu.loaded || (tr && tr.loaded)) { specialSound('chirp'); setCaption('The bird is on the slingshot. Tap the slingshot to throw it.'); }
+          else if (pu.wall) setCaption('Only a bird thrown from the slingshot can break wood.');
+          refresh(); if (inRoom()) coopNav();
+        } });
         return;
       }
-      // A ball that stays on its board rolls; a letter steps one tile sideways, and may then fall.
-      end = animTrip([{ b: b, path: pu.path }], { id: pu.id, kind: pu.kind, ch: p.ch }, hitAt, pu.kind === 'ball' ? 62 : 150, {});
-      specialSound(pu.kind === 'ball' ? 'kick' : 'slide');
-      specialBusy = end;
+      // A letter steps one tile sideways, and may then fall.
+      specialSound('slide');
+      startTrip({ segs: [{ b: b, path: pu.path }], kind: 'letter', id: pu.id, ch: p.ch, perCell: 150, delay: 140, onEnd: function () { animFalls(0); } });
     });
-    animFalls(end);
   }
-  // Letters that lost their support drop, one after another.
-  function animFalls(after) {
-    var falls = state.falls || [], end = after;
+  function ballLanded(last, now) {
+    if (last === 'goal') {
+      specialSound('whistle'); specialFxAdd({ kind: 'goal', b: curIdx(), dur: 1800 });
+      [1, 1.25, 1.5, 2].forEach(function (x, i) { pluck(523.25 * x, 0.1 + i * 0.09, 0.1, 1.2); });
+      specialBusy = now + 2400;
+      setTimeout(function () { if (!ended) finish(true); }, 1500);
+      return;
+    }
+    if (last === 'out' || last === 'own') {
+      collisions++;
+      specialSound('out'); buzz(30);
+      setCaption(last === 'own' ? 'Own goal! That costs a life. The ball goes back to its spot.' : 'Out! That costs a life. The ball goes back to its spot.');
+      if (inRoom()) coopSyncLives(); refresh();
+      if (state.lives === 0) { finish(false, 'lives'); return; }
+      var k = coop.room.kick;
+      if (coop.idx !== k.b) coopSwitch(k.b);
+      specialFxAdd({ kind: 'pop', b: k.b, cell: [k.x, k.y], start: now + 380, dur: 700 });
+    }
+    whenIdle(specialCheck);
+  }
+  // Letters that lost their support drop. delay is in milliseconds from now.
+  function animFalls(delay) {
+    var falls = state.falls || [], b = curIdx();
     falls.forEach(function (f) {
       var p = E.findProp(state, f.id); if (!p) return;
-      var dist = f.to[1] - f.from[1];
-      var e2 = animTrip([{ b: coop.idx, path: [f.from, f.to] }], { id: p.id, kind: 'letter', ch: p.ch }, after, 0, { gravity: true });
-      propAnims[propAnims.length - 1].dur = 220 + dist * 70; e2 = after + 220 + dist * 70;
-      end = Math.max(end, e2);
-      setTimeout(function () { pluck(330, 0, 0.08, 0.25); if (current.level.slotAt && current.level.slotAt[f.to[1] * current.level.w + f.to[0]] !== undefined) specialSound('slot'); }, Math.max(0, e2 - performance.now()));
+      var dist = f.to[1] - f.from[1], to = f.to;
+      startTrip({ segs: [{ b: b, path: [f.from, f.to] }], kind: 'letter', id: p.id, ch: p.ch, delay: delay, gravity: true, durFn: function () { return 220 + dist * 70; }, onEnd: function () {
+        pluck(330, 0, 0.08, 0.25);
+        if (current.level.slotAt && current.level.slotAt[to[1] * current.level.w + to[0]] !== undefined) specialSound('slot');
+      } });
     });
     state.falls = [];
-    specialBusy = Math.max(specialBusy, end);
-    return end;
   }
   function aimPreview() {
     var out = [];
     for (var d = 0; d < 4; d++) {
       var states = roomStates().map(function (S) { return { removed: S.removed.slice(), launches: S.launches, lives: S.lives, props: S.props.map(function (p) { return Object.assign({}, p); }), broken: Object.assign({}, S.broken), loaded: S.loaded, ghostFlip: S.ghostFlip, frozen: {}, burning: {}, arrowsRef: S.arrowsRef }; });
-      var r = E.throwBird(roomLevels(), states, coop.idx, d);
+      var r = E.throwBird(roomLevels(), states, curIdx(), d);
       var pts = r && r.segs && r.segs[0] ? r.segs[0].path.slice() : [];
-      if (r && r.impact && r.impact.b === coop.idx && (!r.segs[1])) pts.push(r.impact.p);
+      if (r && r.impact && r.impact.b === curIdx() && (!r.segs[1])) pts.push(r.impact.p);
       if (r && r.gone && pts.length) { var lp = pts[pts.length - 1]; pts.push([lp[0] + E.DX[d], lp[1] + E.DY[d]]); }
       out.push({ pts: pts, noop: !r || r.noop });
     }
     return out;
   }
   function specialTapCode(id) {
-    var L = current.level, now = performance.now();
-    if (id === -9) { aim = null; setCaption(coopBoardCaption(coop.idx)); return; }
+    var now = performance.now();
+    if (id === -9) { aim = null; setCaption(inRoom() ? coopBoardCaption(coop.idx) : baseCaption()); return; }
     if (id === -10) {
       if (state.loaded === -1) { setCaption('Push a bird onto the slingshot with an arrow.'); pluck(220, 0, 0.07, 0.3); return; }
-      if (aim) { aim = null; setCaption(coopBoardCaption(coop.idx)); return; }
-      aim = { b: coop.idx, start: now, preview: aimPreview() };
+      if (aim) { aim = null; setCaption(inRoom() ? coopBoardCaption(coop.idx) : baseCaption()); return; }
+      aim = { b: curIdx(), start: now, preview: aimPreview() };
       specialSound('chirp'); setCaption('Choose where to throw the bird.');
       return;
     }
     if (id <= -11 && id >= -14) throwFrom(-11 - id, now);
   }
   function throwFrom(d, now) {
-    var b = coop.idx, levels = roomLevels(), states = roomStates(), L = current.level;
+    var b = curIdx(), levels = roomLevels(), states = roomStates();
     var loadedBird = E.findProp(state, state.loaded), color = loadedBird && loadedBird.color;
-    // Arrows a bird may break: remember how they look, so they stay in sight until the bird gets there.
     var r = E.throwBird(levels, states, b, d);
     aim = null;
     if (!r) return;
     if (r.noop) { setCaption('Something is right in front of it.'); pluck(220, 0, 0.07, 0.3); return; }
-    var bird = { id: r.id, kind: 'bird', color: color };
-    var start = now + 60, end = animTrip(r.segs, bird, start, 48, { fadeOut: r.gone, fly: true, linear: true });
-    propAnims.filter(function (an) { return an.id === r.id && an.start >= start - 1; }).forEach(function (an) { an.fly = true; });
     specialSound('throw'); buzz(10);
-    if (r.broke) {
-      specialFxAdd({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: end - 40, dur: 700 });
-      setTimeout(function () { specialSound('crack'); buzz(20); }, Math.max(0, end - performance.now()));
-    }
+    var trip = startTrip({ segs: r.segs, kind: 'bird', id: r.id, color: color, perCell: 48, delay: 60, fly: true, linear: true, fadeOut: r.gone, onEnd: function (t) {
+      if (r.broke) { specialFxAdd({ kind: 'splinters', b: r.broke.b, key: r.broke.key, start: t, dur: 700 }); specialSound('crack'); buzz(20); }
+      if (r.destroyed) {
+        var m2 = levels[r.destroyed.b].arrows[r.destroyed.id];
+        specialFxAdd({ kind: 'impact', b: r.destroyed.b, cell: m2.cells[m2.cells.length >> 1], color: '#b3122e', start: t, dur: 600 });
+        sniperBlast();
+        progress.tutorials = progress.tutorials || {};
+        if (!progress.tutorials.birdHit) { progress.tutorials.birdHit = 1; save('unwind.progress2', progress); setCaption('A thrown bird breaks the first arrow it hits.'); }
+      } else if (r.impact && !r.broke) specialFxAdd({ kind: 'pop', b: r.impact.b, cell: r.impact.p, dur: 500, start: t });
+      if (r.gone) setCaption('The bird flew away.');
+      if (r.loaded) specialSound('chirp');
+      refresh(); if (inRoom()) coopNav();
+      if (inRoom() && coopAllWon()) { finish(true); return; }
+      whenIdle(specialCheck);
+    } });
+    if (r.broke) specialFxAdd({ kind: 'doomedWall', b: r.broke.b, key: r.broke.key, trip: trip, start: now, dur: 1e9 });
     if (r.destroyed) {
-      var DL = levels[r.destroyed.b], m = DL.arrows[r.destroyed.id];
-      specialFxAdd({ kind: 'doomed', b: r.destroyed.b, pts: m.cells.concat([[E.headOf(m)[0] + E.DX[m.dir] * 2, E.headOf(m)[1] + E.DY[m.dir] * 2]]), len: lengthOf(m), color: arrowColor(m), hitAt: end + 20, start: now, dur: end - now + 60 });
-      specialFxAdd({ kind: 'impact', b: r.destroyed.b, cell: m.cells[m.cells.length >> 1], color: '#b3122e', start: end, dur: 600 });
-      setTimeout(function () { sniperBlast(); }, Math.max(0, end - performance.now()));
-    } else if (r.impact && !r.broke) specialFxAdd({ kind: 'pop', b: r.impact.b, cell: r.impact.p, dur: 500, start: end });
-    if (r.gone) setTimeout(function () { setCaption('The bird flew away.'); }, Math.max(0, end - performance.now()));
-    else if (r.to && r.to.b !== b) followTo(r.to.b, end + 200, 'The bird landed on board ' + (r.to.b + 1) + '.');
-    if (r.loaded) setTimeout(function () { specialSound('chirp'); }, Math.max(0, end - performance.now()));
-    specialBusy = end;
-    setTimeout(function () {
-      if (!coop || ended) return;
-      refresh(); coopNav();
-      if (coopAllWon()) { finish(true); return; }
-      specialCheck();
-    }, Math.max(0, end - performance.now()) + 80);
-  }
-  // Anything left to do? Matchday and Woodland look at every board; the poem only at the line being written.
-  function specialCheck() {
-    if (!coop || ended) return;
-    var kind = special(), levels = roomLevels(), states = roomStates();
-    if (kind === 'poem') {
-      var B = coop.boards[coop.idx];
-      if (!B.done && E.slotsDone(B.level, state)) { poemLineDone(); return; }
-      if (!B.done && !E.anyMove(B.level, state)) stuckSoon('No moves left: these letters cannot reach their slots any more.');
-      return;
+      var m = levels[r.destroyed.b].arrows[r.destroyed.id];
+      specialFxAdd({ kind: 'doomed', b: r.destroyed.b, pts: m.cells.concat([[E.headOf(m)[0] + E.DX[m.dir] * 2, E.headOf(m)[1] + E.DY[m.dir] * 2]]), len: lengthOf(m), color: arrowColor(m), trip: trip, start: now, dur: 1e9 });
     }
-    if (kind === 'sling' && coopAllWon()) return;
+  }
+  // Anything left to do? Matchday and Woodland look at every board. A poem line is lost as soon as it can no
+  // longer be finished.
+  function specialCheck() {
+    if (ended || !current) return;
+    var kind = special(), levels = roomLevels(), states = roomStates();
+    if (kind === 'poem') { poemCheck(); return; }
+    if (kind === 'sling' && inRoom() && coopAllWon()) return;
     var any = levels.some(function (L, i) { return E.anyMove(L, states[i]); });
     if (!any) stuckSoon(kind === 'football' ? 'No moves left: the ball can no longer reach the goal.' : 'No moves left: some arrows can never leave now.');
   }
   function stuckSoon(why) {
     var c = current;
-    setTimeout(function () { if (current === c && !ended) { setCaption(why); finish(false, 'stuck'); } }, Math.max(0, specialBusy - performance.now()) + 700);
+    whenIdle(function () { setTimeout(function () { if (current === c && !ended) { setCaption(why); finish(false, 'stuck'); } }, 600); });
   }
 
-  /* The Poem: each board writes one line. Finishing a board shows the poem so far, then opens the next board. */
-  function poemLines(upto) {
-    return coop.boards.slice(0, upto).map(function (B) { return B.level.line; });
+  /* Poems of the sea: a challenge played one line at a time, each line on its own board with the normal level
+     controls. Losing a line retries that line. The hint button can also go back to an earlier line. */
+  var POEMS = [{ id: 'po-1', key: 'poem', title: 'Poems of the sea' }];
+  function poemProgress(id) {
+    progress.poems = progress.poems || {};
+    return progress.poems[id] || (progress.poems[id] = { written: [], at: 0, hits: 0 });
+  }
+  function openPoem(line, idx) {
+    idx = idx || 0;
+    var P = POEMS[idx], pr = poemProgress(P.id);
+    if (pr.finished) { pr.written = []; pr.at = 0; pr.hits = 0; pr.finished = false; }
+    var room = E.specialRoom(P.key, window.UnwindI18n.lang()), n = room.boards.length;
+    if (line === undefined) line = pr.at || 0;
+    line = Math.max(0, Math.min(n - 1, line));
+    var L = room.boards[line];
+    L.lives = 3; L.hints = 1;
+    L.caption = 'Line ' + (line + 1) + ' of ' + n + ': push the letters into their slots.';
+    save('unwind.progress2', progress);
+    begin({ id: P.id, mode: 'poem', poem: idx, line: line, n: n, lines: room.boards.map(function (B) { return B.line; }), level: L, title: P.title + ' · Line ' + (line + 1) + ' of ' + n, chapter: CHAPTERS[timeChapter()], sunY: 40 });
+    state.safe = false; poemUndo = []; trips = []; propAnims = []; specialFx = []; aim = null; specialBusy = 0;
+    boardLayer = null; refresh();
   }
   function lineHtml(line, glow) {
     var esc = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
     return esc(line).replace(/\{([^}]*)\}/, function (_, w) { return '<b class="' + (glow ? 'glow' : '') + '">' + esc(w) + '</b>'; });
   }
+  function poemCheck() {
+    if (ended || current.mode !== 'poem') return;
+    if (E.slotsDone(current.level, state)) { poemLineDone(); return; }
+    // No winning play left on this line counts as a loss.
+    var sol = E.solveSpecial(current.level, state, 40000);
+    if (!sol.solved && sol.exhausted) { setCaption('No winning moves are left on this line.'); setTimeout(function () { if (!ended) finish(false, 'stuck'); }, 700); }
+  }
   function poemLineDone() {
-    var B = coop.boards[coop.idx], i = coop.idx, n = coop.n;
-    B.done = true; coop.poemDone = Math.max(coop.poemDone || 0, i + 1);
-    specialBusy = performance.now() + 99999;
+    var c = current, P = POEMS[c.poem], pr = poemProgress(P.id), i = c.line;
+    ended = true; refresh();
+    pr.written[i] = true; pr.hits = (pr.hits || 0) + collisions;
+    // Back on an earlier line, finishing it returns to the furthest line; otherwise the next unwritten one.
+    var next = -1;
+    if (i < pr.at && !pr.written[pr.at]) next = pr.at;
+    else for (var k = i + 1; k < c.n; k++) if (!pr.written[k]) { next = k; break; }
+    if (next < 0) for (var k2 = 0; k2 < c.n; k2++) if (!pr.written[k2]) { next = k2; break; }
+    if (next >= 0) pr.at = Math.max(pr.at, next);
+    save('unwind.progress2', progress);
     [0, 4, 7, 12].forEach(function (s, k) { pluck(392 * Math.pow(2, s / 12), 0.15 + k * 0.12, 0.09, 1.6); });
     var host = $('poemCard') || (function () { var d = document.createElement('div'); d.id = 'poemCard'; d.className = 'poemcard notr'; d.setAttribute('aria-live', 'polite'); document.body.appendChild(d); return d; })();
-    var lines = poemLines(i + 1);
-    host.innerHTML = '<div class="pc-in">' + lines.map(function (ln, k) { return '<p class="' + (k === i ? 'new' : 'old') + '">' + lineHtml(ln, k === i) + '</p>'; }).join('') + '</div>';
+    host.innerHTML = '<div class="pc-in">' + c.lines.map(function (ln, k) { return pr.written[k] ? '<p class="' + (k === i ? 'new' : 'old') + '">' + lineHtml(ln, k === i) + '</p>' : ''; }).join('') + '</div>';
     host.hidden = false; host.classList.remove('out');
     void host.offsetWidth; host.classList.add('on');
-    var last = i === n - 1;
     setTimeout(function () {
       host.classList.add('out');
       setTimeout(function () { host.hidden = true; host.classList.remove('on', 'out'); }, 500);
-      specialBusy = 0;
-      if (!coop || ended) return;
-      if (last) poemFinale(function () { finish(true); });
-      else { coopSwitch(i + 1); coopNav(); }
+      if (current !== c) return;
+      if (next < 0) { pr.finished = true; save('unwind.progress2', progress); poemFinale(function () { ended = false; finish(true); }, c.lines); }
+      else openPoem(next, c.poem);
     }, 3600);
+  }
+  function poemHintSheet() {
+    var c = current, pr = poemProgress(POEMS[c.poem].id);
+    var html = '<div class="row"><h2>Hint</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+      '<div class="modes"><button id="phMove"' + (hintsLeft > 0 ? '' : ' disabled') + '><b>Show me a move</b><span>' + (hintsLeft > 0 ? 'One hint for this line.' : 'No hints left on this line.') + '</span></button></div>';
+    if (c.line > 0 && pr.written.slice(0, c.line).some(Boolean)) {
+      html += '<div class="chapter">Go back to an earlier line</div><p class="note">The lines you have written stay written. Once you finish it, you come back here.</p><div class="modes">';
+      for (var k = 0; k < c.line; k++) if (pr.written[k]) html += '<button data-pl="' + k + '"><b>Line ' + (k + 1) + '</b><span class="notr">' + c.lines[k].replace(/[{}]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></button>';
+      html += '</div>';
+    }
+    var s = sheet(html);
+    s.querySelector('#x').onclick = closeSheet;
+    s.querySelector('#phMove').onclick = function () {
+      closeSheet();
+      var sol = E.solveSpecial(current.level, state, 40000);
+      if (sol.solved && sol.first >= 0) {
+        hintArrow = sol.first; hintStart = performance.now(); hintsLeft--; hintsUsed++;
+        pluck(M.hz(M.THEMES[wantedTheme()].pent[7]), 0, 0.12, 1); focusArrow(hintArrow); track('hint_used', { poem: true });
+      } else setCaption('No winning moves are left on this line.');
+      refresh();
+    };
+    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { openPoem(+b.getAttribute('data-pl'), c.poem); }; });
+  }
+  // Undo for a poem line: letters move, so the whole line is remembered before each move.
+  function poemSnap() { poemUndo.push({ removed: state.removed.slice(), launches: state.launches, history: state.history.slice(), snaps: (state.snaps || []).slice(), props: state.props.map(function (p) { return Object.assign({}, p); }), ghostFlip: state.ghostFlip }); }
+  function poemRewind() {
+    var u = poemUndo.pop(); if (!u) return;
+    state.removed = u.removed; state.launches = u.launches; state.history = u.history; state.snaps = u.snaps; state.props = u.props; state.ghostFlip = u.ghostFlip; state.falls = [];
+    trips = []; bounces = {}; flights = [];
+    current.level.arrows.forEach(function (a) { if (a.kind === 'compass') { angles[a.id] = E.dirOf(a, state) * 90; a.vis = angles[a.id]; } });
+    rewinds++; boardLayer = null; hintArrow = -1;
+    pluck(146.8, 0, 0.12, 0.7); refresh();
   }
   // The finished poem, read out line by line over a night sea, with its own music.
   function poemFinale(done, replay) {
-    var lines = (replay ? replay : coop.boards.map(function (B) { return B.level.line; }));
+    var lines = replay;
     var el = document.createElement('div');
     el.id = 'poemEnd'; el.className = 'poemend notr';
     el.innerHTML = '<canvas aria-hidden="true"></canvas><div class="pe-text">' + lines.map(function (ln, k) { return '<p style="animation-delay:' + (1.2 + k * 2.6) + 's">' + lineHtml(ln, true) + '</p>'; }).join('') + '<button class="primary" id="poemOk" style="animation-delay:' + (1.6 + lines.length * 2.6) + 's">' + window.UnwindI18n.t('Continue') + '</button></div>';
@@ -1641,7 +1717,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-a';
+  var BUILD = '2026.11.25-b';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2195,13 +2271,13 @@
     shownLives = lives;
     drawBadge();
     $('bNextTheme').hidden = !cycleOn();
-    $('bRewind').disabled = current.coop ? ended : !state.history.length || ended;
+    $('bRewind').disabled = current.coop ? ended : current.mode === 'poem' ? !poemUndo.length || ended : !state.history.length || ended;
     var wantPause = !!current.coop;
     if ($('bRewind').getAttribute('data-pause') !== String(wantPause)) {
       $('bRewind').setAttribute('data-pause', wantPause);
       $('bRewind').innerHTML = wantPause ? '<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>Pause' : '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5"/></svg>Rewind';
     }
-    $('bHint').disabled = hintsLeft <= 0 || ended;
+    $('bHint').disabled = (hintsLeft <= 0 && !(current.mode === 'poem' && current.line > 0)) || ended;
     var onlineGame = !!(current.coop && coop && coop.online);
     $('bHint').hidden = $('bRestart').hidden = $('bRewind').hidden = onlineGame;
     // Boards that give no hints at all (Hard, Challenges, multi-board play) leave the button out.
@@ -2429,6 +2505,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     if (!current) return;
+    if (trips.length) tickTrips(now);
     var dt = lastFrame ? Math.min(100, now - lastFrame) : 0; lastFrame = now;
     var paused = ended || document.hidden || !!$('sheetHost').firstChild;
     // Online, the clock is shared: it only stops when the whole room is paused, never for one player's menu.
@@ -2717,8 +2794,9 @@
     });
     if (l.special) {
       propAnims = propAnims.filter(function (an) { return now < an.start + an.dur + 400; });
-      specialFx = specialFx.filter(function (f) { return now < f.start + f.dur + 50; });
-      drawSpecialsOver(now, l, state, coop ? coop.idx : 0, propAnims, specialFx);
+      specialFx = specialFx.filter(function (f) { return f.trip ? !f.trip.done : now < f.start + f.dur + 50; });
+      var live = propAnims.concat(tripAnims(now, curIdx())); live.live = true;
+      drawSpecialsOver(now, l, state, curIdx(), live, specialFx);
     }
 
     drawWakes(now);
@@ -3732,8 +3810,11 @@
       return;
     }
     if (current.coop && !(coop && coop.online) && !coopAllow(id)) return;
-    var l = current.level, now = performance.now(), rt = special() ? E.roomTap(roomLevels(), roomStates(), coop.idx, id, coop.room.kick || { b: 0, x: 0, y: 0 }) : null, res = rt ? rt.res : E.tap(l, state, id);
-    if (res.pushed) { specialPushed(rt, res, now); coopSyncLives(); refresh(); if (state.lives === 0 && !(rt.ball && rt.ball.result !== 'moved')) finish(false, 'lives'); else setTimeout(specialCheck, Math.max(0, specialBusy - performance.now()) + 60); return; }
+    var l = current.level, now = performance.now(), sk0 = special();
+    if (current.mode === 'poem') poemSnap();
+    var rt = sk0 ? E.roomTap(roomLevels(), roomStates(), curIdx(), id, inRoom() ? coop.room.kick || { b: 0, x: 0, y: 0 } : { b: 0, x: 0, y: 0 }) : null, res = rt ? rt.res : E.tap(l, state, id);
+    if (current.mode === 'poem' && !res.ok && !(res.pushed && res.pushed.some(function (pu) { return pu.moved; }))) poemUndo.pop();
+    if (res.pushed) { specialPushed(rt, res, now); if (inRoom()) coopSyncLives(); refresh(); whenIdle(specialCheck); return; }
     takeEarlyFlowers(now);
     if (res.notReady) {
       // Waiting arrows give a small shake and a soft sound. It costs nothing.
@@ -3796,11 +3877,11 @@
       if (current.coop) coopAfterLaunch(id, res, now);
       hintStillGood();
       var sk = special();
-      if (sk) animFalls(now + 120);
-      if (sk === 'football' || sk === 'poem') setTimeout(specialCheck, Math.max(0, specialBusy - performance.now()) + 60);
-      else if (res.won && current.coop && !coopAllWon()) { setCaption('Board ' + (coop.idx + 1) + ' cleared! Help clear the others.'); if (sk) setTimeout(specialCheck, 200); }
+      if (sk) animFalls(120);
+      if (sk === 'football' || sk === 'poem') whenIdle(specialCheck);
+      else if (res.won && current.coop && !coopAllWon()) { setCaption('Board ' + (coop.idx + 1) + ' cleared! Help clear the others.'); if (sk) whenIdle(specialCheck); }
       else if ((res.won || (current.coop && coopAllWon())) && !(coop && coop.online) && current.mode !== 'challenge') { bee = null; finish(true); }
-      else if (sk) setTimeout(specialCheck, Math.max(0, specialBusy - performance.now()) + 60);
+      else if (sk) whenIdle(specialCheck);
     } else {
       collisions++;
       res.results.forEach(function (r) {
@@ -3925,6 +4006,7 @@
     ended = true; refresh();
     var c = current, secs = Math.max(1, Math.round(activeMs / 1000));
     var perfect = won && collisions === 0 && c.level.lives !== null;
+    if (c.mode === 'poem') { var ppr = poemProgress(POEMS[c.poem].id); if (!won) { ppr.hits = (ppr.hits || 0) + collisions; save('unwind.progress2', progress); } perfect = won && !ppr.hits; }
     track(won ? 'level_complete' : 'level_fail', { launches: state.launches, collisions: collisions, seconds: secs, mode: c.mode, set: c.set, perfect: perfect, why: why });
     var stats = { secs: secs, perfect: perfect, launches: state.launches, livesLeft: state.lives, hits: collisions, hints: hintsUsed, rewinds: rewinds };
     if (won) {
@@ -3940,7 +4022,7 @@
         progress.done[c.id] = true;
         if (perfect) progress.perfect[c.id] = true;
       } else if (c.mode === 'endless') progress.endlessBy[c.endlessKey] = (progress.endlessBy[c.endlessKey] || 0) + 1;
-      else if (c.mode === 'challenge') { progress.done[c.id] = true; if (perfect) progress.perfect[c.id] = true; }
+      else if (c.mode === 'challenge' || c.mode === 'poem') { progress.done[c.id] = true; if (perfect) progress.perfect[c.id] = true; }
       else if (c.coop) {
         if (coop && coop.room.boarding !== undefined) { progress.done['bu-' + (coop.room.boarding + 1)] = true; if (perfect) progress.perfect['bu-' + (coop.room.boarding + 1)] = true; }
         if (coop && coop.room.endless) progress.endlessBy[coop.room.endless] = (progress.endlessBy[coop.room.endless] || 0) + 1;
@@ -4029,7 +4111,7 @@
     var hasNext = c.mode === 'levels' && c.index < SETS[c.set].length - 1;
     // The end of a group leads to the next group. Only the very last level leads to open water.
     var nextSet = c.mode === 'levels' && !hasNext ? SET_FLOW[SET_FLOW.indexOf(c.set) + 1] : null;
-    var title = c.mode === 'challenge' ? 'Challenge complete!' : st.perfect ? 'Perfect!' : 'All clear';
+    var title = c.mode === 'challenge' ? 'Challenge complete!' : c.mode === 'poem' ? 'Poem complete!' : st.perfect ? 'Perfect!' : 'All clear';
     var lines = st.perfect ? ['You never lost a life.', 'Not one collision. Lovely.', 'Smooth as still water.']
       : c.level.lives === null ? ['Another calm stretch of water.'] : st.hits === 1 ? ['One small bump on the way.'] : [st.hits + ' bumps on the way, and you got there.'];
     var line = lines[Math.floor(Math.random() * lines.length)];
@@ -4045,7 +4127,7 @@
     var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
     var bu = c.coop && coop && coop.room.boarding !== undefined ? coop.room.boarding : -1, owc = c.coop && coop && coop.room.endless;
-    var nextLabel = c.mode === 'challenge' ? (c.index < CHALLENGES.length - 1 ? 'Next challenge' : 'Back to challenges') : bu >= 0 ? (bu < BOARDING.length - 1 ? 'Next level' : 'Back to levels') : owc ? 'Keep drifting' : hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var nextLabel = c.mode === 'poem' ? 'Back to challenges' : c.mode === 'challenge' ? (c.index < CHALLENGES.length - 1 ? 'Next challenge' : 'Back to challenges') : bu >= 0 ? (bu < BOARDING.length - 1 ? 'Next level' : 'Back to levels') : owc ? 'Keep drifting' : hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
@@ -4058,11 +4140,12 @@
         else openEndless();
       } else if (c.mode === 'endless' || owc) openEndless();
       else if (c.mode === 'challenge') { if (c.index < CHALLENGES.length - 1) openChallenge(c.index + 1); else levelsSheet('extra'); }
+      else if (c.mode === 'poem') levelsSheet('extra');
       else if (bu >= 0) { if (bu < BOARDING.length - 1) openBoarding(bu + 1); else levelsSheet('boarding'); }
       else levelsSheet();
     };
     s.querySelector('#replayTune').onclick = function () { audio(); playTune(); };
-    s.querySelector('#again').onclick = function () { if (c.coop && coop && coop.online) { netSend({ t: 'lobby' }); closeSheet(); return; } if (c.coop && coop) coopRestart(); else begin(c); };
+    s.querySelector('#again').onclick = function () { if (c.coop && coop && coop.online) { netSend({ t: 'lobby' }); closeSheet(); return; } if (c.mode === 'poem') { openPoem(0, c.poem); return; } if (c.coop && coop) coopRestart(); else begin(c); };
     s.querySelector('#winLevels').onclick = function () { levelsSheet(); };
     s.querySelector('#next').focus({ preventScroll: true });
   }
@@ -4094,6 +4177,12 @@
     }
     var timeUp = why === 'time';
     if (why === 'stuck') {
+      if (c.mode === 'poem') {
+        var ps = sheet('<h2>No winning moves left</h2><p>This line can no longer be written. Try it again: the lines you have already written stay written.</p><button class="primary" id="again">Try this line again</button><button class="secondary" id="toLevels">Back to challenges</button>');
+        ps.querySelector('#again').onclick = function () { restart(); };
+        ps.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+        return;
+      }
       var ss = sheet('<h2>No moves left</h2><p>' + (special() === 'football' ? 'The ball can no longer reach the goal from here. Try a different order.' : special() === 'poem' ? 'These letters can no longer reach their slots. Try a different order.' : 'Some arrows can never leave now. Try a different order.') + '</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Choose another level</button>');
       ss.querySelector('#again').onclick = function () { restart(); };
       ss.querySelector('#toLevels').onclick = function () { levelsSheet(); };
@@ -4160,7 +4249,6 @@
           var label = set[0] === 'poem' ? 'The Poem' : String(shown);
           return '<button data-bu="' + i + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '" aria-label="' + (b.title || 'Boarding Up ' + (i + 1)) + '">' + label + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
         }).join('') + '</div>';
-        if (set[0] === 'poem' && progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
       });
     }
     else if (tab === 'calm') CALM_SECTIONS.forEach(function (sec) { html += '<div class="chapter">' + sec[0] + '</div>' + grid('calm', sec[1], sec[2]); });
@@ -4181,6 +4269,11 @@
     }
     if (tab === 'extra') {
       html += '<div class="chapter strong">Daily</div><div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button></div>';
+      html += '<div class="chapter strong">Poems of the sea</div><p class="note">Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.</p><div class="lv wide">' + POEMS.map(function (P, i) {
+        var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
+        return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + ' ' + (i + 1) + '">' + P.title + ' ' + (i + 1) + (started ? ' · Line ' + (pr.at + 1) : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
+      }).join('') + '</div>';
+      if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
       CHALLENGE_GROUPS.forEach(function (g) {
         html += '<div class="chapter strong">' + g.name + '</div><p class="note">' + g.note + '</p><div class="lv">';
         CHALLENGES.forEach(function (c, i) {
@@ -4225,6 +4318,7 @@
     s.querySelectorAll('[data-ch]').forEach(function (b) { b.onclick = function () { openChallenge(+b.getAttribute('data-ch')); }; });
     if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { showTutorial(['boards'], 0, false, 'play'); };
     s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
+    s.querySelectorAll('[data-poem]').forEach(function (b) { b.onclick = function () { openPoem(undefined, +b.getAttribute('data-poem')); }; });
     if (s.querySelector('#mPoemRead')) s.querySelector('#mPoemRead').onclick = function () { var room = E.specialRoom('poem', window.UnwindI18n.lang()); poemFinale(null, room.boards.map(function (L) { return L.line; })); };
     if (tab !== 'endless') return;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
@@ -4334,12 +4428,14 @@
   }
   // The very first level also explains the point of the game.
   function levelDemos() {
+    if (current.mode === 'poem') return ['poem', 'compass'];
     if (current.coop && coop && coop.room.kind) {
       // Each special set has its own demo, plus the arrows it uses (red cards play differently on a pitch).
       var k = coop.room.kind, here = {};
       coop.boards.forEach(function (B) { mechanicsOf(B.level).forEach(function (m) { here[m] = 1; }); });
       if (k === 'football') delete here.red;
-      var first = k === 'football' ? ['football'] : k === 'poem' ? ['poem'] : ['sling'].concat(coop.boards[0].level.birdsBreak ? ['birdbreak'] : []);
+      // Birds break arrows from Woodland 1, but its demo waits for level 2 so the first level is not too much at once.
+      var first = k === 'football' ? ['football'] : ['sling'].concat(coop.room.key !== 'sl1' ? ['birdbreak'] : []);
       return first.concat(Object.keys(here));
     }
     if (current.coop && coop) {
@@ -4571,7 +4667,7 @@
     sling: { title: 'Slingshot and birds', text: 'An arrow that hits a bird pushes it, and it slides until something stops it. A bird that slides onto the slingshot sits on it. Tap the slingshot, then a direction, to throw the bird. It breaks the first wooden wall it meets. Clear every arrow to win.',
       def: { kind: 'sling', lives: 9, boards: [{ w: 6, h: 5, sling: [2, 1], birds: [[2, 2]], walls: [[1, 1, 'r']], arrows: [['2,4 2,3'], ['0,1 1,1']] }] },
       steps: [{ b: 0, tap: 0, say: 'An arrow pushes the bird onto the slingshot' }, { b: 0, aim: true, say: 'Tap the slingshot to aim' }, { b: 0, fire: 3, say: 'The bird breaks the wooden wall' }, { b: 0, tap: 1, say: 'Arrows push birds out of the way' }, { b: 0, tap: 1, say: 'Now the arrow can leave' }, { b: 0, tap: 0, say: '' }] },
-    birdbreak: { title: 'Birds break arrows', text: 'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.',
+    birdbreak: { title: 'Birds break arrows', text: 'A thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.',
       def: { kind: 'sling', lives: 9, birdsBreak: true, boards: [{ w: 5, h: 4, sling: [2, 3], birds: [[2, 3]], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1']] }] },
       steps: [{ b: 0, tap: 0, say: 'These two arrows block each other' }, { b: 0, aim: true, say: 'Aim the slingshot at one of them' }, { b: 0, fire: 0, say: 'The bird breaks the arrow it hits' }, { b: 0, tap: 0, say: 'Now the other one can leave' }] },
     poem: { title: 'The Poem', text: 'Fill every slot with its letter to write a line. Letters with nothing under them fall. A compass arrow that hits a letter pushes it one tile sideways and stays. Compass arrows still turn each time an arrow leaves. Finish a board to read the line, then the next board opens.',
@@ -4999,7 +5095,7 @@
         art: '<rect x="44" y="9" width="14" height="28" stroke="#e0574a" stroke-width="2.5"/>' + line('M4 23H22', ink) + head(28, 23, ink) + '<circle cx="38" cy="23" r="7" fill="#fff" stroke="#26262e" stroke-width="1.5"/><path d="M38 19.5l3 2.2-1.1 3.5h-3.8l-1.1-3.5Z" fill="#26262e"/>' },
       { key: 'sling', title: 'Woodland: birds and the slingshot', text: 'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.',
         art: '<path d="M14 40V26L6 14M14 26l8-12" stroke="#6a4220" stroke-width="4" stroke-linecap="round"/><path d="M6 14Q14 22 22 14" stroke="#3a2c34" stroke-width="2"/><rect x="44" y="6" width="5" height="34" rx="2" fill="' + wood + '"/><ellipse cx="32" cy="22" rx="7" ry="5.5" fill="#3d8bf2"/><circle cx="36" cy="18" r="4" fill="#3d8bf2"/><path d="M39.5 17.5l3 1-3 1Z" fill="#f5a524"/>' },
-      { key: 'birdbreak', title: 'Birds that break arrows', text: 'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.',
+      { key: 'birdbreak', title: 'Birds that break arrows', text: 'A thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch. A bird pushed by an arrow breaks nothing.',
         art: line('M30 23H50', ink) + head(56, 23, ink) + '<ellipse cx="16" cy="23" rx="7" ry="5.5" fill="#f2b035"/><circle cx="20" cy="19" r="4" fill="#f2b035"/><path d="M23.5 18.5l3 1-3 1Z" fill="#f5a524"/><path d="M28 14l4 5M28 32l4-5M26 23h5" stroke="#d4161f" stroke-width="2"/>' },
       { key: 'poem', title: 'The Poem: letters and slots', text: 'Fill every slot with its letter to write a line. Letters fall when nothing holds them up, and a compass arrow that hits a letter pushes it one tile sideways.',
         art: '<rect x="6" y="6" width="20" height="20" rx="4" fill="#fff6df" stroke="#b89566" stroke-width="1.5"/><text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" font-family="Georgia,serif" fill="#5a3a18" stroke="none">A</text><rect x="34" y="22" width="20" height="20" rx="4" stroke="' + ink + '" stroke-opacity=".5" stroke-dasharray="4 3" stroke-width="1.5"/><path d="M16 30v8m-4-4 4 4 4-4" stroke="' + ink + '" stroke-width="2"/>' }
@@ -5017,6 +5113,7 @@
   }
   function restart() {
     if (current && current.mode === 'challenge') { openChallenge(current.index); return; }
+    if (current && current.mode === 'poem') { openPoem(current.line, current.poem); return; }
     if (current && current.coop && coop && coop.online) { setCaption('Online games cannot be restarted. Clear the boards together!'); return; }
     if (current && current.coop && coop) { coopRestart(); return; }
     track('restart', { launches: state.launches });
@@ -5451,6 +5548,7 @@
   $('bRewind').onclick = function () {
     audio();
     if (current && current.coop && coop) { coopPause(); return; }
+    if (current && current.mode === 'poem') { if (!busy()) poemRewind(); return; }
     var ids = E.rewind(state, current.level);
     if (!ids) return;
     current.level.arrows.forEach(function (x) { delete x.rot; delete x.burnUntil; delete x.burn; });
@@ -5475,6 +5573,7 @@
   };
   $('bHint').onclick = function () {
     audio();
+    if (current && current.mode === 'poem') { poemHintSheet(); return; }
     var l = current.level, sol = E.solve(l, state, l.big ? 6000 : 80000);
     if (E.effectsOf(l).length && sol.solved && sol.sequence.length && !E.canLaunch(l, state, sol.sequence[0])) {
       // The best arrow is frozen or waiting: point at a move that helps right now.
@@ -5580,8 +5679,10 @@
     hintAmt: function () { return lastHintAmt; },
     win: function () { return null; },
     boarding: function (i) { loadingSync = true; try { openBoarding(i); } finally { loadingSync = false; } },
+    poem: function (line) { loadingSync = true; try { openPoem(line, 0); } finally { loadingSync = false; } },
     boardingList: function () { return BOARDING.map(function (b) { return b.special || ''; }); },
-    sp: function () { return coop && { kind: coop.room.kind, idx: coop.idx, n: coop.n, poemDone: coop.poemDone, busy: busy(), ended: ended, lives: state.lives, loaded: state.loaded, aim: !!aim, props: coop.boards.map(function (B) { return (B.state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y + (p.loaded ? 'L' : ''); }); }), removed: coop.boards.map(function (B) { return B.state.removed.filter(Boolean).length + '/' + B.state.removed.length; }), sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent }; },
+    sp: function () { if (current && current.mode === 'poem') return { kind: 'poem', idx: 0, line: current.line, busy: busy(), ended: ended, lives: state.lives, undo: poemUndo.length, props: [(state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y; })], removed: [state.removed.filter(Boolean).length + '/' + state.removed.length], sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent };
+      return coop && { kind: coop.room.kind, key: coop.room.key, kick: coop.room.kicks ? coop.room.kicks.indexOf(coop.room.kick) : -1, idx: coop.idx, n: coop.n, poemDone: coop.poemDone, busy: busy(), ended: ended, lives: state.lives, loaded: state.loaded, aim: !!aim, props: coop.boards.map(function (B) { return (B.state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y + (p.loaded ? 'L' : ''); }); }), removed: coop.boards.map(function (B) { return B.state.removed.filter(Boolean).length + '/' + B.state.removed.length; }), sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent }; },
     slingPoint: function (d) { var L = current.level, p = px([L.sling.x, L.sling.y]); if (d !== undefined) { p.x += E.DX[d] * cs * 0.95; p.y += E.DY[d] * cs * 0.95; } return p; },
     arrowPoint: function (id) { var a = current.level.arrows[id]; return px(a.cells[a.cells.length - 1]); }
   };

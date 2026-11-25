@@ -5,8 +5,8 @@ const path = require('path');
 const E = require('../src/engine.js');
 const G = require('./gen-specials.js');
 
-function plan(key, lang) {
-  const room = E.specialRoom(key, lang);
+function plan(key, lang, kick) {
+  const room = E.specialRoom(key, lang, null, { kick: kick || 0 });
   if (room.kind === 'poem') {
     let all = [];
     room.boards.forEach((L, i) => { const s = G.solve(Object.assign({}, room, { boards: [L] }), 300000); all = all.concat(s.best.path.map((m) => ({ b: i, id: m.id, fire: m.fire, kind: m.kind }))); });
@@ -26,22 +26,24 @@ function plan(key, lang) {
   p.on('console', (m) => { if (m.type() === 'error' && !/ERR_TUNNEL|fonts|net::/.test(m.text())) errs.push(m.text()); });
   await p.goto('file://' + path.resolve(__dirname, '../dist/index.html'));
   await p.waitForTimeout(300); await p.click('#begin'); await p.waitForTimeout(600);
-  const list = await p.evaluate(() => unwindTest.boardingList());
+  const list = (await p.evaluate(() => unwindTest.boardingList())).concat(['poem']);
   const idle = async () => { for (let i = 0; i < 80; i++) { const s = await p.evaluate(() => unwindTest.sp()); if (!s.busy) return s; await p.waitForTimeout(100); } return p.evaluate(() => unwindTest.sp()); };
   for (let i = 0; i < list.length; i++) {
     const key = list[i]; if (!key || (process.env.ONLY && key !== process.env.ONLY)) continue;
-    const moves = plan(key, lang);
-    await p.evaluate((k) => unwindTest.boarding(k), i);
+    if (key === 'poem') await p.evaluate(() => unwindTest.poem(0)); else await p.evaluate((k) => unwindTest.boarding(k), i);
     await p.waitForTimeout(900);
+    const info = await p.evaluate(() => unwindTest.sp());
+    const moves = plan(key, lang, info.kick);
     await p.screenshot({ path: `${out}/${key}-start.png` });
     let n = 0, prevIdx = -1;
     for (const m of moves) {
       let s = await idle();
-      if (s.ended) break;
+      if (s.ended && key !== 'poem') break;
       // The board slides in when it changes: wait for it, as a player would.
-      if (prevIdx !== -1 && s.idx !== prevIdx) { await p.waitForTimeout(500); s = await idle(); }
+      if (prevIdx !== -1 && (key === 'poem' ? s.line : s.idx) !== prevIdx && key !== 'poem') { await p.waitForTimeout(500); s = await idle(); }
       prevIdx = m.b;
-      if (s.idx !== m.b) {
+      if (key === 'poem') { for (let t = 0; t < 100 && (s.line !== m.b || s.busy || s.ended); t++) { await p.waitForTimeout(100); s = await p.evaluate(() => unwindTest.sp()); } }
+      else if (s.idx !== m.b) {
         const r = await p.evaluate((x) => { const e = document.querySelector('.cnav[data-board="' + x + '"]'); if (!e) return null; const q = e.getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2 }; }, m.b);
         if (r) await p.mouse.click(r.x, r.y); else await p.evaluate((x) => unwindTest.coopSwitch(x), m.b);
         await p.waitForTimeout(450);
