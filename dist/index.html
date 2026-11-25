@@ -2440,6 +2440,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   var SIZES = [13, 17, 23], SIZE_NAMES = ['Small', 'Medium', 'Large'];
   var BEAM_STEPS = 16, BEAM_HALF = 15 * Math.PI / 180, BEAM_CORE = 0.75;
   var MAX_LIVES = 5;
+  // On Hard the sea seems to go on past the edge of the map: this many rings of open water outside it carry
+  // waves and catch the light like any other tile, so nothing gives the edge away until the boat sails off it.
+  var EDGE = 4;
 
   function mulberry(a) {
     return function () {
@@ -2455,7 +2458,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     h = Math.imul(h ^ h >>> 16, 0x7FEB352D); h = Math.imul(h ^ h >>> 15, 0x846CA68B); h ^= h >>> 16;
     return mulberry(h);
   }
-  var SALT = { map: 1, waves: 2, wind: 3, whirl: 4, serpent: 5, respawn: 6, roam: 7 };
+  var SALT = { map: 1, waves: 2, wind: 3, whirl: 4, serpent: 5, respawn: 6, roam: 7, edge: 8 };
 
   function inside(G, x, y) { return x >= 0 && y >= 0 && x < G.n && y < G.n; }
   function cell(G, x, y) { return inside(G, x, y) ? G.grid[y * G.n + x] : -1; }
@@ -2463,6 +2466,15 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return i; return -1; }
   function barrelAt(G, x, y) { for (var i = 0; i < G.barrels.length; i++) if (!G.barrels[i].taken && G.barrels[i].x === x && G.barrels[i].y === y) return i; return -1; }
   function sailable(t) { return t === WATER || t === WHIRL; }
+  // Tiles just outside the map (Hard only) have their own index in a padded grid.
+  function outKey(G, x, y) { var P = G.n + 2 * EDGE; return x >= -EDGE && y >= -EDGE && x < G.n + EDGE && y < G.n + EDGE && !inside(G, x, y) ? (y + EDGE) * P + (x + EDGE) : -1; }
+  function outXY(G, k) { var P = G.n + 2 * EDGE; return [k % P - EDGE, Math.floor(k / P) - EDGE]; }
+  // The wave on any tile, inside the map or (on Hard) just outside it.
+  function waveAt(G, x, y) {
+    if (inside(G, x, y)) return G.waves[y * G.n + x];
+    var k = G.hard ? outKey(G, x, y) : -1;
+    return k >= 0 && G.outWaves ? G.outWaves[k] : -1;
+  }
 
   /* ---------- The map ---------- */
   // Tiles reachable from (x, y) by sailing, ignoring waves (the captain can always wait for the right wave).
@@ -2559,44 +2571,59 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     if (!G) throw new Error('no map');
     G.seed = seed | 0; G.size = size; G.hard = hard;
     G.round = 0; G.lives = 3; G.flares = G.startFlares; G.sail = true;
-    G.beam = -1; G.lit = []; G.flare = false; G.flareUsed = false;
+    G.beam = -1; G.lit = []; G.litOut = []; G.flare = false; G.flareUsed = false;
     G.ended = null; G.moves = 0; G.hits = 0;
     G.keeperSeen = {}; G.boatSeen = {};
     G.lampOut = false; G.waited = false;
     G.phase = 'keeper';
     G.wind = G.hard ? Math.floor(rngFor(G.seed, 0, SALT.wind)() * 4) : -1;
     G.waves = wavesFor(G);
+    G.outWaves = outWavesFor(G);
     rememberBoat(G);
     return G;
   }
 
   /* ---------- Waves, wind and the lamp ---------- */
   // Every round the sea changes: a random share of the tiles carry a wave, each in a random direction.
-  // Never under the boat or a barrel. Next to the boat there are always waves going at least two different
-  // ways (they may lead into a rock or off the map).
+  // Never under the boat or a barrel. Next to the boat there are always waves going at least two different ways
+  // the boat can really go (not into a rock, a serpent, the lighthouse or off the map), unless the boat is boxed
+  // in so tightly that fewer ways are open.
   function wavesFor(G) {
     var r = rngFor(G.seed, G.round, SALT.waves), w = [], share = 0.3 + r() * 0.22;
     for (var i = 0; i < G.n * G.n; i++) {
       var x = i % G.n, y = Math.floor(i / G.n), on = G.grid[i] === WATER && r() < share, d = Math.floor(r() * 4);
       w.push(on && barrelAt(G, x, y) < 0 && !(x === G.boat.x && y === G.boat.y) ? d : -1);
     }
-    var near = [], dirs = {}, spare = [];
+    var open = [];
+    for (var d0 = 0; d0 < 4; d0++) { var ox = G.boat.x + DX[d0], oy = G.boat.y + DY[d0]; if (inside(G, ox, oy) && sailable(G.grid[oy * G.n + ox]) && serpentAt(G, ox, oy) < 0) open.push(d0); }
+    var near = [], spare = [];
     for (var yy = G.boat.y - 1; yy <= G.boat.y + 1; yy++) for (var xx = G.boat.x - 1; xx <= G.boat.x + 1; xx++) {
       if (!inside(G, xx, yy) || (xx === G.boat.x && yy === G.boat.y) || G.grid[yy * G.n + xx] !== WATER) continue;
-      if (barrelAt(G, xx, yy) >= 0) { spare.push(yy * G.n + xx); continue; }
-      near.push(yy * G.n + xx);
-      if (w[yy * G.n + xx] >= 0) dirs[w[yy * G.n + xx]] = 1;
+      if (barrelAt(G, xx, yy) >= 0) spare.push(yy * G.n + xx); else near.push(yy * G.n + xx);
     }
     // Hemmed in by rocks, the boat may get a wave on a barrel tile too.
     if (near.length < 2) near = near.concat(spare);
-    for (var t = 0; Object.keys(dirs).length < 2 && t < 24 && near.length; t++) {
-      var k = near[Math.floor(r() * near.length)], d2 = Math.floor(r() * 4);
-      if (dirs[d2]) continue;
-      if (w[k] >= 0 && Object.keys(dirs).length === 1 && dirs[w[k]] && near.filter(function (q) { return w[q] === w[k]; }).length === 1) continue;
-      w[k] = d2; dirs = {};
-      near.forEach(function (q) { if (w[q] >= 0) dirs[w[q]] = 1; });
+    var good = function () { var g = {}; near.forEach(function (q) { if (w[q] >= 0 && open.indexOf(w[q]) >= 0) g[w[q]] = (g[w[q]] || 0) + 1; }); return g; };
+    var need = Math.min(2, open.length, near.length);
+    for (var t = 0; t < 40; t++) {
+      var g = good(), have = Object.keys(g).length;
+      if (have >= need) break;
+      var missing = open.filter(function (q) { return !g[q]; }), d2 = missing[Math.floor(r() * missing.length)];
+      // Put it on an empty tile, or on one whose wave leads nowhere, or one that repeats another good wave.
+      var spots = near.filter(function (q) { return w[q] < 0; });
+      if (!spots.length) spots = near.filter(function (q) { return open.indexOf(w[q]) < 0; });
+      if (!spots.length) spots = near.filter(function (q) { return g[w[q]] > 1; });
+      if (!spots.length) break;
+      w[spots[Math.floor(r() * spots.length)]] = d2;
     }
     return w;
+  }
+  // Hard only: waves on the open water just outside the map, so it looks like any other part of the sea.
+  function outWavesFor(G) {
+    if (!G.hard) return null;
+    var r = rngFor(G.seed, G.round, SALT.edge), P = G.n + 2 * EDGE, out = [], share = 0.3 + r() * 0.22;
+    for (var k = 0; k < P * P; k++) { var xy = outXY(G, k), on = !inside(G, xy[0], xy[1]) && r() < share, d = Math.floor(r() * 4); out.push(on ? d : -1); }
+    return out;
   }
   // Hard only. Each round there is a chance the wind turns.
   function windFor(G) {
@@ -2631,25 +2658,42 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     }
     return out;
   }
-  function isLit(G, x, y) { return G.lit.indexOf(y * G.n + x) >= 0; }
+  // Hard: the tiles outside the map that the beam lights, so its path does not stop at the edge.
+  function beamOut(G, dir) {
+    if (dir < 0 || !G.hard) return [];
+    var a = dir * 2 * Math.PI / BEAM_STEPS, ux = Math.sin(a), uy = -Math.cos(a), out = [];
+    for (var y = -EDGE; y < G.n + EDGE; y++) for (var x = -EDGE; x < G.n + EDGE; x++) {
+      if (inside(G, x, y)) continue;
+      var dx = x - G.c, dy = y - G.c, along = dx * ux + dy * uy, across = Math.abs(dx * uy - dy * ux);
+      if (along <= 0.2) continue;
+      if ((Math.atan2(across, along) <= BEAM_HALF || across <= BEAM_CORE) && lineClear(G, G.c, G.c, x, y)) out.push(outKey(G, x, y));
+    }
+    return out;
+  }
+  function isLit(G, x, y) { return inside(G, x, y) ? G.lit.indexOf(y * G.n + x) >= 0 : (G.litOut || []).indexOf(outKey(G, x, y)) >= 0; }
   // What the captain sees: the tiles around the boat (two around with a flare), and the whole beam when it
-  // touches the boat or a tile next to it.
+  // touches the boat or a tile next to it. On Hard, tiles outside the map are seen the same way (in `out`).
   function boatView(G) {
-    var seen = {}, R = G.flare ? 2 : 1, bx = G.boat.x, by = G.boat.y, touched = false;
+    var seen = {}, out = {}, R = G.flare ? 2 : 1, bx = G.boat.x, by = G.boat.y, touched = false;
     for (var y = by - R; y <= by + R; y++) for (var x = bx - R; x <= bx + R; x++) {
-      if (!inside(G, x, y)) continue;
+      var ins = inside(G, x, y);
+      if (!ins && !G.hard) continue;
       if (R > 1 && cheb(x, y, bx, by) > 1 && !lineClear(G, bx, by, x, y)) continue;
-      seen[y * G.n + x] = 1;
+      if (ins) seen[y * G.n + x] = 1; else out[outKey(G, x, y)] = 1;
       if (cheb(x, y, bx, by) <= 1 && isLit(G, x, y)) touched = true;
     }
     // Tall rocks also hide parts of the lit path from the captain.
-    if (touched) G.lit.forEach(function (i) { var x = i % G.n, y = (i - x) / G.n; if (lineClear(G, bx, by, x, y)) seen[i] = 1; });
-    return { cells: seen, touched: touched };
+    if (touched) {
+      G.lit.forEach(function (i) { var x = i % G.n, y = (i - x) / G.n; if (lineClear(G, bx, by, x, y)) seen[i] = 1; });
+      (G.litOut || []).forEach(function (k) { var xy = outXY(G, k); if (lineClear(G, bx, by, xy[0], xy[1])) out[k] = 1; });
+    }
+    return { cells: seen, out: out, touched: touched };
   }
   function keeperView(G) {
-    var seen = {};
+    var seen = {}, out = {};
     G.lit.forEach(function (i) { seen[i] = 1; });
-    return { cells: seen, boat: isLit(G, G.boat.x, G.boat.y) };
+    (G.litOut || []).forEach(function (k) { out[k] = 1; });
+    return { cells: seen, out: out, boat: isLit(G, G.boat.x, G.boat.y) };
   }
   function rememberBoat(G) { var v = boatView(G).cells; for (var k in v) G.boatSeen[k] = 1; }
 
@@ -2657,8 +2701,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   // Waves the captain can use: any wave the captain can see (around the boat, further with a flare, or along the
   // keeper's beam when it touches the boat). The boat moves the way that wave goes.
   function catchable(G) {
-    var out = [], cells = boatView(G).cells;
-    for (var k in cells) { var i = +k, w = G.waves[i]; if (w >= 0) out.push({ x: i % G.n, y: Math.floor(i / G.n), dir: w }); }
+    var out = [], v = boatView(G);
+    for (var k in v.cells) { var i = +k, w = G.waves[i]; if (w >= 0) out.push({ x: i % G.n, y: Math.floor(i / G.n), dir: w }); }
+    for (var k2 in v.out) { var xy = outXY(G, +k2), w2 = waveAt(G, xy[0], xy[1]); if (w2 >= 0) out.push({ x: xy[0], y: xy[1], dir: w2 }); }
     return out;
   }
   // How far a wave carries the boat in one move: one tile, or on Hard two tiles with the wind behind a raised sail,
@@ -2748,24 +2793,29 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     }
     return -1;
   }
+  // Serpents take two steps a round (three on Hard), one tile at a time, and choose their way again at every
+  // step: one that spots the boat halfway through its move turns towards it.
   function moveSerpents(G, log) {
-    var reach = G.hard ? 3 : 2;
+    var steps = G.hard ? 3 : 2;
     G.serpents.slice().forEach(function (s) {
       if (G.serpents.indexOf(s) < 0) return;
       if (s.frozen || G.ended) return;
-      var r = rngFor(G.seed, G.round * 17 + s.id, SALT.serpent);
-      if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= 1) { s.hunt = [G.boat.x, G.boat.y]; log.spotted = (log.spotted || []).concat([s.id]); }
-      var target = s.hunt || s.goal;
-      if (target && target[0] === s.x && target[1] === s.y) { s.hunt = null; s.goal = null; target = null; }
-      for (var t = 0; !target && t < 40; t++) {
-        var gx = Math.floor(r() * G.n), gy = Math.floor(r() * G.n);
-        if (serpentOk(G, gx, gy) && cheb(gx, gy, s.x, s.y) >= 3) target = s.goal = [gx, gy];
-      }
-      var dir = target ? firstStep(G, s, target[0], target[1]) : -1;
-      if (dir < 0) { s.goal = null; s.hunt = null; var opts = []; for (var k = 0; k < 4; k++) if (serpentOk(G, s.x + DX[k], s.y + DY[k])) opts.push(k); if (!opts.length) return; dir = opts[Math.floor(r() * opts.length)]; }
-      var path = [[s.x, s.y]];
-      // Serpents move two tiles (three on Hard), always in a straight line.
-      for (var i = 0; i < reach; i++) {
+      var r = rngFor(G.seed, G.round * 17 + s.id, SALT.serpent), path = [[s.x, s.y]];
+      for (var i = 0; i < steps; i++) {
+        if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= 1) { s.hunt = [G.boat.x, G.boat.y]; if ((log.spotted || []).indexOf(s.id) < 0) log.spotted = (log.spotted || []).concat([s.id]); }
+        var target = s.hunt || s.goal;
+        if (target && target[0] === s.x && target[1] === s.y) { s.hunt = null; s.goal = null; target = null; }
+        for (var t = 0; !target && t < 40; t++) {
+          var gx = Math.floor(r() * G.n), gy = Math.floor(r() * G.n);
+          if (serpentOk(G, gx, gy) && cheb(gx, gy, s.x, s.y) >= 3) target = s.goal = [gx, gy];
+        }
+        var dir = target ? firstStep(G, s, target[0], target[1]) : -1;
+        if (dir < 0) {
+          s.goal = null; s.hunt = null;
+          var opts = []; for (var k = 0; k < 4; k++) if (serpentOk(G, s.x + DX[k], s.y + DY[k]) && serpentAt(G, s.x + DX[k], s.y + DY[k]) < 0) opts.push(k);
+          if (!opts.length) break;
+          dir = opts[Math.floor(r() * opts.length)];
+        }
         var nx = s.x + DX[dir], ny = s.y + DY[dir], onBoat = nx === G.boat.x && ny === G.boat.y;
         if (!onBoat && (!serpentOk(G, nx, ny) || serpentAt(G, nx, ny) >= 0)) break;
         s.x = nx; s.y = ny; path.push([nx, ny]);
@@ -2775,7 +2825,6 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
           replaceSerpent(G, s, log);
           return;
         }
-        if (s.hunt && s.hunt[0] === nx && s.hunt[1] === ny) break;
       }
       log.serpents.push({ id: s.id, path: path });
     });
@@ -2786,9 +2835,10 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     G.round++;
     G.flare = false; G.flareUsed = false;
     G.serpents.forEach(function (s) { s.frozen = false; });
-    G.lit = []; G.beam = -1;
+    G.lit = []; G.litOut = []; G.beam = -1;
     G.wind = windFor(G);
     G.waves = wavesFor(G);
+    G.outWaves = outWavesFor(G);
     G.phase = 'keeper';
     log.round = G.round;
     rememberBoat(G);
@@ -2813,7 +2863,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       if (G.lampOut) return { ok: false, why: 'out' };
       var d = act.dir | 0;
       if (d < 0 || d >= BEAM_STEPS) return { ok: false, why: 'bad' };
-      G.beam = d; G.lit = beamCells(G, d);
+      G.beam = d; G.lit = beamCells(G, d); G.litOut = beamOut(G, d);
       G.lit.forEach(function (i) { G.keeperSeen[i] = 1; });
       // Serpents caught in the light dive and stay still this round; bubbles show where they are.
       G.serpents.forEach(function (s) { s.frozen = isLit(G, s.x, s.y); });
@@ -2841,8 +2891,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       G.waited = act.a === 'wait';
       if (act.a === 'move') {
         var x = act.x | 0, y = act.y | 0;
-        if (!inside(G, x, y) || !boatView(G).cells[y * G.n + x]) return { ok: false, why: 'far' };
-        var w = G.waves[y * G.n + x];
+        var bv = boatView(G);
+        if (inside(G, x, y) ? !bv.cells[y * G.n + x] : !bv.out[outKey(G, x, y)]) return { ok: false, why: 'far' };
+        var w = waveAt(G, x, y);
         if (w < 0) return { ok: false, why: 'nowave' };
         sailBoat(G, w, log);
         G.moves++;
@@ -2865,7 +2916,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   return {
     create: create, apply: apply, replay: replay, beamCells: beamCells, boatView: boatView, keeperView: keeperView,
     catchable: catchable, stepsFor: stepsFor, lampWorks: lampWorks, canWait: canWait, isLit: isLit, serpentAt: serpentAt, barrelAt: barrelAt,
-    cell: cell, inside: inside, cheb: cheb, distances: distances,
+    cell: cell, inside: inside, cheb: cheb, distances: distances, waveAt: waveAt, outKey: outKey, outXY: outXY, EDGE: EDGE,
     DX: DX, DY: DY, WATER: WATER, ROCK: ROCK, BIG: BIG, WHIRL: WHIRL, LIGHT: LIGHT,
     SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, BEAM_STEPS: BEAM_STEPS
   };
@@ -2884,14 +2935,14 @@ window.UnwindI18n = (function () {
     'You waited last round: catch a wave this time.': 'Esperaste na ronda passada: desta vez apanha uma onda.',
     'Your turn: rekindle the light.': 'A tua vez: reacende a luz.',
     'The light is out this round. Your turn: catch a wave.': 'A luz está apagada nesta ronda. A tua vez: apanha uma onda.',
-    'Sea serpents roam the fog looking for the boat, two tiles at a time. Once one spots it, it hunts it down. A serpent caught in your light dives and cannot move this round. Bubbles show where it is. When a serpent bites the boat it is gone, but a new one appears somewhere else.': 'As serpentes do mar andam pelo nevoeiro à procura do barco, duas casas de cada vez. Quando uma o vê, persegue-o. Uma serpente apanhada pela tua luz mergulha e não se mexe nesta ronda. As bolhas mostram onde está. Quando uma serpente morde o barco desaparece, mas aparece outra noutro sítio.',
-    'Tap any wave you can see: it carries the boat one tile the way it goes, wherever that wave is. There are always waves going at least two ways next to you, though not all of them are safe. Waves change every round. If none goes your way, wait.': 'Toca em qualquer onda que consigas ver: ela leva o barco uma casa na direção em que vai, esteja onde estiver. Ao teu lado há sempre ondas em pelo menos duas direções, mas nem todas são seguras. As ondas mudam em cada ronda. Se nenhuma for para onde queres, espera.',
-    'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, two tiles at a time, so keep moving.': 'As rochas bloqueiam o caminho. Os remoinhos atiram-te numa direção ao acaso. Os barris têm uma vida extra ou um sinalizador extra. Sair pela borda do mapa custa uma vida. As serpentes que chegam perto veem-te e perseguem-te, duas casas de cada vez, por isso não pares.',
+    'Sea serpents roam the fog looking for the boat, taking two steps a round and turning as they please. Once one spots it, it hunts it down. A serpent caught in your light dives and stays down until the light goes out at the end of the round. Bubbles show where it is. When a serpent bites the boat it is gone, but a new one appears somewhere else.': 'As serpentes do mar andam pelo nevoeiro à procura do barco, dando dois passos por ronda e virando quando querem. Quando uma o vê, persegue-o. Uma serpente apanhada pela tua luz mergulha e fica no fundo até a luz se apagar no fim da ronda. As bolhas mostram onde está. Quando uma serpente morde o barco desaparece, mas aparece outra noutro sítio.',
+    'Tap any wave you can see: it carries the boat one tile the way it goes, wherever that wave is. Next to you there are always waves going at least two ways you can really sail. Waves change every round. If none goes your way, wait.': 'Toca em qualquer onda que consigas ver: ela leva o barco uma casa na direção em que vai, esteja onde estiver. Ao teu lado há sempre ondas em pelo menos duas direções por onde podes mesmo navegar. As ondas mudam em cada ronda. Se nenhuma for para onde queres, espera.',
+    'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, two steps a round, so keep moving.': 'As rochas bloqueiam o caminho. Os remoinhos atiram-te numa direção ao acaso. Os barris têm uma vida extra ou um sinalizador extra. Sair pela borda do mapa custa uma vida. As serpentes que chegam perto veem-te e perseguem-te, dois passos por ronda, por isso não pares.',
     'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light, for the keeper and for the captain. Look around them.': 'No Difícil, há rochas altas no mar. Bloqueiam o barco, e também a luz, para o faroleiro e para o capitão. Contorna-as.',
     'The wind direction is shown in the top left, and it can turn. With your sail up, a wave that goes with the wind carries you two tiles in one move, and against the wind you do not move. Side winds change nothing. Lower the sail to ignore the wind.': 'A direção do vento aparece no canto superior esquerdo, e pode mudar. Com a vela içada, uma onda a favor do vento leva-te duas casas numa só jogada, e contra o vento não te mexes. O vento de lado não muda nada. Recolhe a vela para ignorar o vento.',
     'After every shine the light goes out. On the keeper\'s next turn, press Rekindle the light: that round stays dark, and the light works again the round after.': 'Depois de cada vez que ilumina, a luz apaga-se. No turno seguinte do faroleiro, carrega em Reacender a luz: essa ronda fica às escuras, e a luz volta a funcionar na ronda a seguir.',
     'No resting': 'Sem descanso',
-    'On Hard the captain cannot wait two rounds in a row. There are more serpents, and they are faster: three tiles in a straight line. And the edge of the map is hidden in the fog, so you cannot see where the sea ends.': 'No Difícil o capitão não pode esperar duas rondas seguidas. Há mais serpentes, e são mais rápidas: três casas em linha reta. E a borda do mapa está escondida no nevoeiro, por isso não vês onde o mar acaba.',
+    'On Hard the captain cannot wait two rounds in a row. There are more serpents, and they are faster: three steps a round. And the fog closes in again behind you: nobody remembers what they saw last round.': 'No Difícil o capitão não pode esperar duas rondas seguidas. Há mais serpentes, e são mais rápidas: três passos por ronda. E o nevoeiro volta a fechar-se atrás de ti: ninguém se lembra do que viu na ronda anterior.',
     'Guiding Light': 'Luz Guia',
     'Guiding Light room': 'Sala Luz Guia',
     'Lighthouse keeper': 'Faroleiro',
@@ -5276,7 +5327,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-j';
+  var BUILD = '2026.11.25-k';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -9411,7 +9462,7 @@ window.UnwindI18n = (function () {
   }
   // Every action, local or from the server, goes through here so the animation and sounds are the same.
   function guideApply(role, act) {
-    var G = guide.G, before = { boat: { x: G.boat.x, y: G.boat.y }, serpents: G.serpents.map(function (s) { return { id: s.id, x: s.x, y: s.y, frozen: s.frozen }; }), phase: G.phase, round: G.round };
+    var G = guide.G, before = { boat: { x: G.boat.x, y: G.boat.y }, serpents: G.serpents.map(function (s) { return { id: s.id, x: s.x, y: s.y, frozen: s.frozen }; }), phase: G.phase, round: G.round, beam: G.beam, lit: G.lit.slice(), litOut: (G.litOut || []).slice(), flare: G.flare };
     var res = Gd.apply(G, role, act);
     if (!res.ok) return false;
     guide.actions.push({ role: role, act: act });
@@ -9429,21 +9480,26 @@ window.UnwindI18n = (function () {
       pluck(act.up ? 523.25 : 392, 0, 0.05, 0.3);
     } else if (act.a === 'move' || act.a === 'wait') {
       var boatDur = log.path ? Math.max(1, log.path.length - 1) * 230 + (log.washBack ? 520 : 0) : 0;
-      guide.anim = { t0: now, log: log, before: before, boatDur: boatDur, snakeDur: 420 };
-      guide.busyUntil = now + boatDur + 460;
+      // The light stays on until the boat has finished moving, then fades; only then do the serpents surface
+      // and move, one tile per step.
+      var snakeAt = boatDur + (G.ended === 'won' ? 0 : before.beam >= 0 ? 520 : 150), segs = 0;
+      log.serpents.forEach(function (q) { segs = Math.max(segs, q.path.length - 1); });
+      var snakeDur = segs * GUIDE_STEP;
+      guide.anim = { t0: now, log: log, before: before, boatDur: boatDur, snakeAt: snakeAt, snakeDur: snakeDur, total: snakeAt + snakeDur + 300 };
+      guide.busyUntil = now + guide.anim.total;
       if (act.a === 'move') pluck(392, 0, 0.06, 0.4);
       log.barrels.forEach(function (b, i) { setTimeout(function () { specialSound('chirp'); guideFloat(b.kind === 'life' ? '+1 life' : '+1 flare', b.x, b.y); }, 260 + i * 120); });
       log.whirls.forEach(function (w, i) { setTimeout(function () { pluck(330, 0, 0.06, 0.5); pluck(262, 0.08, 0.05, 0.6); pluck(196, 0.16, 0.05, 0.7); }, 230 * (i + 1)); });
-      log.hits.forEach(function (h, i) { setTimeout(function () { thud(); buzz(40); guideFloat('-1 life', h.x, h.y, true); }, h.why === 'serpent' && log.serpents.length ? boatDur + 300 : 240 + i * 100); });
+      log.hits.forEach(function (h, i) { setTimeout(function () { thud(); buzz(40); guideFloat('-1 life', h.x, h.y, true); }, h.why === 'serpent' && log.serpents.length ? snakeAt + snakeDur : 240 + i * 100); });
       if (log.washBack) setTimeout(function () { specialSound('out'); }, 200);
     }
-    if (G.ended) setTimeout(function () { if (guide && guide.G === G) guideEnd(); }, guide.anim ? guide.anim.boatDur + 900 : 300);
+    if (G.ended) setTimeout(function () { if (guide && guide.G === G) guideEnd(); }, guide.anim ? guide.anim.total + 500 : 300);
     else if (guide.local && before.phase !== G.phase) {
       // On one device the screen covers up before the other player looks.
-      setTimeout(function () { if (guide && guide.G === G && !G.ended) guideCover(true); }, guide.anim ? guide.anim.boatDur + 600 : 900);
+      setTimeout(function () { if (guide && guide.G === G && !G.ended) guideCover(true); }, guide.anim ? guide.anim.total + 250 : 900);
     } else if (!guide.local && G.phase !== before.phase && !G.ended) {
       var mine = guideMine();
-      setTimeout(function () { if (guide && guide.G === G && mine) { pluck(784, 0, 0.05, 0.4); guideToast(G.phase === 'keeper' ? (G.lampOut ? 'Your turn: rekindle the light.' : 'Your turn: shine the light.') : (act.a === 'rekindle' ? 'The light is out this round. Your turn: catch a wave.' : 'Your turn: catch a wave.')); } }, guide.anim ? guide.anim.boatDur + 400 : 300);
+      setTimeout(function () { if (guide && guide.G === G && mine) { pluck(784, 0, 0.05, 0.4); guideToast(G.phase === 'keeper' ? (G.lampOut ? 'Your turn: rekindle the light.' : 'Your turn: shine the light.') : (act.a === 'rekindle' ? 'The light is out this round. Your turn: catch a wave.' : 'Your turn: catch a wave.')); } }, guide.anim ? guide.anim.total : 300);
     }
     guideHud();
     return true;
@@ -9527,7 +9583,7 @@ window.UnwindI18n = (function () {
   function guideCamera(role, boatPos) {
     var G = guide.G;
     if (role === 'keeper' || guide.peek) {
-      var cs = Math.min(gw / (G.n + 0.4), gh / (G.n + 0.4));
+      var fit = G.hard && !guide.peek ? G.n + 4 : G.n + 0.4, cs = Math.min(gw / fit, gh / fit);
       return { cs: cs, ox: (gw - G.n * cs) / 2, oy: (gh - G.n * cs) / 2 };
     }
     var cs2 = Math.min(gw, gh) / 6.4;
@@ -9563,10 +9619,11 @@ window.UnwindI18n = (function () {
     var wb = Math.min(1, (t - moveDur) / 520);
     return { x: a.log.washBack[0], y: a.log.washBack[1], alpha: wb };
   }
+  var GUIDE_STEP = 260;
   function animSerpent(now, s) {
     var a = guide.anim;
     if (!a) return { x: s.x, y: s.y };
-    var t = now - a.t0 - a.boatDur;
+    var t = now - a.t0 - a.snakeAt;
     var m = a.log.serpents.filter(function (q) { return q.id === s.id; })[0];
     var dive = a.log.dives.filter(function (q) { return q.id === s.id; })[0];
     var born = a.log.dives.filter(function (q) { return q.newId === s.id; })[0];
@@ -9574,11 +9631,13 @@ window.UnwindI18n = (function () {
     if (born) { var tb = t - a.snakeDur - 300; return tb < 0 ? { x: s.x, y: s.y, hidden: true } : { x: s.x, y: s.y, rising: Math.min(1, tb / 500) }; }
     var b = a.before.serpents.filter(function (q) { return q.id === s.id; })[0];
     if (t < 0) return b ? { x: b.x, y: b.y } : { x: s.x, y: s.y };
-    if (m && t < a.snakeDur && m.path.length > 1) {
-      var segs = m.path.length - 1, f = Math.min(0.999, t / a.snakeDur) * segs, k = Math.floor(f), u = f - k;
+    var own = m ? (m.path.length - 1) * GUIDE_STEP : 0;
+    if (m && t < own && m.path.length > 1) {
+      var segs = m.path.length - 1, f = Math.min(0.999, t / own) * segs, k = Math.floor(f), u = f - k;
+      u = u * u * (3 - 2 * u);
       return { x: m.path[k][0] + (m.path[k + 1][0] - m.path[k][0]) * u, y: m.path[k][1] + (m.path[k + 1][1] - m.path[k][1]) * u };
     }
-    if (dive && t < a.snakeDur + 300) { var last = m ? m.path[m.path.length - 1] : dive.from; return { x: last[0], y: last[1], diving: true }; }
+    if (dive && t < own + 300) { var last = m ? m.path[m.path.length - 1] : dive.from; return { x: last[0], y: last[1], diving: true }; }
     if (s.gone) return { x: s.x, y: s.y, hidden: true };
     return { x: s.x, y: s.y };
   }
@@ -9589,76 +9648,90 @@ window.UnwindI18n = (function () {
     ctx2.fillStyle = '#060a1c'; ctx2.fillRect(0, 0, gw, gh);
     if (guide.cover) { guideDrawCoverSea(ctx2, now); return; }
     var boatPos = animBoat(now), cam = guideCamera(role, boatPos), cs = cam.cs;
-    // What this player can see right now, and what they remember.
-    var see = {}, mem = role === 'keeper' ? G.keeperSeen : G.boatSeen, showBoat = false, lightVisible = false;
+    // While a move plays out, the round's light stays on until the boat has finished, then fades. V is the game
+    // as it looked with that light (and the captain's flare) still on.
+    var A = guide.anim, at = A ? now - A.t0 : 1e9, V = G, fadeK = 1;
+    if (A && at < A.snakeAt) {
+      V = Object.assign({}, G, { beam: A.before.beam, lit: A.before.lit, litOut: A.before.litOut, flare: A.before.flare });
+      if (at > A.boatDur) fadeK = Math.max(0, 1 - (at - A.boatDur) / Math.max(1, A.snakeAt - A.boatDur - 80));
+    }
+    // What this player can see right now, and what they remember (nothing on Hard: the fog closes in again).
+    var see = {}, outSee = {}, mem = G.hard ? {} : role === 'keeper' ? G.keeperSeen : G.boatSeen, showBoat = false, lightVisible = false;
     if (guide.peek) { for (var i = 0; i < G.n * G.n; i++) see[i] = 1; showBoat = true; lightVisible = true; }
-    else if (role === 'keeper') { var kv = Gd.keeperView(G); see = kv.cells; showBoat = kv.boat; lightVisible = true; }
-    else { var bv = Gd.boatView(G); see = bv.cells; showBoat = true; lightVisible = bv.touched; }
+    else if (role === 'keeper') {
+      var kv = Gd.keeperView(V); see = kv.cells; outSee = kv.out; lightVisible = true;
+      showBoat = A && at < A.boatDur ? Gd.isLit(V, Math.round(boatPos.x), Math.round(boatPos.y)) : kv.boat;
+    } else { var bv = Gd.boatView(V); see = bv.cells; outSee = bv.out; showBoat = true; lightVisible = bv.touched; }
     var X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; };
-    // On Hard the edge of the map is hidden: past it the sea looks just like more fog (or open water right
-    // around the boat), so nobody can tell where the map ends.
-    var hideEdge = G.hard && !guide.peek, viewR = G.flare ? 2 : 1;
-    var near = function (x, y) { return role === 'boat' && Math.max(Math.abs(x - G.boat.x), Math.abs(y - G.boat.y)) <= viewR; };
+    // On Hard the edge of the map is hidden: the water past it carries waves and catches the light like any other
+    // tile (see guide.js), so nothing on screen shows where the map ends.
+    var hideEdge = G.hard && !guide.peek;
+    var outVis = function (x, y) { var k = Gd.outKey(G, x, y); return k >= 0 && !!outSee[k]; };
     var x0 = Math.floor(-cam.ox / cs) - 1, x1 = Math.ceil((gw - cam.ox) / cs) + 1;
     var y0 = Math.floor(-cam.oy / cs) - 1, y1 = Math.ceil((gh - cam.oy) / cs) + 1;
     if (!hideEdge) { x0 = Math.max(-1, x0); x1 = Math.min(G.n, x1); y0 = Math.max(-1, y0); y1 = Math.min(G.n, y1); }
+    var fogTile = role === 'keeper' ? '#0f1838' : '#0a1029';
     // The sea, tile by tile: lit and seen tiles are bright, remembered ones dim, the rest dark fog.
     for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
       var px = X(x), py = Y(y);
       if (!Gd.inside(G, x, y)) {
-        if (hideEdge) { ctx2.fillStyle = near(x, y) ? '#1f2d5e' : role === 'keeper' ? '#0f1838' : '#0a1029'; ctx2.fillRect(px, py, cs + 0.5, cs + 0.5); }
+        if (hideEdge) { ctx2.fillStyle = outVis(x, y) ? (Gd.isLit(V, x, y) ? '#2b3c74' : '#1f2d5e') : fogTile; ctx2.fillRect(px, py, cs + 0.5, cs + 0.5); }
         continue;
       }
       var idx = y * G.n + x, vis = !!see[idx], rem = !!mem[idx];
-      ctx2.fillStyle = vis ? (Gd.isLit(G, x, y) ? '#2b3c74' : '#1f2d5e') : rem ? '#141e44' : role === 'keeper' ? '#0f1838' : '#0a1029';
+      ctx2.fillStyle = vis ? (Gd.isLit(V, x, y) ? '#2b3c74' : '#1f2d5e') : rem ? '#141e44' : fogTile;
       ctx2.fillRect(px, py, cs + 0.5, cs + 0.5);
       if (vis || rem) guideTerrain(ctx2, G, x, y, px, py, cs, now, vis ? 1 : 0.35);
     }
     // The edge of the map, where the captain can see it (not on Hard).
     if (!hideEdge) {
-    ctx2.save(); ctx2.strokeStyle = 'rgba(255,214,140,.55)'; ctx2.lineWidth = Math.max(2, cs * 0.05); ctx2.setLineDash([cs * 0.18, cs * 0.14]);
-    for (y = 0; y < G.n; y++) for (x = 0; x < G.n; x++) {
-      var id2 = y * G.n + x;
-      if (!see[id2]) continue;
-      if (x === 0) { ctx2.beginPath(); ctx2.moveTo(X(0), Y(y)); ctx2.lineTo(X(0), Y(y + 1)); ctx2.stroke(); }
-      if (y === 0) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(0)); ctx2.lineTo(X(x + 1), Y(0)); ctx2.stroke(); }
-      if (x === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(G.n), Y(y)); ctx2.lineTo(X(G.n), Y(y + 1)); ctx2.stroke(); }
-      if (y === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(G.n)); ctx2.lineTo(X(x + 1), Y(G.n)); ctx2.stroke(); }
+      ctx2.save(); ctx2.strokeStyle = 'rgba(255,214,140,.55)'; ctx2.lineWidth = Math.max(2, cs * 0.05); ctx2.setLineDash([cs * 0.18, cs * 0.14]);
+      for (y = 0; y < G.n; y++) for (x = 0; x < G.n; x++) {
+        if (!see[y * G.n + x]) continue;
+        if (x === 0) { ctx2.beginPath(); ctx2.moveTo(X(0), Y(y)); ctx2.lineTo(X(0), Y(y + 1)); ctx2.stroke(); }
+        if (y === 0) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(0)); ctx2.lineTo(X(x + 1), Y(0)); ctx2.stroke(); }
+        if (x === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(G.n), Y(y)); ctx2.lineTo(X(G.n), Y(y + 1)); ctx2.stroke(); }
+        if (y === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(G.n)); ctx2.lineTo(X(x + 1), Y(G.n)); ctx2.stroke(); }
+      }
+      ctx2.restore();
     }
-    ctx2.restore();
-    }
-    // Waves, barrels and serpents only show where the player can see right now.
-    for (y = Math.max(0, y0); y <= Math.min(G.n - 1, y1); y++) for (x = Math.max(0, x0); x <= Math.min(G.n - 1, x1); x++) {
-      var i3 = y * G.n + x;
-      if (!see[i3]) continue;
-      var bi = Gd.barrelAt(G, x, y);
-      if (bi >= 0) guideBarrel(ctx2, X(x) + cs / 2, Y(y) + cs / 2, cs, now);
-      var wv = G.waves[i3];
-      if (wv >= 0 && !(guide.anim && now - guide.anim.t0 < guide.anim.boatDur)) guideWave(ctx2, X(x), Y(y), cs, wv, now, x * 7 + y * 13);
+    // Waves and barrels only show where the player can see right now. The new round's waves appear once the
+    // serpents have moved.
+    var wavesOn = !(A && at < A.snakeAt + A.snakeDur);
+    for (y = y0; y <= y1; y++) for (x = x0; x <= x1; x++) {
+      var ins = Gd.inside(G, x, y);
+      if (ins ? !see[y * G.n + x] : !(hideEdge && outVis(x, y))) continue;
+      if (ins && Gd.barrelAt(G, x, y) >= 0) guideBarrel(ctx2, X(x) + cs / 2, Y(y) + cs / 2, cs, now, x * 5 + y * 11);
+      var wv = Gd.waveAt(G, x, y);
+      if (wv >= 0 && wavesOn) guideWave(ctx2, X(x), Y(y), cs, wv, now, x * 7 + y * 13);
     }
     // The beam: from the lamp, across the whole map.
-    var beamOn = G.beam >= 0 && lightVisible;
+    var beamOn = V.beam >= 0 && lightVisible, beamK = Math.min(1, (now - guide.beamAt) / 350) * fadeK;
     var aimDir = role === 'keeper' && G.phase === 'keeper' && !G.lampOut && guideMine() && guide.aim >= 0 ? guide.aim : -1;
     var lampX = X(G.c) + cs / 2, lampY = Y(G.c) + cs / 2 - cs * 0.62;
     var mapClip = hideEdge ? null : [X(0), Y(0), G.n * cs, G.n * cs];
-    if (beamOn) guideBeam(ctx2, X(G.c) + cs / 2, Y(G.c) + cs / 2, G.beam, cs, G.n, Math.min(1, (now - guide.beamAt) / 350), false, mapClip);
+    if (beamOn) guideBeam(ctx2, X(G.c) + cs / 2, Y(G.c) + cs / 2, V.beam, cs, G.n, beamK, false, mapClip);
     if (aimDir >= 0) guideBeam(ctx2, X(G.c) + cs / 2, Y(G.c) + cs / 2, aimDir, cs, G.n, 1, true, mapClip);
     // Lit tiles get a warm glow.
     if (beamOn) {
-      ctx2.fillStyle = 'rgba(255,214,130,' + (0.12 * Math.min(1, (now - guide.beamAt) / 350)) + ')';
-      G.lit.forEach(function (k) { var lx = k % G.n, ly = (k - lx) / G.n; if (see[k]) ctx2.fillRect(X(lx), Y(ly), cs + 0.5, cs + 0.5); });
+      ctx2.fillStyle = 'rgba(255,214,130,' + (0.12 * beamK) + ')';
+      V.lit.forEach(function (k) { var lx = k % G.n, ly = (k - lx) / G.n; if (see[k]) ctx2.fillRect(X(lx), Y(ly), cs + 0.5, cs + 0.5); });
+      if (hideEdge) (V.litOut || []).forEach(function (k) { var xy = Gd.outXY(G, k); if (outSee[k]) ctx2.fillRect(X(xy[0]), Y(xy[1]), cs + 0.5, cs + 0.5); });
     }
-    // Serpents: surfaced in the dark, but those caught in the light have dived, and only bubbles show.
+    // Serpents: surfaced in the dark, but those caught in the light have dived, and only bubbles show. They stay
+    // down until the light goes out at the end of the round.
     // The serpents that bit the boat this round are gone from the game, but still play out their bite and dive.
-    var ghosts = guide.anim ? guide.anim.log.dives.map(function (d) {
-      var b = guide.anim.before.serpents.filter(function (q) { return q.id === d.id; })[0];
+    var ghosts = A ? A.log.dives.map(function (d) {
+      var b = A.before.serpents.filter(function (q) { return q.id === d.id; })[0];
       return { id: d.id, x: d.from[0], y: d.from[1], frozen: false, gone: true, bx: b ? b.x : d.from[0], by: b ? b.y : d.from[1] };
     }) : [];
     G.serpents.concat(ghosts).forEach(function (s) {
       var p = animSerpent(now, s), cx = Math.round(p.x), cy = Math.round(p.y);
       if (p.hidden || !Gd.inside(G, cx, cy) || !see[cy * G.n + cx]) return;
       if (p.rising !== undefined) { guideSerpent(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id, p.rising); return; }
-      if (s.frozen && !(guide.anim && now - guide.anim.t0 < guide.anim.boatDur + guide.anim.snakeDur)) guideBubbles(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id);
+      var b0 = A && at < A.snakeAt ? A.before.serpents.filter(function (q) { return q.id === s.id; })[0] : null;
+      var down = b0 ? b0.frozen : s.frozen;
+      if (down) guideBubbles(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id);
       else guideSerpent(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id, p.diving ? 0.4 : 1);
     });
     // The lighthouse in the middle: always for the keeper, for the captain only when they can see it.
@@ -9666,29 +9739,29 @@ window.UnwindI18n = (function () {
     if (lhSeen) {
       var img = lighthouseImage(), lk = cs * 1.15 / 85;
       if (img.complete && img.naturalWidth) ctx2.drawImage(img, X(G.c) + cs / 2 - 20 * lk, Y(G.c) + cs * 0.85 - 110 * lk, 40 * lk, 126 * lk);
-      var on = role !== 'keeper' || Gd.lampWorks(G) || G.beam >= 0;
+      var on = role !== 'keeper' || Gd.lampWorks(G) || V.beam >= 0;
       var gl = ctx2.createRadialGradient(lampX, lampY, 0, lampX, lampY, cs * 0.55);
-      gl.addColorStop(0, on ? 'rgba(255,233,168,.75)' : 'rgba(255,233,168,.12)'); gl.addColorStop(1, 'rgba(255,233,168,0)');
+      gl.addColorStop(0, on ? 'rgba(255,233,168,' + (0.12 + 0.63 * (V.beam >= 0 ? fadeK : 1)) + ')' : 'rgba(255,233,168,.12)'); gl.addColorStop(1, 'rgba(255,233,168,0)');
       ctx2.fillStyle = gl; ctx2.beginPath(); ctx2.arc(lampX, lampY, cs * 0.55, 0, 7); ctx2.fill();
     }
     // The boat.
-    if (showBoat || (guide.anim && now - guide.anim.t0 < guide.anim.boatDur && role === 'keeper' && Gd.isLit(G, G.boat.x, G.boat.y))) {
+    if (showBoat) {
       guideBoat(ctx2, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs, now, G.hard ? G.sail : true, boatPos.alpha, boatPos.flip || 0);
       if (role === 'boat' && !guide.peek) {
         // The captain's lantern: a soft glow around the boat, bigger with a flare.
-        var R = cs * (G.flare ? 2.6 : 1.7), lg = ctx2.createRadialGradient(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs * 0.3, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, R);
+        var lanternR = cs * (V.flare ? 2.6 : 1.7), lg = ctx2.createRadialGradient(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs * 0.3, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, lanternR);
         lg.addColorStop(0, 'rgba(255,214,140,.16)'); lg.addColorStop(1, 'rgba(255,214,140,0)');
-        ctx2.fillStyle = lg; ctx2.beginPath(); ctx2.arc(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, R, 0, 7); ctx2.fill();
+        ctx2.fillStyle = lg; ctx2.beginPath(); ctx2.arc(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, lanternR, 0, 7); ctx2.fill();
       }
     }
     // Fog over everything the player cannot see, soft at the edges.
     if (!guide.peek) {
       if (!hideEdge) { ctx2.save(); ctx2.fillStyle = 'rgba(3,5,15,.94)'; ctx2.beginPath(); ctx2.rect(0, 0, gw, gh); ctx2.rect(X(0), Y(0), G.n * cs, G.n * cs); ctx2.fill('evenodd'); ctx2.restore(); }
+      var fogA = role === 'keeper' ? 'rgba(6,9,24,.62)' : 'rgba(6,9,24,.86)';
       for (y = hideEdge ? y0 : Math.max(0, y0); y <= (hideEdge ? y1 : Math.min(G.n - 1, y1)); y++) for (x = hideEdge ? x0 : Math.max(0, x0); x <= (hideEdge ? x1 : Math.min(G.n - 1, x1)); x++) {
         var i4 = y * G.n + x, out4 = !Gd.inside(G, x, y);
-        if (out4 ? near(x, y) : see[i4]) continue;
-        if (out4) { ctx2.fillStyle = role === 'keeper' ? 'rgba(6,9,24,.62)' : 'rgba(6,9,24,.86)'; ctx2.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5); continue; }
-        ctx2.fillStyle = mem[i4] ? 'rgba(6,9,24,.5)' : role === 'keeper' ? 'rgba(6,9,24,.62)' : 'rgba(6,9,24,.86)';
+        if (out4 ? outVis(x, y) : see[i4]) continue;
+        ctx2.fillStyle = !out4 && mem[i4] ? 'rgba(6,9,24,.5)' : fogA;
         ctx2.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5);
       }
       // The keeper knows the map: a faint grid and its outline show through the fog.
@@ -9844,14 +9917,48 @@ window.UnwindI18n = (function () {
     c.beginPath(); c.moveTo(-cs * 0.11, -cs * 0.08); c.lineTo(0, -cs * 0.22); c.lineTo(cs * 0.11, -cs * 0.08); c.stroke();
     c.restore();
   }
-  function guideBarrel(c, cx, cy, cs, now) {
-    var bob = reduced ? 0 : Math.sin(now / 500 + cx) * cs * 0.03, w = cs * 0.34, h = cs * 0.42;
-    c.save(); c.translate(cx, cy + bob); c.rotate(-0.12);
-    c.fillStyle = '#8a5a36'; c.beginPath(); c.ellipse(0, 0, w / 2, h / 2, 0, 0, 7); c.fill();
-    c.fillStyle = '#a8703f'; c.fillRect(-w * 0.32, -h * 0.5, w * 0.64, h);
-    c.strokeStyle = '#3a2a20'; c.lineWidth = Math.max(1.2, cs * 0.035);
-    [-0.28, 0.28].forEach(function (k) { c.beginPath(); c.moveTo(-w * 0.42, h * k); c.lineTo(w * 0.42, h * k); c.stroke(); });
-    c.fillStyle = 'rgba(255,233,168,.9)'; c.beginPath(); c.arc(0, 0, cs * 0.04, 0, 7); c.fill();
+  // A barrel lying on its side, half under water: it bobs and rocks with the swell, the sea laps over its lower
+  // half, and rings of ripples spread out from it.
+  function guideBarrel(c, cx, cy, cs, now, seed) {
+    var t = reduced ? 0 : now / 1000 + (seed || 0) * 0.37;
+    var bob = Math.sin(t * 2.1) * cs * 0.035, tilt = Math.sin(t * 1.3 + 0.6) * 0.14, w = cs * 0.56, h = cs * 0.32, wl = cy + cs * 0.06;
+    c.save();
+    // Ripples spreading out.
+    for (var k = 0; k < 2; k++) {
+      var u = reduced ? 0.5 : ((t * 0.45 + k * 0.5) % 1);
+      c.strokeStyle = 'rgba(210,225,255,' + (0.35 * (1 - u)) + ')'; c.lineWidth = Math.max(1, cs * 0.02);
+      c.beginPath(); c.ellipse(cx, wl, w * (0.55 + u * 0.4), h * (0.35 + u * 0.3), 0, 0, 7); c.stroke();
+    }
+    // The barrel.
+    c.save(); c.translate(cx, cy + bob); c.rotate(tilt);
+    var g = c.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, '#c08350'); g.addColorStop(0.45, '#9a6438'); g.addColorStop(1, '#5e3a20');
+    c.fillStyle = g; c.beginPath();
+    c.moveTo(-w / 2, -h * 0.36); c.quadraticCurveTo(0, -h * 0.62, w / 2, -h * 0.36); c.lineTo(w / 2, h * 0.36); c.quadraticCurveTo(0, h * 0.62, -w / 2, h * 0.36); c.closePath(); c.fill();
+    // Staves and iron hoops.
+    c.strokeStyle = 'rgba(60,36,20,.45)'; c.lineWidth = Math.max(0.8, cs * 0.012);
+    [-0.18, 0.18].forEach(function (k2) { c.beginPath(); c.moveTo(-w / 2, h * k2); c.quadraticCurveTo(0, h * k2 * 1.25, w / 2, h * k2); c.stroke(); });
+    c.strokeStyle = '#3b3440'; c.lineWidth = Math.max(1.2, cs * 0.032);
+    [-0.3, 0.3].forEach(function (k3) { c.beginPath(); c.moveTo(w * k3, -h * 0.55); c.lineTo(w * k3, h * 0.55); c.stroke(); });
+    // The round end, facing us.
+    c.fillStyle = '#7a4c2a'; c.beginPath(); c.ellipse(w / 2, 0, w * 0.08, h * 0.38, 0, 0, 7); c.fill();
+    c.strokeStyle = '#3b3440'; c.lineWidth = Math.max(1, cs * 0.022); c.stroke();
+    c.fillStyle = 'rgba(255,240,210,.35)'; c.beginPath(); c.ellipse(-w * 0.05, -h * 0.34, w * 0.3, h * 0.06, 0, 0, 7); c.fill();
+    // A glint of what is inside.
+    c.fillStyle = 'rgba(255,233,168,.95)'; c.beginPath(); c.arc(0, -h * 0.05, cs * 0.035, 0, 7); c.fill();
+    c.restore();
+    // The sea laps over the lower half: a wavy band of water with foam along its top.
+    var waveY = function (x) { return wl + Math.sin(x / cs * 14 + t * 3) * cs * 0.012; };
+    c.beginPath(); c.moveTo(cx - w * 0.62, waveY(cx - w * 0.62));
+    for (var x = -w * 0.62; x <= w * 0.62; x += cs * 0.04) c.lineTo(cx + x, waveY(cx + x));
+    c.lineTo(cx + w * 0.62, wl + h * 0.6); c.lineTo(cx - w * 0.62, wl + h * 0.6); c.closePath();
+    var wg = c.createLinearGradient(0, wl, 0, wl + h * 0.6);
+    wg.addColorStop(0, 'rgba(36,54,112,.82)'); wg.addColorStop(1, 'rgba(36,54,112,0)');
+    c.fillStyle = wg; c.fill();
+    c.strokeStyle = 'rgba(225,235,255,.65)'; c.lineWidth = Math.max(1, cs * 0.022); c.lineCap = 'round';
+    c.beginPath();
+    for (var x2 = -w * 0.55; x2 <= w * 0.55; x2 += cs * 0.04) { if (x2 === -w * 0.55) c.moveTo(cx + x2, waveY(cx + x2)); else c.lineTo(cx + x2, waveY(cx + x2)); }
+    c.stroke();
     c.restore();
   }
   function guideSerpent(c, cx, cy, cs, now, id, alpha) {
@@ -10000,21 +10107,21 @@ window.UnwindI18n = (function () {
       { t: 'You keep the lighthouse', p: 'The sea is dark and foggy. Your partner\'s boat is somewhere out there, and you cannot see it. Your job is to light the way so the boat can reach the lighthouse in the middle.', scene: 'intro' },
       { t: 'Aim and shine', p: 'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you.', scene: 'beam' },
       { t: 'Find the boat', p: 'You only see the boat when the beam is on it. When your light touches the boat or a tile next to it, the captain sees the whole lit path to the lighthouse.', scene: 'find' },
-      { t: 'Hold back the serpents', p: 'Sea serpents roam the fog looking for the boat, two tiles at a time. Once one spots it, it hunts it down. A serpent caught in your light dives and cannot move this round. Bubbles show where it is. When a serpent bites the boat it is gone, but a new one appears somewhere else.', scene: 'serpent' },
+      { t: 'Hold back the serpents', p: 'Sea serpents roam the fog looking for the boat, taking two steps a round and turning as they please. Once one spots it, it hunts it down. A serpent caught in your light dives and stays down until the light goes out at the end of the round. Bubbles show where it is. When a serpent bites the boat it is gone, but a new one appears somewhere else.', scene: 'serpent' },
       { t: 'Light the way, or guard it?', p: 'Every turn is a choice: search for the boat, show it a safe path, or pin down a serpent that is getting close. Talk to each other!', scene: 'choice' }
     ],
     boat: [
       { t: 'You sail the boat', p: 'You only see the tiles around your boat. Somewhere in the dark is the lighthouse in the middle of the map. Stop next to it to win.', scene: 'intro' },
-      { t: 'Catch a wave', p: 'Tap any wave you can see: it carries the boat one tile the way it goes, wherever that wave is. There are always waves going at least two ways next to you, though not all of them are safe. Waves change every round. If none goes your way, wait.', scene: 'waves' },
+      { t: 'Catch a wave', p: 'Tap any wave you can see: it carries the boat one tile the way it goes, wherever that wave is. Next to you there are always waves going at least two ways you can really sail. Waves change every round. If none goes your way, wait.', scene: 'waves' },
       { t: 'Follow the light', p: 'When the keeper\'s beam touches you or a tile next to you, you see the whole lit path to the lighthouse.', scene: 'find' },
-      { t: 'Out on the water', p: 'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, two tiles at a time, so keep moving.', scene: 'hazards' },
+      { t: 'Out on the water', p: 'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life. Serpents that come close spot you and hunt you, two steps a round, so keep moving.', scene: 'hazards' },
       { t: 'Flares', p: 'A flare lets you see two tiles around you for this turn. Only you see it: the keeper does not.', scene: 'flare' }
     ],
     hard: [
       { t: 'Tall rocks', p: 'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light, for the keeper and for the captain. Look around them.', scene: 'tall' },
       { t: 'Wind and sail', p: 'The wind direction is shown in the top left, and it can turn. With your sail up, a wave that goes with the wind carries you two tiles in one move, and against the wind you do not move. Side winds change nothing. Lower the sail to ignore the wind.', scene: 'wind' },
       { t: 'A faulty lamp', p: 'After every shine the light goes out. On the keeper\'s next turn, press Rekindle the light: that round stays dark, and the light works again the round after.', scene: 'lamp' },
-      { t: 'No resting', p: 'On Hard the captain cannot wait two rounds in a row. There are more serpents, and they are faster: three tiles in a straight line. And the edge of the map is hidden in the fog, so you cannot see where the sea ends.', scene: 'hazards' }
+      { t: 'No resting', p: 'On Hard the captain cannot wait two rounds in a row. There are more serpents, and they are faster: three steps a round. And the fog closes in again behind you: nobody remembers what they saw last round.', scene: 'hazards' }
     ]
   };
   function guideTutorial(kind, hard, after) {

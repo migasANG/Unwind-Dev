@@ -21,6 +21,9 @@
   var SIZES = [13, 17, 23], SIZE_NAMES = ['Small', 'Medium', 'Large'];
   var BEAM_STEPS = 16, BEAM_HALF = 15 * Math.PI / 180, BEAM_CORE = 0.75;
   var MAX_LIVES = 5;
+  // On Hard the sea seems to go on past the edge of the map: this many rings of open water outside it carry
+  // waves and catch the light like any other tile, so nothing gives the edge away until the boat sails off it.
+  var EDGE = 4;
 
   function mulberry(a) {
     return function () {
@@ -36,7 +39,7 @@
     h = Math.imul(h ^ h >>> 16, 0x7FEB352D); h = Math.imul(h ^ h >>> 15, 0x846CA68B); h ^= h >>> 16;
     return mulberry(h);
   }
-  var SALT = { map: 1, waves: 2, wind: 3, whirl: 4, serpent: 5, respawn: 6, roam: 7 };
+  var SALT = { map: 1, waves: 2, wind: 3, whirl: 4, serpent: 5, respawn: 6, roam: 7, edge: 8 };
 
   function inside(G, x, y) { return x >= 0 && y >= 0 && x < G.n && y < G.n; }
   function cell(G, x, y) { return inside(G, x, y) ? G.grid[y * G.n + x] : -1; }
@@ -44,6 +47,15 @@
   function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return i; return -1; }
   function barrelAt(G, x, y) { for (var i = 0; i < G.barrels.length; i++) if (!G.barrels[i].taken && G.barrels[i].x === x && G.barrels[i].y === y) return i; return -1; }
   function sailable(t) { return t === WATER || t === WHIRL; }
+  // Tiles just outside the map (Hard only) have their own index in a padded grid.
+  function outKey(G, x, y) { var P = G.n + 2 * EDGE; return x >= -EDGE && y >= -EDGE && x < G.n + EDGE && y < G.n + EDGE && !inside(G, x, y) ? (y + EDGE) * P + (x + EDGE) : -1; }
+  function outXY(G, k) { var P = G.n + 2 * EDGE; return [k % P - EDGE, Math.floor(k / P) - EDGE]; }
+  // The wave on any tile, inside the map or (on Hard) just outside it.
+  function waveAt(G, x, y) {
+    if (inside(G, x, y)) return G.waves[y * G.n + x];
+    var k = G.hard ? outKey(G, x, y) : -1;
+    return k >= 0 && G.outWaves ? G.outWaves[k] : -1;
+  }
 
   /* ---------- The map ---------- */
   // Tiles reachable from (x, y) by sailing, ignoring waves (the captain can always wait for the right wave).
@@ -140,44 +152,59 @@
     if (!G) throw new Error('no map');
     G.seed = seed | 0; G.size = size; G.hard = hard;
     G.round = 0; G.lives = 3; G.flares = G.startFlares; G.sail = true;
-    G.beam = -1; G.lit = []; G.flare = false; G.flareUsed = false;
+    G.beam = -1; G.lit = []; G.litOut = []; G.flare = false; G.flareUsed = false;
     G.ended = null; G.moves = 0; G.hits = 0;
     G.keeperSeen = {}; G.boatSeen = {};
     G.lampOut = false; G.waited = false;
     G.phase = 'keeper';
     G.wind = G.hard ? Math.floor(rngFor(G.seed, 0, SALT.wind)() * 4) : -1;
     G.waves = wavesFor(G);
+    G.outWaves = outWavesFor(G);
     rememberBoat(G);
     return G;
   }
 
   /* ---------- Waves, wind and the lamp ---------- */
   // Every round the sea changes: a random share of the tiles carry a wave, each in a random direction.
-  // Never under the boat or a barrel. Next to the boat there are always waves going at least two different
-  // ways (they may lead into a rock or off the map).
+  // Never under the boat or a barrel. Next to the boat there are always waves going at least two different ways
+  // the boat can really go (not into a rock, a serpent, the lighthouse or off the map), unless the boat is boxed
+  // in so tightly that fewer ways are open.
   function wavesFor(G) {
     var r = rngFor(G.seed, G.round, SALT.waves), w = [], share = 0.3 + r() * 0.22;
     for (var i = 0; i < G.n * G.n; i++) {
       var x = i % G.n, y = Math.floor(i / G.n), on = G.grid[i] === WATER && r() < share, d = Math.floor(r() * 4);
       w.push(on && barrelAt(G, x, y) < 0 && !(x === G.boat.x && y === G.boat.y) ? d : -1);
     }
-    var near = [], dirs = {}, spare = [];
+    var open = [];
+    for (var d0 = 0; d0 < 4; d0++) { var ox = G.boat.x + DX[d0], oy = G.boat.y + DY[d0]; if (inside(G, ox, oy) && sailable(G.grid[oy * G.n + ox]) && serpentAt(G, ox, oy) < 0) open.push(d0); }
+    var near = [], spare = [];
     for (var yy = G.boat.y - 1; yy <= G.boat.y + 1; yy++) for (var xx = G.boat.x - 1; xx <= G.boat.x + 1; xx++) {
       if (!inside(G, xx, yy) || (xx === G.boat.x && yy === G.boat.y) || G.grid[yy * G.n + xx] !== WATER) continue;
-      if (barrelAt(G, xx, yy) >= 0) { spare.push(yy * G.n + xx); continue; }
-      near.push(yy * G.n + xx);
-      if (w[yy * G.n + xx] >= 0) dirs[w[yy * G.n + xx]] = 1;
+      if (barrelAt(G, xx, yy) >= 0) spare.push(yy * G.n + xx); else near.push(yy * G.n + xx);
     }
     // Hemmed in by rocks, the boat may get a wave on a barrel tile too.
     if (near.length < 2) near = near.concat(spare);
-    for (var t = 0; Object.keys(dirs).length < 2 && t < 24 && near.length; t++) {
-      var k = near[Math.floor(r() * near.length)], d2 = Math.floor(r() * 4);
-      if (dirs[d2]) continue;
-      if (w[k] >= 0 && Object.keys(dirs).length === 1 && dirs[w[k]] && near.filter(function (q) { return w[q] === w[k]; }).length === 1) continue;
-      w[k] = d2; dirs = {};
-      near.forEach(function (q) { if (w[q] >= 0) dirs[w[q]] = 1; });
+    var good = function () { var g = {}; near.forEach(function (q) { if (w[q] >= 0 && open.indexOf(w[q]) >= 0) g[w[q]] = (g[w[q]] || 0) + 1; }); return g; };
+    var need = Math.min(2, open.length, near.length);
+    for (var t = 0; t < 40; t++) {
+      var g = good(), have = Object.keys(g).length;
+      if (have >= need) break;
+      var missing = open.filter(function (q) { return !g[q]; }), d2 = missing[Math.floor(r() * missing.length)];
+      // Put it on an empty tile, or on one whose wave leads nowhere, or one that repeats another good wave.
+      var spots = near.filter(function (q) { return w[q] < 0; });
+      if (!spots.length) spots = near.filter(function (q) { return open.indexOf(w[q]) < 0; });
+      if (!spots.length) spots = near.filter(function (q) { return g[w[q]] > 1; });
+      if (!spots.length) break;
+      w[spots[Math.floor(r() * spots.length)]] = d2;
     }
     return w;
+  }
+  // Hard only: waves on the open water just outside the map, so it looks like any other part of the sea.
+  function outWavesFor(G) {
+    if (!G.hard) return null;
+    var r = rngFor(G.seed, G.round, SALT.edge), P = G.n + 2 * EDGE, out = [], share = 0.3 + r() * 0.22;
+    for (var k = 0; k < P * P; k++) { var xy = outXY(G, k), on = !inside(G, xy[0], xy[1]) && r() < share, d = Math.floor(r() * 4); out.push(on ? d : -1); }
+    return out;
   }
   // Hard only. Each round there is a chance the wind turns.
   function windFor(G) {
@@ -212,25 +239,42 @@
     }
     return out;
   }
-  function isLit(G, x, y) { return G.lit.indexOf(y * G.n + x) >= 0; }
+  // Hard: the tiles outside the map that the beam lights, so its path does not stop at the edge.
+  function beamOut(G, dir) {
+    if (dir < 0 || !G.hard) return [];
+    var a = dir * 2 * Math.PI / BEAM_STEPS, ux = Math.sin(a), uy = -Math.cos(a), out = [];
+    for (var y = -EDGE; y < G.n + EDGE; y++) for (var x = -EDGE; x < G.n + EDGE; x++) {
+      if (inside(G, x, y)) continue;
+      var dx = x - G.c, dy = y - G.c, along = dx * ux + dy * uy, across = Math.abs(dx * uy - dy * ux);
+      if (along <= 0.2) continue;
+      if ((Math.atan2(across, along) <= BEAM_HALF || across <= BEAM_CORE) && lineClear(G, G.c, G.c, x, y)) out.push(outKey(G, x, y));
+    }
+    return out;
+  }
+  function isLit(G, x, y) { return inside(G, x, y) ? G.lit.indexOf(y * G.n + x) >= 0 : (G.litOut || []).indexOf(outKey(G, x, y)) >= 0; }
   // What the captain sees: the tiles around the boat (two around with a flare), and the whole beam when it
-  // touches the boat or a tile next to it.
+  // touches the boat or a tile next to it. On Hard, tiles outside the map are seen the same way (in `out`).
   function boatView(G) {
-    var seen = {}, R = G.flare ? 2 : 1, bx = G.boat.x, by = G.boat.y, touched = false;
+    var seen = {}, out = {}, R = G.flare ? 2 : 1, bx = G.boat.x, by = G.boat.y, touched = false;
     for (var y = by - R; y <= by + R; y++) for (var x = bx - R; x <= bx + R; x++) {
-      if (!inside(G, x, y)) continue;
+      var ins = inside(G, x, y);
+      if (!ins && !G.hard) continue;
       if (R > 1 && cheb(x, y, bx, by) > 1 && !lineClear(G, bx, by, x, y)) continue;
-      seen[y * G.n + x] = 1;
+      if (ins) seen[y * G.n + x] = 1; else out[outKey(G, x, y)] = 1;
       if (cheb(x, y, bx, by) <= 1 && isLit(G, x, y)) touched = true;
     }
     // Tall rocks also hide parts of the lit path from the captain.
-    if (touched) G.lit.forEach(function (i) { var x = i % G.n, y = (i - x) / G.n; if (lineClear(G, bx, by, x, y)) seen[i] = 1; });
-    return { cells: seen, touched: touched };
+    if (touched) {
+      G.lit.forEach(function (i) { var x = i % G.n, y = (i - x) / G.n; if (lineClear(G, bx, by, x, y)) seen[i] = 1; });
+      (G.litOut || []).forEach(function (k) { var xy = outXY(G, k); if (lineClear(G, bx, by, xy[0], xy[1])) out[k] = 1; });
+    }
+    return { cells: seen, out: out, touched: touched };
   }
   function keeperView(G) {
-    var seen = {};
+    var seen = {}, out = {};
     G.lit.forEach(function (i) { seen[i] = 1; });
-    return { cells: seen, boat: isLit(G, G.boat.x, G.boat.y) };
+    (G.litOut || []).forEach(function (k) { out[k] = 1; });
+    return { cells: seen, out: out, boat: isLit(G, G.boat.x, G.boat.y) };
   }
   function rememberBoat(G) { var v = boatView(G).cells; for (var k in v) G.boatSeen[k] = 1; }
 
@@ -238,8 +282,9 @@
   // Waves the captain can use: any wave the captain can see (around the boat, further with a flare, or along the
   // keeper's beam when it touches the boat). The boat moves the way that wave goes.
   function catchable(G) {
-    var out = [], cells = boatView(G).cells;
-    for (var k in cells) { var i = +k, w = G.waves[i]; if (w >= 0) out.push({ x: i % G.n, y: Math.floor(i / G.n), dir: w }); }
+    var out = [], v = boatView(G);
+    for (var k in v.cells) { var i = +k, w = G.waves[i]; if (w >= 0) out.push({ x: i % G.n, y: Math.floor(i / G.n), dir: w }); }
+    for (var k2 in v.out) { var xy = outXY(G, +k2), w2 = waveAt(G, xy[0], xy[1]); if (w2 >= 0) out.push({ x: xy[0], y: xy[1], dir: w2 }); }
     return out;
   }
   // How far a wave carries the boat in one move: one tile, or on Hard two tiles with the wind behind a raised sail,
@@ -329,24 +374,29 @@
     }
     return -1;
   }
+  // Serpents take two steps a round (three on Hard), one tile at a time, and choose their way again at every
+  // step: one that spots the boat halfway through its move turns towards it.
   function moveSerpents(G, log) {
-    var reach = G.hard ? 3 : 2;
+    var steps = G.hard ? 3 : 2;
     G.serpents.slice().forEach(function (s) {
       if (G.serpents.indexOf(s) < 0) return;
       if (s.frozen || G.ended) return;
-      var r = rngFor(G.seed, G.round * 17 + s.id, SALT.serpent);
-      if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= 1) { s.hunt = [G.boat.x, G.boat.y]; log.spotted = (log.spotted || []).concat([s.id]); }
-      var target = s.hunt || s.goal;
-      if (target && target[0] === s.x && target[1] === s.y) { s.hunt = null; s.goal = null; target = null; }
-      for (var t = 0; !target && t < 40; t++) {
-        var gx = Math.floor(r() * G.n), gy = Math.floor(r() * G.n);
-        if (serpentOk(G, gx, gy) && cheb(gx, gy, s.x, s.y) >= 3) target = s.goal = [gx, gy];
-      }
-      var dir = target ? firstStep(G, s, target[0], target[1]) : -1;
-      if (dir < 0) { s.goal = null; s.hunt = null; var opts = []; for (var k = 0; k < 4; k++) if (serpentOk(G, s.x + DX[k], s.y + DY[k])) opts.push(k); if (!opts.length) return; dir = opts[Math.floor(r() * opts.length)]; }
-      var path = [[s.x, s.y]];
-      // Serpents move two tiles (three on Hard), always in a straight line.
-      for (var i = 0; i < reach; i++) {
+      var r = rngFor(G.seed, G.round * 17 + s.id, SALT.serpent), path = [[s.x, s.y]];
+      for (var i = 0; i < steps; i++) {
+        if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= 1) { s.hunt = [G.boat.x, G.boat.y]; if ((log.spotted || []).indexOf(s.id) < 0) log.spotted = (log.spotted || []).concat([s.id]); }
+        var target = s.hunt || s.goal;
+        if (target && target[0] === s.x && target[1] === s.y) { s.hunt = null; s.goal = null; target = null; }
+        for (var t = 0; !target && t < 40; t++) {
+          var gx = Math.floor(r() * G.n), gy = Math.floor(r() * G.n);
+          if (serpentOk(G, gx, gy) && cheb(gx, gy, s.x, s.y) >= 3) target = s.goal = [gx, gy];
+        }
+        var dir = target ? firstStep(G, s, target[0], target[1]) : -1;
+        if (dir < 0) {
+          s.goal = null; s.hunt = null;
+          var opts = []; for (var k = 0; k < 4; k++) if (serpentOk(G, s.x + DX[k], s.y + DY[k]) && serpentAt(G, s.x + DX[k], s.y + DY[k]) < 0) opts.push(k);
+          if (!opts.length) break;
+          dir = opts[Math.floor(r() * opts.length)];
+        }
         var nx = s.x + DX[dir], ny = s.y + DY[dir], onBoat = nx === G.boat.x && ny === G.boat.y;
         if (!onBoat && (!serpentOk(G, nx, ny) || serpentAt(G, nx, ny) >= 0)) break;
         s.x = nx; s.y = ny; path.push([nx, ny]);
@@ -356,7 +406,6 @@
           replaceSerpent(G, s, log);
           return;
         }
-        if (s.hunt && s.hunt[0] === nx && s.hunt[1] === ny) break;
       }
       log.serpents.push({ id: s.id, path: path });
     });
@@ -367,9 +416,10 @@
     G.round++;
     G.flare = false; G.flareUsed = false;
     G.serpents.forEach(function (s) { s.frozen = false; });
-    G.lit = []; G.beam = -1;
+    G.lit = []; G.litOut = []; G.beam = -1;
     G.wind = windFor(G);
     G.waves = wavesFor(G);
+    G.outWaves = outWavesFor(G);
     G.phase = 'keeper';
     log.round = G.round;
     rememberBoat(G);
@@ -394,7 +444,7 @@
       if (G.lampOut) return { ok: false, why: 'out' };
       var d = act.dir | 0;
       if (d < 0 || d >= BEAM_STEPS) return { ok: false, why: 'bad' };
-      G.beam = d; G.lit = beamCells(G, d);
+      G.beam = d; G.lit = beamCells(G, d); G.litOut = beamOut(G, d);
       G.lit.forEach(function (i) { G.keeperSeen[i] = 1; });
       // Serpents caught in the light dive and stay still this round; bubbles show where they are.
       G.serpents.forEach(function (s) { s.frozen = isLit(G, s.x, s.y); });
@@ -422,8 +472,9 @@
       G.waited = act.a === 'wait';
       if (act.a === 'move') {
         var x = act.x | 0, y = act.y | 0;
-        if (!inside(G, x, y) || !boatView(G).cells[y * G.n + x]) return { ok: false, why: 'far' };
-        var w = G.waves[y * G.n + x];
+        var bv = boatView(G);
+        if (inside(G, x, y) ? !bv.cells[y * G.n + x] : !bv.out[outKey(G, x, y)]) return { ok: false, why: 'far' };
+        var w = waveAt(G, x, y);
         if (w < 0) return { ok: false, why: 'nowave' };
         sailBoat(G, w, log);
         G.moves++;
@@ -446,7 +497,7 @@
   return {
     create: create, apply: apply, replay: replay, beamCells: beamCells, boatView: boatView, keeperView: keeperView,
     catchable: catchable, stepsFor: stepsFor, lampWorks: lampWorks, canWait: canWait, isLit: isLit, serpentAt: serpentAt, barrelAt: barrelAt,
-    cell: cell, inside: inside, cheb: cheb, distances: distances,
+    cell: cell, inside: inside, cheb: cheb, distances: distances, waveAt: waveAt, outKey: outKey, outXY: outXY, EDGE: EDGE,
     DX: DX, DY: DY, WATER: WATER, ROCK: ROCK, BIG: BIG, WHIRL: WHIRL, LIGHT: LIGHT,
     SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, BEAM_STEPS: BEAM_STEPS
   };
