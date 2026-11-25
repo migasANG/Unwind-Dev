@@ -53,7 +53,7 @@ window.UnwindI18n = (function () {
     'Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.': 'Escreve um poema um verso de cada vez. As setas bússola empurram as letras para o lado, e as letras sem nada por baixo caem. Se um verso já não puder ser acabado, perdes, e tentas esse verso outra vez. O botão de dica pode levar-te a um verso anterior.',
     'The Poem': 'O Poema',
     'Matchday': 'Dia de Jogo',
-    'Woodland': 'Bosque',
+    'Fowl Play': 'Penas Eriçadas',
     'Kick the ball into the goal on the right. The goal on the left is your own.': 'Chuta a bola para a baliza da direita. A baliza da esquerda é a tua.',
     'Red cards that run out stay on the pitch for good. Clear the way in time.': 'Os cartões vermelhos que acabam ficam em campo para sempre. Abre caminho a tempo.',
     'Five boards. Sometimes the way forward starts by going back.': 'Cinco tabuleiros. Às vezes, para avançar, é preciso recuar primeiro.',
@@ -94,18 +94,18 @@ window.UnwindI18n = (function () {
     'The whole poem, with its music.': 'O poema inteiro, com a sua música.',
     'Boarding Up specials': 'Especiais de Tabuleiros em Grupo',
     'Matchday: the ball': 'Dia de Jogo: a bola',
-    'Woodland: birds and the slingshot': 'Bosque: pássaros e a fisga',
+    'Fowl Play: birds and the slingshot': 'Penas Eriçadas: pássaros e a fisga',
     'Birds that break arrows': 'Pássaros que partem setas',
     'The Poem: letters and slots': 'O Poema: letras e espaços',
     'An arrow that hits the ball kicks it and stays put. The ball rolls until something stops it, even across boards. Score on the right; the left goal is yours. Goalkeepers never move, and run-out red cards stay for good.': 'Uma seta que acerta na bola chuta-a e fica onde está. A bola rola até algo a parar, mesmo entre tabuleiros. Marca à direita; a baliza da esquerda é a tua. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
     'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.': 'As setas empurram pássaros, que deslizam até algo os parar, mesmo para outros tabuleiros. Um pássaro que desliza para a fisga fica lá: toca na fisga e depois numa direção para o atirar. Parte a primeira parede de madeira que encontrar.',
-    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Não conta como lançamento.',
+    'From Fowl Play 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.': 'A partir de Penas Eriçadas 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Não conta como lançamento.',
     'Fill every slot with its letter to write a line. Letters fall when nothing holds them up, and a compass arrow that hits a letter pushes it one tile sideways.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras caem quando nada as segura, e uma seta bússola que acerta numa letra empurra-a uma casa para o lado.',
     'Slingshot and birds': 'Fisga e pássaros',
     'Birds break arrows': 'Os pássaros partem setas',
     'An arrow that hits the ball kicks it and stays. The ball rolls until something stops it, even onto the next board. Score in the goal on the RIGHT: the left one is yours, and an own goal or a ball off the pitch costs a life. Goalkeepers never move, and red cards that run out stay for good.': 'Uma seta que acerta na bola chuta-a e fica. A bola rola até algo a parar, mesmo para o tabuleiro seguinte. Marca na baliza da DIREITA: a da esquerda é a tua, e um autogolo ou uma bola fora custa uma vida. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
     'An arrow that hits a bird pushes it, and it slides until something stops it. A bird that slides onto the slingshot sits on it. Tap the slingshot, then a direction, to throw the bird. It breaks the first wooden wall it meets. Clear every arrow to win.': 'Uma seta que acerta num pássaro empurra-o, e ele desliza até algo o parar. Um pássaro que desliza para a fisga fica lá. Toca na fisga e depois numa direção para atirar o pássaro. Parte a primeira parede de madeira que encontrar. Tira todas as setas para ganhar.',
-    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Partir uma seta não conta como lançamento. Usa isto para soltar setas que se bloqueiam uma à outra.',
+    'From Fowl Play 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.': 'A partir de Penas Eriçadas 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Partir uma seta não conta como lançamento. Usa isto para soltar setas que se bloqueiam uma à outra.',
     'Fill every slot with its letter to write a line. Letters with nothing under them fall. A compass arrow that hits a letter pushes it one tile sideways and stays. Compass arrows still turn each time an arrow leaves. Finish a board to read the line, then the next board opens.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras sem nada por baixo caem. Uma seta bússola que acerta numa letra empurra-a uma casa para o lado e fica. As setas bússola continuam a rodar sempre que sai uma seta. Acaba um tabuleiro para ler o verso, e abre-se o seguinte.',
     'Clear the ball\'s way first': 'Primeiro abre caminho à bola',
     'An arrow that hits the ball kicks it': 'Uma seta que acerta na bola chuta-a',
@@ -212,7 +212,7 @@ window.UnwindI18n = (function () {
     if (PT[s]) return PT[s];
     var m = s.match(/^(Level|Hard|Timed|Winter|Spring|Summer|Autumn|Open Waters|Open Water) (\d+)$/);
     var bm = s.match(/^Board (\d+) of (\d)$/); if (bm) return 'Tabuleiro ' + bm[1] + ' de ' + bm[2];
-    var sm = s.match(/^(Matchday|Woodland) (\d+)$/); if (sm) return (sm[1] === 'Matchday' ? 'Dia de Jogo ' : 'Bosque ') + sm[2];
+    var sm = s.match(/^(Matchday|Fowl Play) (\d+)$/); if (sm) return (sm[1] === 'Matchday' ? 'Dia de Jogo ' : 'Penas Eriçadas ') + sm[2];
     if (m) return NAMED[m[1]] + ' ' + m[2];
     if ((m = s.match(/^(\d+) effects$/))) return m[1] + ' efeitos';
     if ((m = s.match(/^Best (.+)$/))) return 'Recorde ' + m[1];

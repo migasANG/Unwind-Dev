@@ -1380,7 +1380,7 @@
       [['6,4 5,4'], ['2,2 2,3', { red: 2 }], ['1,5 2,5'], ['0,0 1,0'], ['4,6 5,6'], ['3,1 4,1'], ['6,1 5,1']],
       [['4,2 4,1', { red: 1 }], ['4,0 5,0'], ['3,0 3,1'], ['2,5 3,5', { red: 2 }], ['1,4 2,4'], ['5,4 5,5', { red: 1 }], ['0,6 1,6']]
     ] },
-    // Woodland: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
+    // Fowl Play: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
     sl1: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [4, 1], birds: [[4, 3]], walls: [[1, 1, 'r']], arrows: [['4,5 4,4'], ['0,1 1,1'], ['0,4 1,4'], ['5,3 5,2'], ['2,3 2,2']] }
     ] },
@@ -1388,7 +1388,7 @@
       { w: 5, h: 5, sling: [1, 3], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1'], ['2,4 3,4', { ghostPhase: 1 }], ['4,2 4,3']] },
       { w: 5, h: 5, birds: [[1, 3]], walls: [], arrows: [['4,3 3,3'], ['4,0 3,0 2,0', { phase: true }], ['1,1 1,0'], ['0,0 0,1']] }
     ] },
-    // Woodland 3 brings in nests: the nest is the only way to stop the bird where arrows can steer it onto the slingshot.
+    // Fowl Play 3 brings in nests: the nest is the only way to stop the bird where arrows can steer it onto the slingshot.
     sl3: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [0, 2], birds: [[0, 3]], walls: [], arrows: [['0,5 0,4'], ['2,0 3,0'], ['4,5 4,4'], ['2,3 3,3', { ghostPhase: 1 }], ['2,5 2,4']] },
       { w: 6, h: 6, sling: [5, 4], nests: [[3, 2]], birds: [[3, 3]], walls: [[5, 2, 'r']], arrows: [['3,5 3,4'], ['0,2 1,2'], ['5,0 5,1'], ['1,5 2,5'], ['0,4 0,3'], ['2,0 1,0']] }

@@ -1,4 +1,4 @@
-// Plays every Boarding Up special (Matchday, Woodland, The Poem) to the end with real clicks, using solver moves.
+// Plays every Boarding Up special (Matchday, Fowl Play, The Poem) to the end with real clicks, using solver moves.
 // node tools/test-specials.js <screenshot-folder> [lang]
 const { chromium } = require('playwright');
 const path = require('path');

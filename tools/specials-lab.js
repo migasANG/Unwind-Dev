@@ -1,4 +1,4 @@
-// Design bench for the Boarding Up specials (Matchday, Woodland, The Poem).
+// Design bench for the Boarding Up specials (Matchday, Fowl Play, The Poem).
 // node tools/specials-lab.js [key]   -> prints each board and solves it.
 const E = require('../src/engine.js');
 

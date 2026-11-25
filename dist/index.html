@@ -1898,7 +1898,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       [['6,4 5,4'], ['2,2 2,3', { red: 2 }], ['1,5 2,5'], ['0,0 1,0'], ['4,6 5,6'], ['3,1 4,1'], ['6,1 5,1']],
       [['4,2 4,1', { red: 1 }], ['4,0 5,0'], ['3,0 3,1'], ['2,5 3,5', { red: 2 }], ['1,4 2,4'], ['5,4 5,5', { red: 1 }], ['0,6 1,6']]
     ] },
-    // Woodland: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
+    // Fowl Play: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
     sl1: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [4, 1], birds: [[4, 3]], walls: [[1, 1, 'r']], arrows: [['4,5 4,4'], ['0,1 1,1'], ['0,4 1,4'], ['5,3 5,2'], ['2,3 2,2']] }
     ] },
@@ -1906,7 +1906,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       { w: 5, h: 5, sling: [1, 3], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1'], ['2,4 3,4', { ghostPhase: 1 }], ['4,2 4,3']] },
       { w: 5, h: 5, birds: [[1, 3]], walls: [], arrows: [['4,3 3,3'], ['4,0 3,0 2,0', { phase: true }], ['1,1 1,0'], ['0,0 0,1']] }
     ] },
-    // Woodland 3 brings in nests: the nest is the only way to stop the bird where arrows can steer it onto the slingshot.
+    // Fowl Play 3 brings in nests: the nest is the only way to stop the bird where arrows can steer it onto the slingshot.
     sl3: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
       { w: 6, h: 6, sling: [0, 2], birds: [[0, 3]], walls: [], arrows: [['0,5 0,4'], ['2,0 3,0'], ['4,5 4,4'], ['2,3 3,3', { ghostPhase: 1 }], ['2,5 2,4']] },
       { w: 6, h: 6, sling: [5, 4], nests: [[3, 2]], birds: [[3, 3]], walls: [[5, 2, 'r']], arrows: [['3,5 3,4'], ['0,2 1,2'], ['5,0 5,1'], ['1,5 2,5'], ['0,4 0,3'], ['2,0 1,0']] }
@@ -2407,7 +2407,7 @@ window.UnwindI18n = (function () {
     'Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.': 'Escreve um poema um verso de cada vez. As setas bússola empurram as letras para o lado, e as letras sem nada por baixo caem. Se um verso já não puder ser acabado, perdes, e tentas esse verso outra vez. O botão de dica pode levar-te a um verso anterior.',
     'The Poem': 'O Poema',
     'Matchday': 'Dia de Jogo',
-    'Woodland': 'Bosque',
+    'Fowl Play': 'Penas Eriçadas',
     'Kick the ball into the goal on the right. The goal on the left is your own.': 'Chuta a bola para a baliza da direita. A baliza da esquerda é a tua.',
     'Red cards that run out stay on the pitch for good. Clear the way in time.': 'Os cartões vermelhos que acabam ficam em campo para sempre. Abre caminho a tempo.',
     'Five boards. Sometimes the way forward starts by going back.': 'Cinco tabuleiros. Às vezes, para avançar, é preciso recuar primeiro.',
@@ -2448,18 +2448,18 @@ window.UnwindI18n = (function () {
     'The whole poem, with its music.': 'O poema inteiro, com a sua música.',
     'Boarding Up specials': 'Especiais de Tabuleiros em Grupo',
     'Matchday: the ball': 'Dia de Jogo: a bola',
-    'Woodland: birds and the slingshot': 'Bosque: pássaros e a fisga',
+    'Fowl Play: birds and the slingshot': 'Penas Eriçadas: pássaros e a fisga',
     'Birds that break arrows': 'Pássaros que partem setas',
     'The Poem: letters and slots': 'O Poema: letras e espaços',
     'An arrow that hits the ball kicks it and stays put. The ball rolls until something stops it, even across boards. Score on the right; the left goal is yours. Goalkeepers never move, and run-out red cards stay for good.': 'Uma seta que acerta na bola chuta-a e fica onde está. A bola rola até algo a parar, mesmo entre tabuleiros. Marca à direita; a baliza da esquerda é a tua. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
     'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.': 'As setas empurram pássaros, que deslizam até algo os parar, mesmo para outros tabuleiros. Um pássaro que desliza para a fisga fica lá: toca na fisga e depois numa direção para o atirar. Parte a primeira parede de madeira que encontrar.',
-    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Não conta como lançamento.',
+    'From Fowl Play 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.': 'A partir de Penas Eriçadas 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Não conta como lançamento.',
     'Fill every slot with its letter to write a line. Letters fall when nothing holds them up, and a compass arrow that hits a letter pushes it one tile sideways.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras caem quando nada as segura, e uma seta bússola que acerta numa letra empurra-a uma casa para o lado.',
     'Slingshot and birds': 'Fisga e pássaros',
     'Birds break arrows': 'Os pássaros partem setas',
     'An arrow that hits the ball kicks it and stays. The ball rolls until something stops it, even onto the next board. Score in the goal on the RIGHT: the left one is yours, and an own goal or a ball off the pitch costs a life. Goalkeepers never move, and red cards that run out stay for good.': 'Uma seta que acerta na bola chuta-a e fica. A bola rola até algo a parar, mesmo para o tabuleiro seguinte. Marca na baliza da DIREITA: a da esquerda é a tua, e um autogolo ou uma bola fora custa uma vida. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
     'An arrow that hits a bird pushes it, and it slides until something stops it. A bird that slides onto the slingshot sits on it. Tap the slingshot, then a direction, to throw the bird. It breaks the first wooden wall it meets. Clear every arrow to win.': 'Uma seta que acerta num pássaro empurra-o, e ele desliza até algo o parar. Um pássaro que desliza para a fisga fica lá. Toca na fisga e depois numa direção para atirar o pássaro. Parte a primeira parede de madeira que encontrar. Tira todas as setas para ganhar.',
-    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Partir uma seta não conta como lançamento. Usa isto para soltar setas que se bloqueiam uma à outra.',
+    'From Fowl Play 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.': 'A partir de Penas Eriçadas 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Partir uma seta não conta como lançamento. Usa isto para soltar setas que se bloqueiam uma à outra.',
     'Fill every slot with its letter to write a line. Letters with nothing under them fall. A compass arrow that hits a letter pushes it one tile sideways and stays. Compass arrows still turn each time an arrow leaves. Finish a board to read the line, then the next board opens.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras sem nada por baixo caem. Uma seta bússola que acerta numa letra empurra-a uma casa para o lado e fica. As setas bússola continuam a rodar sempre que sai uma seta. Acaba um tabuleiro para ler o verso, e abre-se o seguinte.',
     'Clear the ball\'s way first': 'Primeiro abre caminho à bola',
     'An arrow that hits the ball kicks it': 'Uma seta que acerta na bola chuta-a',
@@ -2566,7 +2566,7 @@ window.UnwindI18n = (function () {
     if (PT[s]) return PT[s];
     var m = s.match(/^(Level|Hard|Timed|Winter|Spring|Summer|Autumn|Open Waters|Open Water) (\d+)$/);
     var bm = s.match(/^Board (\d+) of (\d)$/); if (bm) return 'Tabuleiro ' + bm[1] + ' de ' + bm[2];
-    var sm = s.match(/^(Matchday|Woodland) (\d+)$/); if (sm) return (sm[1] === 'Matchday' ? 'Dia de Jogo ' : 'Bosque ') + sm[2];
+    var sm = s.match(/^(Matchday|Fowl Play) (\d+)$/); if (sm) return (sm[1] === 'Matchday' ? 'Dia de Jogo ' : 'Penas Eriçadas ') + sm[2];
     if (m) return NAMED[m[1]] + ' ' + m[2];
     if ((m = s.match(/^(\d+) effects$/))) return m[1] + ' efeitos';
     if ((m = s.match(/^Best (.+)$/))) return 'Recorde ' + m[1];
@@ -3107,7 +3107,7 @@ window.UnwindI18n = (function () {
   }
   function coopName(b) { return (coop && coop.room.names || COOP_NAMES)[b] || COOP_NAMES[b]; }
   function coopWhere(i) { return (coop.room.title || 'Co-op test') + (coop.n > 1 ? ' · Board ' + (i + 1) + ' of ' + coop.n : '') + (coop.room.kind ? '' : ' · ' + coopName(i)); }
-  // Where a board sits: a 2 x 2 grid, or a single row for Matchday, Woodland and The Poem.
+  // Where a board sits: a 2 x 2 grid, or a single row for Matchday, Fowl Play and The Poem.
   function coopPos(i) { return coop && coop.room.layout === 'row' ? { c: i, r: 0 } : { c: i & 1, r: i >> 1 }; }
   function coopBoardCaption(i) {
     var B = coop.boards[i];
@@ -3133,16 +3133,16 @@ window.UnwindI18n = (function () {
     { set: 'match', title: 'Matchday 3', special: 'fb3', caption: 'Five boards. Sometimes the way forward starts by going back.' },
     { set: 'match', title: 'Matchday 4', special: 'fb4', caption: 'Bigger pitches. The ball starts in attack, but the way to goal begins back in midfield.' },
     { set: 'match', title: 'Matchday 5', special: 'fb5', caption: 'Five big boards. Switch lanes twice, and mind your own goal.' },
-    { set: 'wood', title: 'Woodland 1', special: 'sl1', caption: 'Push the bird onto the slingshot, then throw it at the wooden wall.' },
-    { set: 'wood', title: 'Woodland 2', special: 'sl2', caption: 'A thrown bird breaks the first arrow it hits. Birds can slide to other boards.' },
-    { set: 'wood', title: 'Woodland 3', special: 'sl3', caption: 'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.' },
-    { set: 'wood', title: 'Woodland 4', special: 'sl4', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
-    { set: 'wood', title: 'Woodland 5', special: 'sl5', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
-    { set: 'wood', title: 'Woodland 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' }
+    { set: 'wood', title: 'Fowl Play 1', special: 'sl1', caption: 'Push the bird onto the slingshot, then throw it at the wooden wall.' },
+    { set: 'wood', title: 'Fowl Play 2', special: 'sl2', caption: 'A thrown bird breaks the first arrow it hits. Birds can slide to other boards.' },
+    { set: 'wood', title: 'Fowl Play 3', special: 'sl3', caption: 'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.' },
+    { set: 'wood', title: 'Fowl Play 4', special: 'sl4', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
+    { set: 'wood', title: 'Fowl Play 5', special: 'sl5', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
+    { set: 'wood', title: 'Fowl Play 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
-    ['wood', 'Woodland', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.']];
+    ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
@@ -3165,7 +3165,7 @@ window.UnwindI18n = (function () {
     });
   }
 
-  /* ---------- Boarding Up specials: Matchday (a football), Woodland (birds and a slingshot) and The Poem ---------- */
+  /* ---------- Boarding Up specials: Matchday (a football), Fowl Play (birds and a slingshot) and The Poem ---------- */
   // Moving balls, birds and letters are drawn from these, so a prop slides along its real path, board by board.
   var propAnims = [], specialFx = [], aim = null, specialBusy = 0, trips = [], poemUndo = [], ballHiddenUntil = 0;
   function special() { return current && current.level && current.level.special ? current.level.special : ''; }
@@ -3741,7 +3741,7 @@ window.UnwindI18n = (function () {
       specialFxAdd({ kind: 'doomed', b: r.destroyed.b, pts: m.cells.concat([[E.headOf(m)[0] + E.DX[m.dir] * 2, E.headOf(m)[1] + E.DY[m.dir] * 2]]), len: lengthOf(m), color: arrowColor(m), trip: trip, start: now, dur: 1e9 });
     }
   }
-  // Anything left to do? Matchday and Woodland look at every board. A poem line is lost as soon as it can no
+  // Anything left to do? Matchday and Fowl Play look at every board. A poem line is lost as soon as it can no
   // longer be finished.
   function specialCheck() {
     if (ended || !current) return;
@@ -4626,7 +4626,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-f';
+  var BUILD = '2026.11.25-g';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -7453,7 +7453,7 @@ window.UnwindI18n = (function () {
       var k = coop.room.kind, here = {};
       coop.boards.forEach(function (B) { mechanicsOf(B.level).forEach(function (m) { here[m] = 1; }); });
       if (k === 'football') delete here.red;
-      // Birds break arrows from Woodland 1, but its demo waits for level 2 so the first level is not too much at once.
+      // Birds break arrows from Fowl Play 1, but its demo waits for level 2 so the first level is not too much at once.
       var first = k === 'football' ? ['football'] : ['sling'].concat(coop.room.key !== 'sl1' ? ['birdbreak'] : []);
       if (k === 'sling' && coop.boards.some(function (B) { return B.level.nests && B.level.nests.length; })) first.push('nest');
       return first.concat(Object.keys(here));
@@ -7679,7 +7679,7 @@ window.UnwindI18n = (function () {
     requestAnimationFrame(loop);
     return function () { alive = false; };
   }
-  /* Demos for Matchday, Woodland and The Poem: small boards played by the real rules, with props that move. */
+  /* Demos for Matchday, Fowl Play and The Poem: small boards played by the real rules, with props that move. */
   var PROP_DEMOS = {
     football: { title: 'Matchday', text: 'An arrow that hits the ball kicks it and stays. The ball rolls until something stops it, even onto the next board. Score in the goal on the RIGHT: the left one is yours, and an own goal or a ball off the pitch costs a life. Goalkeepers never move, and red cards that run out stay for good.',
       def: { kind: 'football', w: 4, h: 4, goal: [1, 2, 3], kick: { b: 0, x: 2, y: 1 }, lives: 9, boards: [[['0,1 1,1']], [['1,0 1,1']]] },
@@ -8130,7 +8130,7 @@ window.UnwindI18n = (function () {
     var sp = [
       { key: 'football', title: 'Matchday: the ball', text: 'An arrow that hits the ball kicks it and stays put. The ball rolls until something stops it, even across boards. Score on the right; the left goal is yours. Goalkeepers never move, and run-out red cards stay for good.',
         art: '<rect x="44" y="9" width="14" height="28" stroke="#e0574a" stroke-width="2.5"/>' + line('M4 23H22', ink) + head(28, 23, ink) + '<circle cx="38" cy="23" r="7" fill="#fff" stroke="#26262e" stroke-width="1.5"/><path d="M38 19.5l3 2.2-1.1 3.5h-3.8l-1.1-3.5Z" fill="#26262e"/>' },
-      { key: 'sling', title: 'Woodland: birds and the slingshot', text: 'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.',
+      { key: 'sling', title: 'Fowl Play: birds and the slingshot', text: 'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.',
         art: '<path d="M14 40V26L6 14M14 26l8-12" stroke="#6a4220" stroke-width="4" stroke-linecap="round"/><path d="M6 14Q14 22 22 14" stroke="#3a2c34" stroke-width="2"/><rect x="44" y="6" width="5" height="34" rx="2" fill="' + wood + '"/><ellipse cx="32" cy="22" rx="7" ry="5.5" fill="#3d8bf2"/><circle cx="36" cy="18" r="4" fill="#3d8bf2"/><path d="M39.5 17.5l3 1-3 1Z" fill="#f5a524"/>' },
       { key: 'birdbreak', title: 'Birds that break arrows', text: 'A thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch. A bird pushed by an arrow breaks nothing.',
         art: line('M30 23H50', ink) + head(56, 23, ink) + '<ellipse cx="16" cy="23" rx="7" ry="5.5" fill="#f2b035"/><circle cx="20" cy="19" r="4" fill="#f2b035"/><path d="M23.5 18.5l3 1-3 1Z" fill="#f5a524"/><path d="M28 14l4 5M28 32l4-5M26 23h5" stroke="#d4161f" stroke-width="2"/>' },

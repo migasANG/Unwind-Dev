@@ -202,7 +202,7 @@ if (require.main === module && process.argv[2] === 'po') {
   }
 }
 
-// ---------- Woodland boards ----------
+// ---------- Fowl Play boards ----------
 function randSling(nb, seed, w, h) {
   const r = E.rng32(seed), boards = [];
   let birdsTotal = 0;
