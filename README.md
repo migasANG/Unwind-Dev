@@ -13,6 +13,8 @@ The root `index.html` is the page GitHub Pages serves. It's a copy of `dist/inde
 - `src/index.template.html`: page and styles
 - `src/music.js`: music themes and the note synth
 - `src/levels.json`: the 48 generated levels
+- `src/guide.js`: Guiding Light rules and map generator (shared with the room server)
+- `src/guide-ui.js`: Guiding Light screen, inlined into `game.js` at build time
 
 ```
 node tools/make-levels.js   # regenerate and prove levels solvable, prints a report
@@ -20,6 +22,9 @@ node tools/test-rules.js    # rule tests, no browser needed
 node tools/build.js         # rebuild dist/
 ```
 `tools/test-browser.js <screenshot-folder>` plays all 48 levels with real clicks and measures the audio. It needs Playwright.
+
+## Guiding Light
+A two-player mode: one player keeps the lighthouse and shines its beam, the other sails a boat home through a dark sea by catching waves next to it. Maps are generated from a seed (Small 9x9, Medium 11x11, Large 15x15). Normal has rocks, whirlpools, barrels and sea serpents; Hard adds tall rocks that block the light, wind and sail, a lamp that works every other round and faster serpents. Play on one device (passing it between turns) or online, where the room server checks every move with `src/guide.js`.
 
 ## Analytics
 All events go through `track()` in `src/game.js` and are stored in the player's browser only. Add `#debug` to the address (or `?debug=1` on your own host) to see the level funnel and event log. Connect a real analytics service in that one function before measuring retention.

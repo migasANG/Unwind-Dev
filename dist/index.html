@@ -146,6 +146,54 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 .bubble.bang{animation:bang 15s ease-out infinite}.bubble.huh{animation:huh 15s ease-out infinite}
 @keyframes bang{0%,63.5%{opacity:0;transform:translate(16px,-84px) scale(.3)}65%{opacity:1;transform:translate(16px,-84px) scale(1.1)}66%,71%{opacity:1;transform:translate(16px,-84px) scale(1)}72.5%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
 @keyframes huh{0%,74%{opacity:0;transform:translate(16px,-84px) scale(.3)}75.5%{opacity:1;transform:translate(16px,-84px) scale(1.05)}76.5%,85%{opacity:1;transform:translate(16px,-84px) scale(1)}87%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
+/* Guiding Light: a dark sea, its own top bar and buttons. Sheets (tutorials, end card) open above it. */
+#guide{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;background:#060a1c;color:#eef0ff;font-family:var(--display)}
+#guide .g-top{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+#guide .g-close,#guide .g-help{flex:none;width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:1.3rem;line-height:1}
+#guide .g-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+#guide .g-title b{font-size:1.05rem;letter-spacing:.01em}
+#guide .g-role{font-size:.8rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#guide .g-stats{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:.8rem}
+#guide .g-round b{font-variant-numeric:tabular-nums}
+#guide .g-lives{display:flex;gap:3px}
+#guide .g-lives svg{width:15px;height:14px;fill:#ff7a93}
+#guide .g-stage{position:relative;flex:1;min-height:0}
+#guide canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#guide .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:6px;padding:6px 10px 6px 12px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.8rem;font-weight:600}
+#guide .g-windarrow{width:22px;height:22px;transition:transform .6s ease}
+#guide .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:6px 12px;border-radius:14px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.75rem}
+#guide .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
+#guide .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+#guide .g-toast.on{animation:gToast 2.8s ease both}
+@keyframes gToast{0%{opacity:0;transform:translate(-50%,-8px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-4px)}}
+#guide .g-cover{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#16204a,#060a1c 70%);padding:24px}
+#guide .g-pass{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
+#guide .g-pass h2{margin:0;font-size:1.5rem}
+#guide .g-pass p{margin:0;opacity:.85;line-height:1.45}
+#guide .g-pass .primary{width:auto;min-width:200px;padding:0 28px;background:#ffe9a8;color:#2a2550;margin-top:8px}
+body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #boardMap{display:none!important}
+#guide .g-passicon svg{height:110px;width:auto}
+#guide .g-bottom{padding:8px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:8px;min-height:96px}
+#guide .g-msg{margin:0;text-align:center;font-size:.95rem;opacity:.9;text-wrap:balance}
+#guide .g-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#guide .g-btns button{height:44px;padding:0 18px;border-radius:22px;background:rgba(238,240,255,.12);color:#eef0ff;font-weight:600;font-size:.95rem}
+#guide .g-btns button.primary{width:auto;min-width:150px;background:#ffe9a8;color:#2a2550;margin:0}
+#guide .g-btns button:disabled{opacity:.4}
+#guide .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
+#guide.hard .g-msg{min-height:1.3em}
+.g-end{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.g-end svg{height:96px;width:auto}
+.g-end .lsum{width:100%}
+.g-tutcv{display:block;width:100%;height:auto;aspect-ratio:560/300;border-radius:14px;margin:4px 0 6px;background:#0a1029}
+.g-tutnav{display:flex;align-items:center;gap:10px;margin-top:6px}
+.g-tutnav span{flex:1;opacity:.6;font-size:.85rem;white-space:nowrap}
+.g-tutnav .primary{width:auto;min-width:120px;margin:0;padding:0 18px}
+.g-tutnav .secondary{padding:0 16px}
+.lroles .lroleicon svg{height:46px;width:auto;display:block;margin:0 auto 4px}
+.lroles button{display:flex;flex-direction:column;align-items:center;gap:2px}
+.oguide{background:linear-gradient(135deg,#1c2552,#2b3c74)!important;color:#fff6f0!important}
+.oguide span{color:#e8e2ff!important;opacity:.9}
+
 .sweep{animation:sweep 9s ease-in-out infinite alternate;transform-origin:50% 50%}
 @keyframes sweep{from{transform:rotate(-13deg)}to{transform:rotate(5deg)}}
 .glowpulse{animation:glowpulse 3s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 50%}
@@ -291,6 +339,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .lview{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8125rem;font-weight:600}
 .lview .sizes,.lseg{grid-template-columns:repeat(2,1fr)}
 .lseg:has(button:nth-child(4)){grid-template-columns:repeat(4,1fr)}
+.lseg:has(button:nth-child(3)):not(:has(button:nth-child(4))){grid-template-columns:repeat(3,1fr)}
 .card.pausecard{gap:12px}
 .card.pausecard>*{flex:none}
 .mpx{border-top:1.5px solid color-mix(in srgb,currentColor 18%,transparent);padding-top:12px;flex:none}
@@ -502,6 +551,16 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 <div id="intro" hidden aria-label="Intro"><canvas></canvas><button id="introSkip" type="button">Skip</button></div>
 <div id="loading" hidden role="status" aria-live="polite"><div><i></i><p>Loading boards…</p></div></div>
 <div id="coopNav" hidden></div>
+<div id="guide" hidden>
+  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light</b><span class="g-role"></span></div><div class="g-stats"><span class="g-round"><span>Round</span> <b class="notr">1</b></span><span class="g-lives"></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
+  <div class="g-stage"><canvas></canvas>
+    <div class="g-wind" hidden><span>Wind</span><svg class="g-windarrow" viewBox="-12 -12 24 24" aria-hidden="true"><path d="M0 9 V-7 M-6 -2 L0 -9 L6 -2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <button class="g-peek" type="button" hidden aria-pressed="false">Show all</button>
+    <div class="g-toast" role="status"></div>
+    <div class="g-cover" hidden></div>
+  </div>
+  <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
+</div>
 <div id="boardMap" class="notr" role="img" hidden></div>
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
 <div id="caption" class="ui"></div>
@@ -2352,10 +2411,504 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   return { patternBars: patternBars, patternSeconds: patternSeconds, redCardSound: redCardSound, igniteSound: igniteSound, springSound: springSound, windSound: windSound, freezeSound: freezeSound, crackSound: crackSound, fireSound: fireSound, buzzSound: buzzSound, VICTORIES: VICTORIES, timeUp: timeUp, tick: tick, victory: victory, THEMES: THEMES, hz: hz, note: note, scheduleBar: scheduleBar, introPiece: introPiece };
 });
 </script>
-<script>// Portuguese (Portugal) for everything on screen. The game is written in English, and any text that
+<script>/*
+ * Guiding Light: a two-player mode for Unwind. One player keeps the lighthouse, the other sails the boat,
+ * and the sea is dark for both. The keeper turns the beam to show the way and to hold back the sea serpents;
+ * the captain catches waves next to the boat to sail it home to the lighthouse in the middle of the map.
+ *
+ * This file holds only the rules, with no drawing. The game and the room server both use it, and everything
+ * random comes from the game's seed, so every phone and the server always agree.
+ *
+ * A round: the keeper shines the beam (on Hard the lamp only works every other round), then the captain acts
+ * (flare, sail, then catch a wave or wait), then the serpents move, then the waves change.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.UnwindGuide = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  // Directions run clockwise: 0 up, 1 right, 2 down, 3 left.
+  var DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+  var WATER = 0, ROCK = 1, BIG = 2, WHIRL = 3, LIGHT = 4;
+  var SIZES = [9, 11, 15], SIZE_NAMES = ['Small', 'Medium', 'Large'];
+  var BEAM_STEPS = 16, BEAM_HALF = 15 * Math.PI / 180, BEAM_CORE = 0.75;
+  var MAX_LIVES = 5;
+
+  function mulberry(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  // A separate stream of random numbers for each purpose and round, so replaying always gives the same sea.
+  function rngFor(seed, round, salt) {
+    var h = (seed | 0) ^ Math.imul(round + 1, 0x9E3779B1) ^ Math.imul(salt + 7, 0x85EBCA77);
+    h = Math.imul(h ^ h >>> 16, 0x7FEB352D); h = Math.imul(h ^ h >>> 15, 0x846CA68B); h ^= h >>> 16;
+    return mulberry(h);
+  }
+  var SALT = { map: 1, waves: 2, wind: 3, whirl: 4, serpent: 5, respawn: 6 };
+
+  function inside(G, x, y) { return x >= 0 && y >= 0 && x < G.n && y < G.n; }
+  function cell(G, x, y) { return inside(G, x, y) ? G.grid[y * G.n + x] : -1; }
+  function cheb(ax, ay, bx, by) { return Math.max(Math.abs(ax - bx), Math.abs(ay - by)); }
+  function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return i; return -1; }
+  function barrelAt(G, x, y) { for (var i = 0; i < G.barrels.length; i++) if (!G.barrels[i].taken && G.barrels[i].x === x && G.barrels[i].y === y) return i; return -1; }
+  function sailable(t) { return t === WATER || t === WHIRL; }
+
+  /* ---------- The map ---------- */
+  // Tiles reachable from (x, y) by sailing, ignoring waves (the captain can always wait for the right wave).
+  function distances(G, sx, sy) {
+    var n = G.n, d = new Array(n * n), q = [sx, sy], h = 0;
+    for (var i = 0; i < d.length; i++) d[i] = -1;
+    d[sy * n + sx] = 0;
+    while (h < q.length) {
+      var x = q[h++], y = q[h++];
+      for (var k = 0; k < 4; k++) {
+        var nx = x + DX[k], ny = y + DY[k];
+        if (!inside(G, nx, ny) || d[ny * n + nx] >= 0 || !sailable(G.grid[ny * n + nx])) continue;
+        d[ny * n + nx] = d[y * n + x] + 1; q.push(nx, ny);
+      }
+    }
+    return d;
+  }
+  function dockDistance(G, d) {
+    var best = -1;
+    for (var y = G.c - 1; y <= G.c + 1; y++) for (var x = G.c - 1; x <= G.c + 1; x++) {
+      var v = d[y * G.n + x];
+      if (v >= 0 && (best < 0 || v < best)) best = v;
+    }
+    return best;
+  }
+  function tryMap(seed, size, hard, attempt) {
+    var r = rngFor(seed, attempt, SALT.map), n = SIZES[size] || 11, c = n >> 1, area = n * n;
+    var G = { n: n, c: c, grid: [], barrels: [], serpents: [] };
+    for (var i = 0; i < area; i++) G.grid.push(WATER);
+    G.grid[c * n + c] = LIGHT;
+    var nearLight = function (x, y) { return cheb(x, y, c, c) <= 1; };
+    var free = function (x, y) { return inside(G, x, y) && G.grid[y * n + x] === WATER && !nearLight(x, y); };
+    // Rocks come in small clusters, so the sea has channels and dead ends instead of an even sprinkle.
+    var place = function (type, total, grow, keep) {
+      var placed = 0, tries = 0;
+      while (placed < total && tries++ < total * 30) {
+        var x = Math.floor(r() * n), y = Math.floor(r() * n);
+        if (!free(x, y) || cheb(x, y, c, c) <= (keep || 0)) continue;
+        G.grid[y * n + x] = type; placed++;
+        var len = Math.floor(r() * (grow + 1));
+        for (var g = 0; g < len && placed < total; g++) {
+          var k = Math.floor(r() * 4); x += DX[k]; y += DY[k];
+          if (!free(x, y) || cheb(x, y, c, c) <= (keep || 0)) break;
+          G.grid[y * n + x] = type; placed++;
+        }
+      }
+    };
+    place(ROCK, Math.round(area * (hard ? 0.13 : 0.15)), 2);
+    // Tall rocks stay a little away from the lighthouse, so they shade parts of the sea instead of whole sides of it.
+    if (hard) place(BIG, Math.round(area * 0.06), 2, 2);
+    place(WHIRL, Math.max(2, Math.round(area / 38)), 0);
+    // The boat starts far out, near the edge of the map.
+    var starts = [];
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (G.grid[y * n + x] === WATER && cheb(x, y, c, c) >= c - 1) starts.push([x, y]);
+    if (!starts.length) return null;
+    var s = starts[Math.floor(r() * starts.length)];
+    G.boat = { x: s[0], y: s[1] };
+    var d = distances(G, s[0], s[1]), dock = dockDistance(G, d);
+    var straight = Math.max(0, Math.abs(s[0] - c) + Math.abs(s[1] - c) - 1);
+    // There has to be a way home, and it should bend: rocks in the way make the couple plan a route.
+    if (dock < 0 || dock < straight + (size === 0 ? 1 : 2)) return null;
+    // Most of the sea must be reachable, so barrels and serpents are not lost in sealed pockets.
+    var reach = 0, water = 0;
+    for (i = 0; i < area; i++) { if (sailable(G.grid[i])) { water++; if (d[i] >= 0) reach++; } }
+    if (reach < water * 0.8) return null;
+    var reachable = function (x, y) { return d[y * n + x] >= 0 && G.grid[y * n + x] === WATER && !nearLight(x, y) && !(x === s[0] && y === s[1]); };
+    var spots = [];
+    for (y = 0; y < n; y++) for (x = 0; x < n; x++) if (reachable(x, y)) spots.push([x, y]);
+    var take = function (ok) {
+      for (var t = 0; t < 200 && spots.length; t++) {
+        var k = Math.floor(r() * spots.length), p = spots[k];
+        if (ok(p[0], p[1])) { spots.splice(k, 1); return p; }
+      }
+      return null;
+    };
+    var nBarrels = Math.max(2, Math.round(area / 40));
+    for (i = 0; i < nBarrels; i++) {
+      var b = take(function () { return true; });
+      if (b) G.barrels.push({ x: b[0], y: b[1], kind: r() < 0.5 ? 'life' : 'flare', taken: false });
+    }
+    var nSerpents = [1, 2, 3][size] || 2;
+    for (i = 0; i < nSerpents; i++) {
+      var p = take(function (x, y) { return cheb(x, y, s[0], s[1]) >= 4; });
+      if (p) G.serpents.push({ x: p[0], y: p[1], frozen: false, id: i });
+    }
+    return G;
+  }
+
+  function create(seed, opts) {
+    opts = opts || {};
+    var size = opts.size === undefined ? 1 : opts.size | 0, hard = !!opts.hard, G = null;
+    for (var a = 0; a < 400 && !G; a++) G = tryMap(seed, size, hard, a);
+    if (!G) throw new Error('no map');
+    G.seed = seed | 0; G.size = size; G.hard = hard;
+    G.round = 0; G.lives = 3; G.flares = 1; G.sail = true;
+    G.beam = -1; G.lit = []; G.flare = false; G.flareUsed = false;
+    G.ended = null; G.moves = 0; G.hits = 0;
+    G.keeperSeen = {}; G.boatSeen = {};
+    G.phase = lampWorks(G) ? 'keeper' : 'boat';
+    G.wind = windFor(G);
+    G.waves = wavesFor(G);
+    rememberBoat(G);
+    return G;
+  }
+
+  /* ---------- Waves, wind and the lamp ---------- */
+  // Every round the sea changes: about two tiles in five carry a wave, each in a random direction.
+  function wavesFor(G) {
+    var r = rngFor(G.seed, G.round, SALT.waves), w = [];
+    for (var i = 0; i < G.n * G.n; i++) {
+      var on = G.grid[i] === WATER && r() < 0.42, d = Math.floor(r() * 4);
+      // No waves under barrels, so a barrel is always easy to see.
+      w.push(on && barrelAt(G, i % G.n, Math.floor(i / G.n)) < 0 ? d : -1);
+    }
+    return w;
+  }
+  // Hard only. The wind turns every six rounds.
+  function windFor(G) { return G.hard ? Math.floor(rngFor(G.seed, Math.floor(G.round / 6), SALT.wind)() * 4) : -1; }
+  // Hard only: the lamp is faulty and only works every other round.
+  function lampWorks(G) { return !G.hard || G.round % 2 === 0; }
+
+  /* ---------- Light and sight ---------- */
+  // Big rocks block the beam and the boat's view. Small rocks are low and do not.
+  function lineClear(G, ax, ay, bx, by) {
+    var steps = Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 3);
+    for (var i = 1; i < steps; i++) {
+      var t = i / steps, x = Math.round(ax + (bx - ax) * t), y = Math.round(ay + (by - ay) * t);
+      if ((x !== ax || y !== ay) && (x !== bx || y !== by) && cell(G, x, y) === BIG) return false;
+    }
+    return true;
+  }
+  // The beam reaches the whole way across the map: a narrow core with a soft widening cone around it.
+  function beamCells(G, dir) {
+    if (dir < 0) return [];
+    var a = dir * 2 * Math.PI / BEAM_STEPS, ux = Math.sin(a), uy = -Math.cos(a), out = [];
+    for (var y = 0; y < G.n; y++) for (var x = 0; x < G.n; x++) {
+      var dx = x - G.c, dy = y - G.c;
+      if (!dx && !dy) continue;
+      var along = dx * ux + dy * uy, across = Math.abs(dx * uy - dy * ux);
+      if (along <= 0.2) continue;
+      var ang = Math.atan2(across, along);
+      if ((ang <= BEAM_HALF || across <= BEAM_CORE) && lineClear(G, G.c, G.c, x, y)) out.push(y * G.n + x);
+    }
+    return out;
+  }
+  function isLit(G, x, y) { return G.lit.indexOf(y * G.n + x) >= 0; }
+  // What the captain sees: the tiles around the boat (two around with a flare), and the whole beam when it
+  // touches the boat or a tile next to it.
+  function boatView(G) {
+    var seen = {}, R = G.flare ? 2 : 1, bx = G.boat.x, by = G.boat.y, touched = false;
+    for (var y = by - R; y <= by + R; y++) for (var x = bx - R; x <= bx + R; x++) {
+      if (!inside(G, x, y)) continue;
+      if (R > 1 && cheb(x, y, bx, by) > 1 && !lineClear(G, bx, by, x, y)) continue;
+      seen[y * G.n + x] = 1;
+      if (cheb(x, y, bx, by) <= 1 && isLit(G, x, y)) touched = true;
+    }
+    if (touched) G.lit.forEach(function (i) { seen[i] = 1; });
+    return { cells: seen, touched: touched };
+  }
+  function keeperView(G) {
+    var seen = {};
+    G.lit.forEach(function (i) { seen[i] = 1; });
+    return { cells: seen, boat: isLit(G, G.boat.x, G.boat.y) };
+  }
+  function rememberBoat(G) { var v = boatView(G).cells; for (var k in v) G.boatSeen[k] = 1; }
+
+  /* ---------- Actions ---------- */
+  // Waves the captain can catch: on the boat's tile or any of the eight around it.
+  function catchable(G) {
+    var out = [];
+    for (var y = G.boat.y - 1; y <= G.boat.y + 1; y++) for (var x = G.boat.x - 1; x <= G.boat.x + 1; x++) {
+      if (!inside(G, x, y)) continue;
+      var w = G.waves[y * G.n + x];
+      if (w >= 0) out.push({ x: x, y: y, dir: w });
+    }
+    return out;
+  }
+  // How far a wave carries the boat: one tile, or on Hard two with the wind behind a raised sail and none against it.
+  function stepsFor(G, dir) {
+    if (!G.hard || !G.sail || G.wind < 0) return 1;
+    if (dir === G.wind) return 2;
+    if (dir === (G.wind + 2) % 4) return 0;
+    return 1;
+  }
+  function hurt(G, log, why, x, y) {
+    G.lives--; G.hits++;
+    log.hits.push({ why: why, x: x, y: y, lives: G.lives });
+    if (G.lives <= 0) G.ended = 'lost';
+  }
+  // A serpent that touches the boat dives and comes up again somewhere far away in the dark.
+  function respawnSerpent(G, s, log) {
+    var r = rngFor(G.seed, G.round * 31 + s.id, SALT.respawn), best = null;
+    for (var t = 0; t < 120; t++) {
+      var x = Math.floor(r() * G.n), y = Math.floor(r() * G.n);
+      if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.c, G.c) <= 1 || serpentAt(G, x, y) >= 0 || barrelAt(G, x, y) >= 0) continue;
+      if (cheb(x, y, G.boat.x, G.boat.y) >= 5) { best = [x, y]; break; }
+      if (!best) best = [x, y];
+    }
+    log.dives.push({ id: s.id, from: [s.x, s.y], to: best });
+    if (best) { s.x = best[0]; s.y = best[1]; }
+  }
+  function sailBoat(G, dir, log) {
+    var steps = stepsFor(G, dir), start = [G.boat.x, G.boat.y], path = [start.slice()], whirls = 0;
+    var r = rngFor(G.seed, G.round, SALT.whirl);
+    log.dir = dir; log.steps = steps;
+    while (steps > 0) {
+      var nx = G.boat.x + DX[dir], ny = G.boat.y + DY[dir], t = cell(G, nx, ny);
+      if (t < 0) {
+        // Off the edge of the map: the boat drifts out, a life is lost, and the sea washes it back.
+        path.push([nx, ny]);
+        hurt(G, log, 'edge', nx, ny);
+        G.boat.x = start[0]; G.boat.y = start[1];
+        log.washBack = start.slice();
+        break;
+      }
+      if (t === ROCK || t === BIG || t === LIGHT) { log.blocked = [nx, ny]; break; }
+      var si = serpentAt(G, nx, ny);
+      if (si >= 0) {
+        hurt(G, log, 'serpent', nx, ny);
+        log.bump = [nx, ny];
+        respawnSerpent(G, G.serpents[si], log);
+        break;
+      }
+      G.boat.x = nx; G.boat.y = ny; path.push([nx, ny]); steps--;
+      var bi = barrelAt(G, nx, ny);
+      if (bi >= 0) {
+        var b = G.barrels[bi]; b.taken = true;
+        if (b.kind === 'life') G.lives = Math.min(MAX_LIVES, G.lives + 1); else G.flares++;
+        log.barrels.push({ x: nx, y: ny, kind: b.kind });
+      }
+      // A whirlpool spins the boat and flings it one more tile in a random direction.
+      if (t === WHIRL && whirls < 6) {
+        whirls++;
+        dir = Math.floor(r() * 4);
+        log.whirls.push({ x: nx, y: ny, dir: dir });
+        steps = Math.max(steps, 1);
+      }
+    }
+    log.path = path;
+  }
+  function moveSerpents(G, log) {
+    var r = rngFor(G.seed, G.round, SALT.serpent), reach = G.hard ? 2 : 1;
+    G.serpents.forEach(function (s) {
+      if (s.frozen || G.ended) return;
+      var opts = [];
+      for (var k = 0; k < 4; k++) { var x = s.x + DX[k], y = s.y + DY[k]; if (sailable(cell(G, x, y)) && cheb(x, y, G.c, G.c) > 1) opts.push(k); }
+      if (!opts.length) return;
+      var dir = opts[Math.floor(r() * opts.length)], path = [[s.x, s.y]];
+      // On Hard serpents move two tiles, always in a straight line.
+      for (var i = 0; i < reach; i++) {
+        var nx = s.x + DX[dir], ny = s.y + DY[dir];
+        if (!sailable(cell(G, nx, ny)) || cheb(nx, ny, G.c, G.c) <= 1 || serpentAt(G, nx, ny) >= 0) break;
+        s.x = nx; s.y = ny; path.push([nx, ny]);
+        if (nx === G.boat.x && ny === G.boat.y) {
+          log.serpents.push({ id: s.id, path: path });
+          hurt(G, log, 'serpent', nx, ny);
+          respawnSerpent(G, s, log);
+          return;
+        }
+      }
+      log.serpents.push({ id: s.id, path: path });
+    });
+  }
+  function docked(G) { return cheb(G.boat.x, G.boat.y, G.c, G.c) === 1; }
+  function endRound(G, log) {
+    G.round++;
+    G.flare = false; G.flareUsed = false;
+    G.serpents.forEach(function (s) { s.frozen = false; });
+    G.lit = []; G.beam = -1;
+    G.wind = windFor(G);
+    G.waves = wavesFor(G);
+    G.phase = lampWorks(G) ? 'keeper' : 'boat';
+    log.round = G.round;
+    rememberBoat(G);
+  }
+
+  // Applies one action. role is 'keeper' or 'boat'. Returns { ok, log } or { ok: false, why }.
+  function apply(G, role, act) {
+    if (G.ended) return { ok: false, why: 'ended' };
+    if (!act || typeof act.a !== 'string') return { ok: false, why: 'bad' };
+    var log = { a: act.a, role: role, hits: [], barrels: [], whirls: [], dives: [], serpents: [] };
+    if (act.a === 'beam') {
+      if (role !== 'keeper' || G.phase !== 'keeper') return { ok: false, why: 'turn' };
+      var d = act.dir | 0;
+      if (d < 0 || d >= BEAM_STEPS) return { ok: false, why: 'bad' };
+      G.beam = d; G.lit = beamCells(G, d);
+      G.lit.forEach(function (i) { G.keeperSeen[i] = 1; });
+      // Serpents caught in the light dive and stay still this round; bubbles show where they are.
+      G.serpents.forEach(function (s) { s.frozen = isLit(G, s.x, s.y); });
+      G.phase = 'boat';
+      rememberBoat(G);
+      log.lit = G.lit.slice();
+      return { ok: true, log: log };
+    }
+    if (role !== 'boat' || G.phase !== 'boat') return { ok: false, why: 'turn' };
+    if (act.a === 'flare') {
+      if (G.flareUsed || G.flares <= 0) return { ok: false, why: 'noflare' };
+      G.flares--; G.flare = true; G.flareUsed = true;
+      rememberBoat(G);
+      return { ok: true, log: log };
+    }
+    if (act.a === 'sail') {
+      if (!G.hard) return { ok: false, why: 'bad' };
+      G.sail = !!act.up;
+      return { ok: true, log: log };
+    }
+    if (act.a === 'move' || act.a === 'wait') {
+      if (act.a === 'move') {
+        var x = act.x | 0, y = act.y | 0;
+        if (cheb(x, y, G.boat.x, G.boat.y) > 1 || !inside(G, x, y)) return { ok: false, why: 'far' };
+        var w = G.waves[y * G.n + x];
+        if (w < 0) return { ok: false, why: 'nowave' };
+        sailBoat(G, w, log);
+        G.moves++;
+      }
+      if (!G.ended && docked(G)) G.ended = 'won';
+      if (!G.ended) moveSerpents(G, log);
+      if (!G.ended) endRound(G, log);
+      return { ok: true, log: log };
+    }
+    return { ok: false, why: 'bad' };
+  }
+
+  // Rebuilds a game from its seed and the list of actions so far.
+  function replay(seed, opts, actions) {
+    var G = create(seed, opts);
+    (actions || []).forEach(function (x) { apply(G, x.role, x.act); });
+    return G;
+  }
+
+  return {
+    create: create, apply: apply, replay: replay, beamCells: beamCells, boatView: boatView, keeperView: keeperView,
+    catchable: catchable, stepsFor: stepsFor, lampWorks: lampWorks, isLit: isLit, serpentAt: serpentAt, barrelAt: barrelAt,
+    cell: cell, inside: inside, cheb: cheb, distances: distances,
+    DX: DX, DY: DY, WATER: WATER, ROCK: ROCK, BIG: BIG, WHIRL: WHIRL, LIGHT: LIGHT,
+    SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, BEAM_STEPS: BEAM_STEPS
+  };
+});
+
+// Portuguese (Portugal) for everything on screen. The game is written in English, and any text that
 // reaches the page is swapped here, so a new sentence only needs a new line in this list.
 window.UnwindI18n = (function () {
   var PT = {
+    'Guiding Light': 'Luz Guia',
+    'Guiding Light room': 'Sala Luz Guia',
+    'Lighthouse keeper': 'Faroleiro',
+    'Boat captain': 'Capitão do barco',
+    'You keep the lighthouse': 'Tu és o faroleiro',
+    'You sail the boat': 'Tu guias o barco',
+    'Round': 'Ronda',
+    'Show all': 'Mostrar tudo',
+    'Home safe!': 'Em casa, a salvo!',
+    'Lost at sea…': 'Perdido no mar…',
+    'Lost at sea': 'Perdido no mar',
+    'Shine the light this way?': 'Apontar a luz para aqui?',
+    'Tap the sea to aim the light.': 'Toca no mar para apontar a luz.',
+    'Shine': 'Iluminar',
+    'The keeper is aiming the light…': 'O faroleiro está a apontar a luz…',
+    'Tap a wave next to the boat to ride it.': 'Toca numa onda junto ao barco para a apanhar.',
+    'No waves next to the boat. Wait for the sea to change.': 'Não há ondas junto ao barco. Espera que o mar mude.',
+    'Wait': 'Esperar',
+    'Flare': 'Sinalizador',
+    'Sail up': 'Vela içada',
+    'Sail down': 'Vela recolhida',
+    'The lamp is cooling down. The captain sails…': 'A lâmpada está a arrefecer. O capitão navega…',
+    'The captain is sailing…': 'O capitão está a navegar…',
+    'The lamp is cooling down. Captain, sail on.': 'A lâmpada está a arrefecer. Capitão, continua a navegar.',
+    'Your turn: shine the light.': 'A tua vez: ilumina o mar.',
+    'The lamp is cooling down. Sail on.': 'A lâmpada está a arrefecer. Continua a navegar.',
+    'Your turn: catch a wave.': 'A tua vez: apanha uma onda.',
+    '+1 life': '+1 vida',
+    '+1 flare': '+1 sinalizador',
+    '-1 life': '-1 vida',
+    'The keeper goes first. Pass the device to the keeper, and no peeking, captain!': 'O faroleiro começa. Passa o dispositivo ao faroleiro, e nada de espreitar, capitão!',
+    'Pass the device to the keeper. No peeking, captain!': 'Passa o dispositivo ao faroleiro. Nada de espreitar, capitão!',
+    'Pass the device to the captain. No peeking, keeper!': 'Passa o dispositivo ao capitão. Nada de espreitar, faroleiro!',
+    'I\'m the keeper': 'Sou o faroleiro',
+    'I\'m the captain': 'Sou o capitão',
+    'The boat reached the lighthouse.': 'O barco chegou ao farol.',
+    'The boat ran out of lives in the dark.': 'O barco ficou sem vidas no escuro.',
+    'Rounds': 'Rondas',
+    'Lives left': 'Vidas restantes',
+    'Map': 'Mapa',
+    'Small': 'Pequeno',
+    'Medium': 'Médio',
+    'Large': 'Grande',
+    'New map': 'Novo mapa',
+    'Back to the menu': 'Voltar ao menu',
+    'Back to the room': 'Voltar à sala',
+    'Waiting for your partner…': 'À espera do teu parceiro…',
+    'Leave this game?': 'Sair deste jogo?',
+    'Your partner will be left alone at sea.': 'O teu parceiro fica sozinho no mar.',
+    'This map will be lost.': 'Este mapa vai perder-se.',
+    'Keep playing': 'Continuar a jogar',
+    'Leave': 'Sair',
+    'Leave the game': 'Sair do jogo',
+    'How to play': 'Como jogar',
+    'A game for two. One of you keeps the lighthouse, the other sails a little boat home through a dark, foggy sea. The keeper\'s beam is the only light out there.': 'Um jogo para dois. Um de vocês é o faroleiro, o outro leva um pequeno barco para casa por um mar escuro e cheio de nevoeiro. A luz do farol é a única que há lá fora.',
+    'A new map is made every game': 'Cada jogo tem um mapa novo',
+    'Tall rocks, wind and sail, a faulty lamp and faster serpents': 'Rochas altas, vento e vela, uma lâmpada avariada e serpentes mais rápidas',
+    'Rocks, whirlpools, barrels and serpents': 'Rochas, remoinhos, barris e serpentes',
+    'Each of you on your own phone. Host a room and send your partner the code.': 'Cada um no seu telemóvel. Cria uma sala e envia o código ao teu parceiro.',
+    'Play on one device': 'Jogar num só dispositivo',
+    'Pass the phone between turns. No peeking!': 'Passem o telemóvel entre turnos. Nada de espreitar!',
+    'The keeper': 'O faroleiro',
+    'Shine the light, find the boat, hold back the serpents.': 'Ilumina o mar, encontra o barco, trava as serpentes.',
+    'The captain': 'O capitão',
+    'Catch waves, dodge danger, sail home.': 'Apanha ondas, foge do perigo, navega até casa.',
+    'Hard mode': 'Modo difícil',
+    'Tall rocks, wind and sail, the faulty lamp.': 'Rochas altas, vento e vela, a lâmpada avariada.',
+    'The sea is dark and foggy. Your partner\'s boat is somewhere out there, and you cannot see it. Your job is to light the way so the boat can reach the lighthouse in the middle.': 'O mar está escuro e cheio de nevoeiro. O barco do teu parceiro anda por aí, e tu não o vês. A tua tarefa é iluminar o caminho para o barco chegar ao farol, no meio do mapa.',
+    'Aim and shine': 'Apontar e iluminar',
+    'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you.': 'Em cada turno, toca no mar para apontar o feixe e carrega em Iluminar. O feixe atravessa o mapa todo. Só vês o que ele ilumina.',
+    'Find the boat': 'Encontra o barco',
+    'You only see the boat when the beam is on it. When your light touches the boat or a tile next to it, the captain sees the whole lit path to the lighthouse.': 'Só vês o barco quando o feixe está em cima dele. Quando a tua luz toca no barco ou numa casa ao lado, o capitão vê todo o caminho iluminado até ao farol.',
+    'Hold back the serpents': 'Trava as serpentes',
+    'Sea serpents roam in the fog and bite the boat. A serpent caught in your light dives and cannot move this round. Bubbles show where it is.': 'As serpentes do mar andam pelo nevoeiro e mordem o barco. Uma serpente apanhada pela tua luz mergulha e não se mexe nesta ronda. As bolhas mostram onde está.',
+    'Light the way, or guard it?': 'Iluminar o caminho, ou guardá-lo?',
+    'Every turn is a choice: search for the boat, show it a safe path, or pin down a serpent that is getting close. Talk to each other!': 'Cada turno é uma escolha: procurar o barco, mostrar-lhe um caminho seguro, ou travar uma serpente que se aproxima. Falem um com o outro!',
+    'You only see the tiles around your boat. Somewhere in the dark is the lighthouse in the middle of the map. Stop next to it to win.': 'Só vês as casas à volta do teu barco. Algures no escuro está o farol, no meio do mapa. Pára ao lado dele para ganhar.',
+    'Catch a wave': 'Apanha uma onda',
+    'Tap a wave on or next to your boat: it carries the boat one tile its way. Waves change every round. If none goes your way, wait.': 'Toca numa onda por baixo ou ao lado do teu barco: ela leva o barco uma casa na sua direção. As ondas mudam em cada ronda. Se nenhuma for para onde queres, espera.',
+    'Follow the light': 'Segue a luz',
+    'When the keeper\'s beam touches you or a tile next to you, you see the whole lit path to the lighthouse.': 'Quando o feixe do faroleiro te toca a ti ou a uma casa ao teu lado, vês todo o caminho iluminado até ao farol.',
+    'Out on the water': 'No mar',
+    'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life, and serpents bite.': 'As rochas bloqueiam o caminho. Os remoinhos atiram-te numa direção ao acaso. Os barris têm uma vida extra ou um sinalizador extra. Sair pela borda do mapa custa uma vida, e as serpentes mordem.',
+    'Flares': 'Sinalizadores',
+    'A flare lets you see two tiles around you for this turn. Only you see it: the keeper does not.': 'Um sinalizador deixa-te ver duas casas à tua volta neste turno. Só tu o vês: o faroleiro não.',
+    'Tall rocks': 'Rochas altas',
+    'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light and the captain\'s view. Look around them.': 'No Difícil, há rochas altas no mar. Bloqueiam o barco, e também a luz e a vista do capitão. Contorna-as.',
+    'Wind and sail': 'Vento e vela',
+    'The wind is shown in the top left. With your sail up, a wave that goes with the wind carries you two tiles, and against the wind none. Side winds change nothing. Lower the sail to ignore the wind.': 'O vento aparece no canto superior esquerdo. Com a vela içada, uma onda a favor do vento leva-te duas casas, e contra o vento nenhuma. O vento de lado não muda nada. Recolhe a vela para ignorar o vento.',
+    'A faulty lamp': 'Uma lâmpada avariada',
+    'The lamp only works every other round. On the dark rounds the captain sails on alone. Serpents are faster too: they move two tiles in a straight line.': 'A lâmpada só funciona uma ronda sim, outra não. Nas rondas escuras o capitão navega sozinho. As serpentes também são mais rápidas: andam duas casas em linha reta.',
+    'Back': 'Voltar',
+    'Rock': 'Rocha',
+    'Whirlpool': 'Remoinho',
+    'Barrel': 'Barril',
+    'Serpent': 'Serpente',
+    'Sail up: 2 tiles': 'Vela içada: 2 casas',
+    'Sail down: 1 tile': 'Vela recolhida: 1 casa',
+    'Roles': 'Papéis',
+    'Roles · tap both to swap': 'Papéis · toca nos dois para trocar',
+    'Free': 'Livre',
+    'Game': 'Jogo',
+    'Co-op boards or Guiding Light': 'Tabuleiros cooperativos ou Luz Guia',
+    'Co-op boards': 'Tabuleiros cooperativos',
+    'Lives': 'Vidas',
+    'The boat reaches the lighthouse': 'O barco chega ao farol',
+    'It is not your turn yet.': 'Ainda não é a tua vez.',
+    'That move is not allowed.': 'Essa jogada não é permitida.',
+    'Your partner left': 'O teu parceiro saiu',
+    'A game for two: one keeps the lighthouse, the other sails home through the fog.': 'Um jogo para dois: um é o faroleiro, o outro navega até casa pelo nevoeiro.',
     'The lighthouse at night: slow, warm piano over the sea': 'O farol à noite: piano lento e quente sobre o mar',
     'Intro': 'Introdução',
     'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.': 'Um ninho! Um pássaro que deslize para lá fica a descansar. Para o pássaro no ninho e depois leva-o até à fisga.',
@@ -2538,7 +3091,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
-    [/^Hint (\d+)$/, 'Dica $1'], [/^Line 2 of (\d+): tap this message to go back to line 1\.$/, 'Verso 2 de $1: toca nesta mensagem para voltares ao verso 1.'], [/^Board (\d+) of (\d+)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
+    [/^Hint (\d+)$/, 'Dica $1'], [/^(\d+) lives$/, '$1 vidas'], [/^(Small|Medium|Large) · Hard$/, function (m, a) { return ({ Small: 'Pequeno', Medium: 'Médio', Large: 'Grande' })[a] + ' · Difícil'; }], [/^Play again \((\d+)\/(\d+)\)$/, 'Jogar outra vez ($1/$2)'], [/^(.+) left the game, so this sea is closed\. You can go back to the room or play again later\.$/, '$1 saiu do jogo, por isso este mar fechou. Podes voltar à sala ou jogar outra vez mais tarde.'], [/^Line 2 of (\d+): tap this message to go back to line 1\.$/, 'Verso 2 de $1: toca nesta mensagem para voltares ao verso 1.'], [/^Board (\d+) of (\d+)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
 [/^Players (\d) \/ (\d)$/, 'Jogadores $1 / $2'], [/^Waiting for (\d) players? to join$/, function (m, n) { return n === '1' ? 'À espera que entre 1 jogador' : 'À espera que entrem ' + n + ' jogadores'; }], [/^Waiting for (\d) players? to be ready$/, function (m, n) { return n === '1' ? 'À espera que 1 jogador fique pronto' : 'À espera que ' + n + ' jogadores fiquem prontos'; }], [/^Remove (.+)$/, 'Remover $1'],
 [/^Board (\d)$/, 'Tabuleiro $1'], [/^Only (.+) is still paused\. As the host, you can carry on without them\.$/, 'Só $1 ainda está em pausa. Como anfitrião, podes continuar sem essa pessoa.'], [/^Waiting for (.+) and (.+)…$/, 'À espera de $1 e $2…'],
 [/^(.+)'s room$/, 'Sala de $1'], [/^(\d) \/ (\d) players · (\d)x boards · (Hard|Normal)$/, function (m, a, b, c, d) { return a + ' / ' + b + ' jogadores · tabuleiros ' + c + 'x · ' + (d === 'Hard' ? 'Difícil' : 'Normal'); }],
@@ -2720,8 +3273,10 @@ window.UnwindI18n = (function () {
     }
     return ac;
   }
-  var introMusic = false;
+  var introMusic = false, guideTheme = false;
   function wantedTheme() {
+    // Guiding Light plays at night by the lighthouse.
+    if (guideTheme) return M.THEMES.map(function (t) { return t.id; }).indexOf('moonlit-coast');
     if (audioPrefs.theme !== 'auto') {
       var i = M.THEMES.map(function (t) { return t.id; }).indexOf(audioPrefs.theme);
       if (i >= 0) return i;
@@ -4556,6 +5111,7 @@ window.UnwindI18n = (function () {
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
         (load('unwind.lastRoom', '') ? '<button class="obig orejoin" id="oRejoin" hidden><b>Back to your game</b><span>Room ' + load('unwind.lastRoom', '') + ' is still going. Jump back onto your board.</span></button>' : '') +
         '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
+        '<button class="obig oguide" id="oGuide"><b>Guiding Light</b><span>A game for two: one keeps the lighthouse, the other sails home through the fog.</span></button>' +
         '<div class="chapter">Join a room</div>' +
         '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
@@ -4580,6 +5136,7 @@ window.UnwindI18n = (function () {
     nameIn.oninput = saveName;
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
     card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; hostOnline(this); };
+    card.querySelector('#oGuide').onclick = function () { saveName(); guideMenu(); };
     fetch(netBase() + '/').then(function (r) { return r.text(); }).then(function (t) { var v = t.match(/Version (\d+)/), el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server ' + (v ? 'version ' + v[1] : 'version 1–5') ; }).catch(function () { var el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server not reachable'; });
     var rj = card.querySelector('#oRejoin');
     if (rj) {
@@ -4626,7 +5183,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-g';
+  var BUILD = '2026.11.25-h';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4693,6 +5250,7 @@ window.UnwindI18n = (function () {
     L.seats = []; L.players.forEach(function (p) { if (p.seat >= 0) L.seats[p.seat] = p; });
     L.amHost = room.host === me; L.view = L.amHost ? 'host' : 'guest'; L.joined = !L.amHost;
     if (room.started) return;
+    if (guide && guide.online) { closeGuide(); if ($('sheetHost').firstChild) closeSheet(); fresh = true; }
     if (fresh || !$('lobbyCard')) sheet('<div id="lobbyCard"></div>', 'tall lobby');
     lobbySheet(true);
   }
@@ -4703,6 +5261,14 @@ window.UnwindI18n = (function () {
     if ($('sheetHost').firstChild) closeSheet();
     var S = m.settings, me = netPid(), names = [], you = 0;
     m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
+    if (S.mode === 'guide') {
+      if (lobby) lobby.timers.forEach(clearTimeout);
+      lobby = null; save('unwind.lastRoom', net.code);
+      // A reconnect during the same game keeps the board; the log fills in what was missed.
+      if (guide && guide.online && guide.seed === m.seed) return;
+      onGuideStart(m, you); guide.seed = m.seed; net.ready = true;
+      return;
+    }
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
     if (lobby) lobby.timers.forEach(clearTimeout);
     lobby = null;
@@ -4728,7 +5294,7 @@ window.UnwindI18n = (function () {
     openCoop(m.seed, false, spec);
   }
   /* ---------- Online game: every phone applies the server's events in the same order ---------- */
-  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1, go: 1, clock: 1 };
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1, go: 1, clock: 1, gact: 1 };
   var coopGo = true;
   // Every phone is ready: the loader lifts on all of them together, and a timed room starts its shared clock.
   function onlineGo(m) {
@@ -4747,6 +5313,7 @@ window.UnwindI18n = (function () {
   }
   var netApplying = false;
   function netGame(m) {
+    if (guide && guide.online) { onGuideEvent(m); return; }
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
     if (m.t === 'log') {
       var evs = m.events || [];
@@ -4893,9 +5460,9 @@ window.UnwindI18n = (function () {
     buzz(30);
   }
   function coopSyncLivesTo(n) { coop.lives = n; coop.boards.forEach(function (B) { if (B.state) B.state.lives = n; }); }
-  function hostOnline(btn) {
+  function hostOnline(btn, extra) {
     if (btn) { btn.disabled = true; btn.querySelector('b').textContent = 'Creating room…'; }
-    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 2 } }) })
+    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: Object.assign({ players: 2 }, extra || {}) }) })
       .then(function (r) { if (!r.code) throw new Error('no code'); netConnect(r.code); })
       .catch(function () { onlineError('Could not reach the online server. Check your connection and try again.'); });
   }
@@ -4929,7 +5496,8 @@ window.UnwindI18n = (function () {
     var waitingFor = S.players - L.players.length, notReady = L.players.filter(function (p) { return !p.ready; }).length;
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
-    var html = '<div class="row"><h2>Co-op room</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
+    var gm = S.mode === 'guide';
+    var html = '<div class="row"><h2>' + (gm ? 'Guiding Light room' : 'Co-op room') + '</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
     if (L.status) html += '<p class="lstatus">' + L.status + '</p>';
     if (!L.joined && !L.online) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
     html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.online ? (L.players.filter(function (q) { return q.host; })[0] || me).name : L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
@@ -4940,11 +5508,22 @@ window.UnwindI18n = (function () {
       var p = L.players[i];
       if (!p) { html += '<li class="empty"><span class="dot"></span><span class="nm">Waiting for a player…</span></li>'; continue; }
       var isHost = host || L.joined ? p.host : i === 1, you = host || L.joined ? p.you : i === 0;
-      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm"><b>' + p.name + '</b>' + (you ? ' <em>(you)</em>' : '') + '<small>Board ' + (lobby.seats.indexOf(p) + 1) + (isHost ? ' · <i class="crown" title="Host">♛ Host</i>' : '') + '</small></span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
+      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm"><b>' + p.name + '</b>' + (you ? ' <em>(you)</em>' : '') + '<small>' + (gm ? (lobby.seats.indexOf(p) === 0 ? 'Lighthouse keeper' : 'Boat captain') : 'Board ' + (lobby.seats.indexOf(p) + 1)) + (isHost ? ' · <i class="crown" title="Host">♛ Host</i>' : '') + '</small></span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
+    if (gm) {
+      // Guiding Light: two roles instead of boards. Tap one, then the other, to swap who plays which.
+      html += '<div class="chapter">Roles' + (host ? ' · tap both to swap' : '') + '</div><div class="lboards n2 lroles">' + [['Lighthouse keeper', 'keeper'], ['Boat captain', 'boat']].map(function (rl, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><span class="lroleicon">' + guideIconSvg(rl[1]) + '</span><b>' + rl[0] + '</b><small>' + (p ? p.name : 'Free') + '</small></button>'; }).join('') + '</div>';
+      html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+      if (host) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
+      html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
+      html += '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('gsize', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]);
+      html += '<div class="setting"><span>Difficulty<small>' + (S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
+      html += '<div class="lsum"><span>Lives<b>3</b></span><span>Players<b>2</b></span><span>Win<b>The boat reaches the lighthouse</b></span></div>';
+    } else {
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+    if (host && L.online) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
     html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and combo arrows that mix up to 3 effects' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
@@ -4952,6 +5531,7 @@ window.UnwindI18n = (function () {
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
     html += '<div class="lsum"><span>Shared lives<b>' + lives + '</b></span><span>Shared timer<b>' + (S.timed ? 'Yes' : 'No') + '</b></span><span>Win<b>All boards cleared</b></span></div>';
+    }
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
     else html += '<p class="lwait">' + (all ? 'Everyone is ready. Waiting for the host to start…' : 'The game starts when everyone is ready and the host starts it.') + '</p>';
@@ -4972,7 +5552,7 @@ window.UnwindI18n = (function () {
     card.querySelector('#lNameRnd').onclick = function () { me.name = lobbyName(); save('unwind.onlineName', me.name); L.askName = false; if (L.online) netSend({ t: 'name', name: me.name }); lobbySheet(true); };
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
-      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' ? +v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
+      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' || k === 'gsize' ? +v : k === 'mode' ? v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
       if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
@@ -4981,7 +5561,7 @@ window.UnwindI18n = (function () {
       me.ready = false;
       lobbySheet(true);
     }; });
-    card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { if (L.online) { netSend({ t: 'settings', settings: { off: off } }); return; } S.off = off; me.ready = false; lobbySheet(true); }, !host); };
+    if (card.querySelector('#lTypes')) card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { if (L.online) { netSend({ t: 'settings', settings: { off: off } }); return; } S.off = off; me.ready = false; lobbySheet(true); }, !host); };
     card.querySelectorAll('[data-sw]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-sw'); S[k] = !S[k]; me.ready = false; lobbySheet(true); }; });
     // Dragging a board onto another swaps their players too.
     if (host) card.querySelectorAll('[data-seat]').forEach(function (b) {
@@ -7224,7 +7804,7 @@ window.UnwindI18n = (function () {
     var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
       (current && current.coop && coop && coop.online && !ended ? '<button class="lleave smleave" data-go="leave">Leave online game</button>' : '') +
-      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
+      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="guide">Guiding Light</button><button data-go="settings">Settings</button></div>' +
       languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.<br>Build ' + BUILD + '</p>';
     var s = sheet(html, 'start');
     s.classList.add('startsheet');
@@ -7236,6 +7816,7 @@ window.UnwindI18n = (function () {
       else if (what === 'levels') levelsSheet();
       else if (what === 'open') levelsSheet('endless');
       else if (what === 'online') onlineSheet('home');
+      else if (what === 'guide') guideMenu();
       else if (what === 'settings') settingsSheet();
       else if (what === 'leave') { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); }
     };
@@ -8692,10 +9273,704 @@ window.UnwindI18n = (function () {
 
   window.addEventListener('resize', function () { layout(); });
   window.addEventListener('hashchange', function () { if (location.hash === '#debug') debugSheet(); });
+    /* ---------- Guiding Light: the lighthouse keeper guides the boat home through a dark sea ----------
+     The rules live in guide.js (shared with the room server). This part draws the sea, takes the players' input
+     and plays the game on one device (passing it between turns) or online (one role on each phone). */
+  var Gd = window.UnwindGuide;
+  var guide = null;
+  // On one device the view belongs to whoever last took the device; it only changes behind the cover screen.
+  function guideRole() { return guide.local ? guide.viewRole : guide.role; }
+  function guideMine() { return !guide.G.ended && guide.G.phase === (guideRole() === 'keeper' ? 'keeper' : 'boat'); }
+  function guideEl() { return $('guide'); }
+
+  // Opens a game. opts: { seed, size, hard, local, role, online }.
+  function openGuide(opts) {
+    if ($('sheetHost').firstChild) closeSheet();
+    var G = Gd.create(opts.seed, { size: opts.size, hard: opts.hard });
+    guide = { G: G, local: !!opts.local, role: opts.role || 'keeper', online: !!opts.online, opts: opts, aim: -1, anim: null, beamAt: 0,
+      cover: null, peek: false, actions: [], view: null, busyUntil: 0, last: performance.now(), toast: null, viewRole: G.phase };
+    var el = guideEl();
+    el.hidden = false; el.classList.toggle('hard', !!opts.hard);
+    document.body.classList.add('guideon');
+    guideMusic(true);
+    guideLayout();
+    if (guide.local) guideCover(true);
+    else guideFirstTutorial();
+    guideHud();
+    track('guide_start', { size: opts.size, hard: !!opts.hard, local: !!opts.local });
+    if (!guide.loop) guideLoop();
+  }
+  function closeGuide() {
+    if (!guide) return;
+    guide = null;
+    guideEl().hidden = true;
+    document.body.classList.remove('guideon');
+    guideMusic(false);
+  }
+  function guideMusic(on) { guideTheme = on; if (audio()) musicTick(); }
+
+  /* ---------- Actions ---------- */
+  function guideAct(act) {
+    if (!guide || !guideMine() || performance.now() < guide.busyUntil) return;
+    var role = guideRole();
+    if (guide.online) { netSend({ t: 'gact', act: act }); guide.busyUntil = performance.now() + 2500; return; }
+    guideApply(role, act);
+  }
+  // Every action, local or from the server, goes through here so the animation and sounds are the same.
+  function guideApply(role, act) {
+    var G = guide.G, before = { boat: { x: G.boat.x, y: G.boat.y }, serpents: G.serpents.map(function (s) { return { x: s.x, y: s.y, frozen: s.frozen }; }), phase: G.phase, round: G.round };
+    var res = Gd.apply(G, role, act);
+    if (!res.ok) return false;
+    guide.actions.push({ role: role, act: act });
+    var log = res.log, now = performance.now();
+    guide.busyUntil = 0;
+    if (act.a === 'beam') {
+      guide.beamAt = now; guide.aim = -1;
+      pluck(659.25, 0, 0.05, 1.4); pluck(987.77, 0.06, 0.04, 1.6);
+      if (G.serpents.some(function (s) { return s.frozen; }) && (guide.local || guide.role === 'keeper')) setTimeout(function () { pluck(196, 0, 0.06, 0.5); pluck(220, 0.12, 0.05, 0.5); }, 280);
+    } else if (act.a === 'flare') {
+      pluck(1318.5, 0, 0.06, 0.6); pluck(1760, 0.08, 0.05, 0.8);
+    } else if (act.a === 'sail') {
+      pluck(act.up ? 523.25 : 392, 0, 0.05, 0.3);
+    } else if (act.a === 'move' || act.a === 'wait') {
+      var boatDur = log.path ? Math.max(1, log.path.length - 1) * 230 + (log.washBack ? 520 : 0) : 0;
+      guide.anim = { t0: now, log: log, before: before, boatDur: boatDur, snakeDur: 420 };
+      guide.busyUntil = now + boatDur + 460;
+      if (act.a === 'move') pluck(392, 0, 0.06, 0.4);
+      log.barrels.forEach(function (b, i) { setTimeout(function () { specialSound('chirp'); guideFloat(b.kind === 'life' ? '+1 life' : '+1 flare', b.x, b.y); }, 260 + i * 120); });
+      log.whirls.forEach(function (w, i) { setTimeout(function () { pluck(330, 0, 0.06, 0.5); pluck(262, 0.08, 0.05, 0.6); pluck(196, 0.16, 0.05, 0.7); }, 230 * (i + 1)); });
+      log.hits.forEach(function (h, i) { setTimeout(function () { thud(); buzz(40); guideFloat('-1 life', h.x, h.y, true); }, h.why === 'serpent' && log.serpents.length ? boatDur + 300 : 240 + i * 100); });
+      if (log.washBack) setTimeout(function () { specialSound('out'); }, 200);
+    }
+    if (G.ended) setTimeout(function () { if (guide && guide.G === G) guideEnd(); }, guide.anim ? guide.anim.boatDur + 900 : 300);
+    else if (guide.local && before.phase !== G.phase && (G.phase === 'boat' || G.phase === 'keeper')) {
+      // On one device the screen covers up before the other player looks, unless the same player goes again
+      // (on Hard, when the lamp is cooling down the captain sails twice in a row).
+      var delay = guide.anim ? guide.anim.boatDur + 600 : 900;
+      if (act.a === 'beam' || G.phase === 'keeper') setTimeout(function () { if (guide && guide.G === G && !G.ended) guideCover(true); }, delay);
+      else setTimeout(function () { if (guide && guide.G === G) guideToast('The lamp is cooling down. Captain, sail on.'); }, delay);
+    } else if (!guide.local && G.phase !== before.phase && !G.ended) {
+      var mine = guideMine();
+      setTimeout(function () { if (guide && guide.G === G && mine) { pluck(784, 0, 0.05, 0.4); guideToast(G.phase === 'keeper' ? 'Your turn: shine the light.' : (before.round !== G.round && guide.role === 'boat' ? 'The lamp is cooling down. Sail on.' : 'Your turn: catch a wave.')); } }, guide.anim ? guide.anim.boatDur + 400 : 300);
+    }
+    guideHud();
+    return true;
+  }
+  function guideFloat(text, x, y, bad) { guide.floats = (guide.floats || []).concat([{ text: text, x: x, y: y, t0: performance.now(), bad: !!bad }]); }
+  function guideToast(text) { guide.toast = { text: text, t0: performance.now() }; var t = guideEl().querySelector('.g-toast'); t.textContent = text; t.classList.remove('on'); void t.offsetWidth; t.classList.add('on'); window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush(); }
+
+  /* ---------- One device: cover the screen between turns ---------- */
+  function guideCover(on) {
+    var c = guideEl().querySelector('.g-cover');
+    guide.cover = on;
+    if (!on) { c.hidden = true; guide.viewRole = guide.G.phase; guideFirstTutorial(); guideHud(); return; }
+    var G = guide.G, keeper = G.phase === 'keeper';
+    c.innerHTML = '<div class="g-pass"><div class="g-passicon">' + (keeper ? guideIconSvg('keeper') : guideIconSvg('boat')) + '</div>' +
+      '<h2>' + (keeper ? 'Lighthouse keeper' : 'Boat captain') + '</h2>' +
+      '<p>' + (G.round === 0 && keeper ? 'The keeper goes first. Pass the device to the keeper, and no peeking, captain!' : keeper ? 'Pass the device to the keeper. No peeking, captain!' : 'Pass the device to the captain. No peeking, keeper!') + '</p>' +
+      '<button class="primary" id="gReady">' + (keeper ? 'I\'m the keeper' : 'I\'m the captain') + '</button></div>';
+    c.hidden = false;
+    c.querySelector('#gReady').onclick = function () { pluck(587.33, 0, 0.05, 0.4); guideCover(false); };
+    window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
+    guideHud();
+  }
+  function guideIconSvg(kind) {
+    if (kind === 'keeper') return '<svg viewBox="-24 -112 48 130" aria-hidden="true">' + lighthouseArt() + '</svg>';
+    return '<svg viewBox="-30 -34 60 48" aria-hidden="true"><path d="M-26 0 H26 L18 12 H-18 Z" fill="#7a4b32"/><path d="M-2 -2 V-32 L20 -6 Z" fill="#fff6f0"/><path d="M-4 -2 V-26 L-18 -6 Z" fill="#f3dccb"/><circle cx="-14" cy="-10" r="3" fill="#ffd27a"/></svg>';
+  }
+
+  /* ---------- Heads-up display ---------- */
+  function guideHud() {
+    if (!guide) return;
+    var el = guideEl(), G = guide.G, role = guide.cover ? (G.phase === 'keeper' ? 'keeper' : 'boat') : guideRole(), mine = guideMine() && !guide.cover;
+    el.querySelector('.g-role').textContent = guide.local ? (role === 'keeper' ? 'Lighthouse keeper' : 'Boat captain') : (guide.role === 'keeper' ? 'You keep the lighthouse' : 'You sail the boat');
+    el.querySelector('.g-round b').textContent = G.round + 1;
+    el.querySelector('.g-lives').innerHTML = Array.apply(null, Array(Math.max(G.lives, 0))).map(function () { return '<svg viewBox="0 0 24 22" aria-hidden="true"><path d="M12 21 C 5 15 1 11.5 1 7 A5.5 5.5 0 0 1 12 4.5 A5.5 5.5 0 0 1 23 7 C23 11.5 19 15 12 21Z"/></svg>'; }).join('');
+    el.querySelector('.g-lives').setAttribute('aria-label', G.lives + ' lives');
+    var wind = el.querySelector('.g-wind');
+    wind.hidden = !G.hard;
+    if (G.hard) wind.querySelector('.g-windarrow').style.transform = 'rotate(' + (G.wind * 90) + 'deg)';
+    var msg = '', btns = '';
+    if (guide.cover) msg = '';
+    else if (G.ended) msg = G.ended === 'won' ? 'Home safe!' : 'Lost at sea…';
+    else if (G.phase === 'keeper') {
+      if (role === 'keeper' && mine) { msg = guide.aim >= 0 ? 'Shine the light this way?' : 'Tap the sea to aim the light.'; btns = '<button class="primary" id="gShine"' + (guide.aim >= 0 ? '' : ' disabled') + '>Shine</button>'; }
+      else msg = 'The keeper is aiming the light…';
+    } else {
+      if (role === 'boat' && mine) {
+        var waves = Gd.catchable(G).length;
+        msg = waves ? 'Tap a wave next to the boat to ride it.' : 'No waves next to the boat. Wait for the sea to change.';
+        btns = '<button id="gWait">Wait</button><button id="gFlare"' + (G.flares > 0 && !G.flareUsed ? '' : ' disabled') + '>Flare <span class="notr">' + G.flares + '</span></button>' +
+          (G.hard ? '<button id="gSail" aria-pressed="' + G.sail + '">' + (G.sail ? 'Sail up' : 'Sail down') + '</button>' : '');
+      } else msg = !Gd.lampWorks(G) && guide.role === 'keeper' ? 'The lamp is cooling down. The captain sails…' : 'The captain is sailing…';
+    }
+    el.querySelector('.g-msg').textContent = msg;
+    var row = el.querySelector('.g-btns');
+    row.innerHTML = btns;
+    if (row.querySelector('#gShine')) row.querySelector('#gShine').onclick = function () { if (guide.aim >= 0) guideAct({ a: 'beam', dir: guide.aim }); };
+    if (row.querySelector('#gWait')) row.querySelector('#gWait').onclick = function () { guideAct({ a: 'wait' }); };
+    if (row.querySelector('#gFlare')) row.querySelector('#gFlare').onclick = function () { guideAct({ a: 'flare' }); };
+    if (row.querySelector('#gSail')) row.querySelector('#gSail').onclick = function () { guideAct({ a: 'sail', up: !G.sail }); };
+    el.querySelector('.g-peek').hidden = !guide.local;
+    el.querySelector('.g-peek').setAttribute('aria-pressed', guide.peek);
+    window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
+  }
+
+  /* ---------- Layout and the camera ---------- */
+  var gctx = null, gw = 0, gh = 0, gdpr = 1;
+  function guideLayout() {
+    if (!guide) return;
+    var cv = guideEl().querySelector('canvas'), r = cv.getBoundingClientRect();
+    gdpr = Math.min(2, window.devicePixelRatio || 1); gw = r.width; gh = r.height;
+    cv.width = Math.round(gw * gdpr); cv.height = Math.round(gh * gdpr);
+    gctx = cv.getContext('2d');
+  }
+  window.addEventListener('resize', function () { if (guide) guideLayout(); });
+  // The keeper sees the whole map with the lighthouse in the middle; the captain's view follows the boat.
+  function guideCamera(role, boatPos) {
+    var G = guide.G;
+    if (role === 'keeper' || guide.peek) {
+      var cs = Math.min(gw / (G.n + 0.4), gh / (G.n + 0.4));
+      return { cs: cs, ox: (gw - G.n * cs) / 2, oy: (gh - G.n * cs) / 2 };
+    }
+    var cs2 = Math.min(gw, gh) / 6.4;
+    return { cs: cs2, ox: gw / 2 - (boatPos.x + 0.5) * cs2, oy: gh / 2 - (boatPos.y + 0.5) * cs2 };
+  }
+
+  /* ---------- Drawing ---------- */
+  function guideLoop() {
+    guide && (guide.loop = true);
+    requestAnimationFrame(function step(now) {
+      if (!guide) return;
+      requestAnimationFrame(step);
+      if (!gctx) guideLayout();
+      guideDraw(now);
+    });
+  }
+  function animBoat(now) {
+    var G = guide.G, a = guide.anim;
+    if (!a || !a.log.path) return { x: G.boat.x, y: G.boat.y, alpha: 1 };
+    var t = now - a.t0, path = a.log.path, segs = path.length - 1;
+    if (segs < 1) return { x: G.boat.x, y: G.boat.y, alpha: 1 };
+    var moveDur = segs * 230;
+    if (t >= a.boatDur) return { x: G.boat.x, y: G.boat.y, alpha: 1 };
+    if (t < moveDur) {
+      var k = Math.min(segs - 1, Math.floor(t / 230)), u = (t - k * 230) / 230, e = u * u * (3 - 2 * u);
+      var p = path[k], q = path[k + 1];
+      var off = a.log.washBack && k === segs - 1;
+      return { x: p[0] + (q[0] - p[0]) * e, y: p[1] + (q[1] - p[1]) * e, alpha: off ? 1 - e * 0.8 : 1, spin: a.log.whirls.some(function (w) { return w.x === p[0] && w.y === p[1]; }) ? u : 0 };
+    }
+    // Washed back after drifting off the edge.
+    var w = Math.min(1, (t - moveDur) / 520);
+    return { x: a.log.washBack[0], y: a.log.washBack[1], alpha: w };
+  }
+  function animSerpent(now, s) {
+    var a = guide.anim;
+    if (!a) return { x: s.x, y: s.y };
+    var t = now - a.t0 - a.boatDur;
+    var m = a.log.serpents.filter(function (q) { return q.id === s.id; })[0];
+    var dive = a.log.dives.filter(function (q) { return q.id === s.id; })[0];
+    if (t < 0) {
+      var b = a.before.serpents[guide.G.serpents.indexOf(s)];
+      return b ? { x: b.x, y: b.y } : { x: s.x, y: s.y };
+    }
+    if (m && t < a.snakeDur && m.path.length > 1) {
+      var segs = m.path.length - 1, f = Math.min(0.999, t / a.snakeDur) * segs, k = Math.floor(f), u = f - k;
+      return { x: m.path[k][0] + (m.path[k + 1][0] - m.path[k][0]) * u, y: m.path[k][1] + (m.path[k + 1][1] - m.path[k][1]) * u };
+    }
+    if (dive && t < a.snakeDur + 300) { var last = m ? m.path[m.path.length - 1] : dive.from; return { x: last[0], y: last[1], diving: true }; }
+    return { x: s.x, y: s.y };
+  }
+  function guideDraw(now) {
+    var G = guide.G, ctx2 = gctx, role = guideRole();
+    if (!ctx2) return;
+    ctx2.setTransform(gdpr, 0, 0, gdpr, 0, 0);
+    ctx2.fillStyle = '#060a1c'; ctx2.fillRect(0, 0, gw, gh);
+    if (guide.cover) { guideDrawCoverSea(ctx2, now); return; }
+    var boatPos = animBoat(now), cam = guideCamera(role, boatPos), cs = cam.cs;
+    // What this player can see right now, and what they remember.
+    var see = {}, mem = role === 'keeper' ? G.keeperSeen : G.boatSeen, showBoat = false, lightVisible = false;
+    if (guide.peek) { for (var i = 0; i < G.n * G.n; i++) see[i] = 1; showBoat = true; lightVisible = true; }
+    else if (role === 'keeper') { var kv = Gd.keeperView(G); see = kv.cells; showBoat = kv.boat; lightVisible = true; }
+    else { var bv = Gd.boatView(G); see = bv.cells; showBoat = true; lightVisible = bv.touched; }
+    var X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; };
+    var x0 = Math.max(-1, Math.floor(-cam.ox / cs) - 1), x1 = Math.min(G.n, Math.ceil((gw - cam.ox) / cs) + 1);
+    var y0 = Math.max(-1, Math.floor(-cam.oy / cs) - 1), y1 = Math.min(G.n, Math.ceil((gh - cam.oy) / cs) + 1);
+    // The sea, tile by tile: lit and seen tiles are bright, remembered ones dim, the rest dark fog.
+    for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
+      var px = X(x), py = Y(y);
+      if (!Gd.inside(G, x, y)) continue;
+      var idx = y * G.n + x, vis = !!see[idx], rem = !!mem[idx];
+      ctx2.fillStyle = vis ? (Gd.isLit(G, x, y) ? '#2b3c74' : '#1f2d5e') : rem ? '#141e44' : role === 'keeper' ? '#0f1838' : '#0a1029';
+      ctx2.fillRect(px, py, cs + 0.5, cs + 0.5);
+      if (vis || rem) guideTerrain(ctx2, G, x, y, px, py, cs, now, vis ? 1 : 0.35);
+    }
+    // The edge of the map, where the captain can see it.
+    ctx2.save(); ctx2.strokeStyle = 'rgba(255,214,140,.55)'; ctx2.lineWidth = Math.max(2, cs * 0.05); ctx2.setLineDash([cs * 0.18, cs * 0.14]);
+    for (y = 0; y < G.n; y++) for (x = 0; x < G.n; x++) {
+      var id2 = y * G.n + x;
+      if (!see[id2]) continue;
+      if (x === 0) { ctx2.beginPath(); ctx2.moveTo(X(0), Y(y)); ctx2.lineTo(X(0), Y(y + 1)); ctx2.stroke(); }
+      if (y === 0) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(0)); ctx2.lineTo(X(x + 1), Y(0)); ctx2.stroke(); }
+      if (x === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(G.n), Y(y)); ctx2.lineTo(X(G.n), Y(y + 1)); ctx2.stroke(); }
+      if (y === G.n - 1) { ctx2.beginPath(); ctx2.moveTo(X(x), Y(G.n)); ctx2.lineTo(X(x + 1), Y(G.n)); ctx2.stroke(); }
+    }
+    ctx2.restore();
+    // Waves, barrels and serpents only show where the player can see right now.
+    for (y = Math.max(0, y0); y <= Math.min(G.n - 1, y1); y++) for (x = Math.max(0, x0); x <= Math.min(G.n - 1, x1); x++) {
+      var i3 = y * G.n + x;
+      if (!see[i3]) continue;
+      var bi = Gd.barrelAt(G, x, y);
+      if (bi >= 0) guideBarrel(ctx2, X(x) + cs / 2, Y(y) + cs / 2, cs, now);
+      var wv = G.waves[i3];
+      if (wv >= 0 && !(guide.anim && now - guide.anim.t0 < guide.anim.boatDur)) guideWave(ctx2, X(x), Y(y), cs, wv, now, x * 7 + y * 13);
+    }
+    // The beam: from the lamp, across the whole map.
+    var beamOn = G.beam >= 0 && lightVisible;
+    var aimDir = role === 'keeper' && G.phase === 'keeper' && guideMine() && guide.aim >= 0 ? guide.aim : -1;
+    var lampX = X(G.c) + cs / 2, lampY = Y(G.c) + cs / 2 - cs * 0.62;
+    var mapClip = [X(0), Y(0), G.n * cs, G.n * cs];
+    if (beamOn) guideBeam(ctx2, X(G.c) + cs / 2, Y(G.c) + cs / 2, G.beam, cs, G.n, Math.min(1, (now - guide.beamAt) / 350), false, mapClip);
+    if (aimDir >= 0) guideBeam(ctx2, X(G.c) + cs / 2, Y(G.c) + cs / 2, aimDir, cs, G.n, 1, true, mapClip);
+    // Lit tiles get a warm glow.
+    if (beamOn) {
+      ctx2.fillStyle = 'rgba(255,214,130,' + (0.12 * Math.min(1, (now - guide.beamAt) / 350)) + ')';
+      G.lit.forEach(function (k) { var lx = k % G.n, ly = (k - lx) / G.n; if (see[k]) ctx2.fillRect(X(lx), Y(ly), cs + 0.5, cs + 0.5); });
+    }
+    // Serpents: surfaced in the dark, but those caught in the light have dived, and only bubbles show.
+    G.serpents.forEach(function (s) {
+      var p = animSerpent(now, s), cx = Math.round(p.x), cy = Math.round(p.y);
+      if (!Gd.inside(G, cx, cy) || !see[cy * G.n + cx]) return;
+      if (s.frozen && !(guide.anim && now - guide.anim.t0 < guide.anim.boatDur + guide.anim.snakeDur)) guideBubbles(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id);
+      else guideSerpent(ctx2, X(p.x) + cs / 2, Y(p.y) + cs / 2, cs, now, s.id, p.diving ? 0.4 : 1);
+    });
+    // The lighthouse in the middle: always for the keeper, for the captain only when they can see it.
+    var lhSeen = role === 'keeper' || guide.peek || lightVisible || see[G.c * G.n + G.c];
+    if (lhSeen) {
+      var img = lighthouseImage(), lk = cs * 1.15 / 85;
+      if (img.complete && img.naturalWidth) ctx2.drawImage(img, X(G.c) + cs / 2 - 20 * lk, Y(G.c) + cs * 0.85 - 110 * lk, 40 * lk, 126 * lk);
+      var on = role !== 'keeper' || Gd.lampWorks(G) || G.beam >= 0;
+      var gl = ctx2.createRadialGradient(lampX, lampY, 0, lampX, lampY, cs * 0.55);
+      gl.addColorStop(0, on ? 'rgba(255,233,168,.75)' : 'rgba(255,233,168,.12)'); gl.addColorStop(1, 'rgba(255,233,168,0)');
+      ctx2.fillStyle = gl; ctx2.beginPath(); ctx2.arc(lampX, lampY, cs * 0.55, 0, 7); ctx2.fill();
+    }
+    // The boat.
+    if (showBoat || (guide.anim && now - guide.anim.t0 < guide.anim.boatDur && role === 'keeper' && Gd.isLit(G, G.boat.x, G.boat.y))) {
+      guideBoat(ctx2, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs, now, G.hard ? G.sail : true, boatPos.alpha, boatPos.spin || 0);
+      if (role === 'boat' && !guide.peek) {
+        // The captain's lantern: a soft glow around the boat, bigger with a flare.
+        var R = cs * (G.flare ? 2.6 : 1.7), lg = ctx2.createRadialGradient(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, cs * 0.3, X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, R);
+        lg.addColorStop(0, 'rgba(255,214,140,.16)'); lg.addColorStop(1, 'rgba(255,214,140,0)');
+        ctx2.fillStyle = lg; ctx2.beginPath(); ctx2.arc(X(boatPos.x) + cs / 2, Y(boatPos.y) + cs / 2, R, 0, 7); ctx2.fill();
+      }
+    }
+    // Waves the captain can catch: rings, and a mark where each would take the boat.
+    if (role === 'boat' && G.phase === 'boat' && guideMine() && !guide.cover && !(guide.anim && now < guide.busyUntil)) {
+      Gd.catchable(G).forEach(function (w) {
+        var pulse = 0.55 + 0.25 * Math.sin(now / 260);
+        ctx2.strokeStyle = 'rgba(255,233,168,' + pulse + ')'; ctx2.lineWidth = Math.max(2, cs * 0.05);
+        ctx2.beginPath(); ctx2.arc(X(w.x) + cs / 2, Y(w.y) + cs / 2, cs * 0.42, 0, 7); ctx2.stroke();
+        var steps = Gd.stepsFor(G, w.dir), tx = G.boat.x + Gd.DX[w.dir] * steps, ty = G.boat.y + Gd.DY[w.dir] * steps;
+        if (steps > 0) { ctx2.fillStyle = 'rgba(255,233,168,.35)'; ctx2.beginPath(); ctx2.arc(X(tx) + cs / 2, Y(ty) + cs / 2, cs * 0.09, 0, 7); ctx2.fill(); }
+      });
+    }
+    // Fog over everything the player cannot see, soft at the edges.
+    if (!guide.peek) {
+      ctx2.save(); ctx2.fillStyle = 'rgba(3,5,15,.94)'; ctx2.beginPath(); ctx2.rect(0, 0, gw, gh); ctx2.rect(X(0), Y(0), G.n * cs, G.n * cs); ctx2.fill('evenodd'); ctx2.restore();
+      for (y = Math.max(0, y0); y <= Math.min(G.n - 1, y1); y++) for (x = Math.max(0, x0); x <= Math.min(G.n - 1, x1); x++) {
+        var i4 = y * G.n + x;
+        if (see[i4]) continue;
+        ctx2.fillStyle = mem[i4] ? 'rgba(6,9,24,.5)' : role === 'keeper' ? 'rgba(6,9,24,.62)' : 'rgba(6,9,24,.86)';
+        ctx2.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5);
+      }
+      // The keeper knows the map: a faint grid and its outline show through the fog.
+      if (role === 'keeper') {
+        ctx2.strokeStyle = 'rgba(160,180,255,.07)'; ctx2.lineWidth = 1;
+        for (var gl2 = 1; gl2 < G.n; gl2++) { ctx2.beginPath(); ctx2.moveTo(X(gl2), Y(0)); ctx2.lineTo(X(gl2), Y(G.n)); ctx2.moveTo(X(0), Y(gl2)); ctx2.lineTo(X(G.n), Y(gl2)); ctx2.stroke(); }
+        ctx2.strokeStyle = 'rgba(255,214,140,.35)'; ctx2.lineWidth = 2; ctx2.strokeRect(X(0), Y(0), G.n * cs, G.n * cs);
+      }
+      guideFogWisps(ctx2, now, cam, G);
+    }
+    // Floating "+1 life" notes.
+    (guide.floats || []).forEach(function (f) {
+      var t = (now - f.t0) / 1300;
+      if (t > 1) return;
+      ctx2.globalAlpha = 1 - t; ctx2.fillStyle = f.bad ? '#ff8a9a' : '#ffe9a8'; ctx2.font = '700 ' + Math.round(cs * 0.3) + 'px ' + getComputedStyle(document.body).getPropertyValue('--display');
+      ctx2.textAlign = 'center'; ctx2.fillText(window.UnwindI18n ? window.UnwindI18n.t(f.text) : f.text, X(f.x) + cs / 2, Y(f.y) - t * cs * 0.6);
+      ctx2.globalAlpha = 1;
+    });
+    guide.floats = (guide.floats || []).filter(function (f) { return now - f.t0 < 1300; });
+  }
+  function guideDrawCoverSea(c, now) {
+    for (var i = 0; i < 40; i++) { var x = (i * 97 % 100) / 100 * gw, y = (i * 61 % 100) / 100 * gh; c.fillStyle = 'rgba(200,214,255,' + (0.15 + 0.15 * Math.sin(now / 900 + i)) + ')'; c.fillRect(x, y, 2, 2); }
+  }
+  // Slow drifting mist over the sea.
+  function guideFogWisps(c, now, cam, G) {
+    if (reduced) return;
+    c.save(); c.beginPath(); c.rect(cam.ox, cam.oy, G.n * cam.cs, G.n * cam.cs); c.clip();
+    for (var i = 0; i < 7; i++) {
+      var span = gw + 500, x = ((now / (70 + i * 11) + i * 230) % span) - 250, y = (i + 0.5) / 7 * gh + Math.sin(now / 3000 + i) * 20;
+      var g = c.createRadialGradient(x, y, 0, x, y, 170);
+      g.addColorStop(0, 'rgba(200,212,255,.05)'); g.addColorStop(1, 'rgba(200,212,255,0)');
+      c.fillStyle = g; c.beginPath(); c.ellipse(x, y, 170, 40, 0, 0, 7); c.fill();
+    }
+    c.restore();
+  }
+  function guideTerrain(c, G, x, y, px, py, cs, now, alpha) {
+    var t = G.grid[y * G.n + x], cx = px + cs / 2, cy = py + cs / 2;
+    c.save(); c.globalAlpha = alpha;
+    if (t === Gd.ROCK) {
+      c.fillStyle = '#5d6390'; c.beginPath(); c.ellipse(cx, cy + cs * 0.08, cs * 0.34, cs * 0.24, 0, 0, 7); c.fill();
+      c.fillStyle = '#8389b4'; c.beginPath(); c.ellipse(cx - cs * 0.06, cy - cs * 0.02, cs * 0.2, cs * 0.13, -0.3, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(220,230,255,.35)'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(cx, cy + cs * 0.24, cs * 0.4, cs * 0.08, 0, 0, Math.PI); c.stroke();
+    } else if (t === Gd.BIG) {
+      // A tall sea stack: it hides what is behind it from the light and from the boat.
+      c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.34, cs * 0.44, cs * 0.12, 0, 0, 7); c.fill();
+      c.fillStyle = '#3a3f66'; c.beginPath(); c.moveTo(cx - cs * 0.4, cy + cs * 0.34); c.lineTo(cx - cs * 0.28, cy - cs * 0.3); c.lineTo(cx - cs * 0.05, cy - cs * 0.46); c.lineTo(cx + cs * 0.22, cy - cs * 0.36); c.lineTo(cx + cs * 0.4, cy + cs * 0.34); c.closePath(); c.fill();
+      c.fillStyle = '#545a88'; c.beginPath(); c.moveTo(cx - cs * 0.28, cy - cs * 0.3); c.lineTo(cx - cs * 0.05, cy - cs * 0.46); c.lineTo(cx - cs * 0.02, cy + cs * 0.34); c.lineTo(cx - cs * 0.4, cy + cs * 0.34); c.closePath(); c.fill();
+    } else if (t === Gd.WHIRL) {
+      c.strokeStyle = 'rgba(190,210,255,.75)'; c.lineWidth = Math.max(1.5, cs * 0.045); c.lineCap = 'round';
+      var rot = reduced ? 0 : now / 500;
+      for (var k = 0; k < 3; k++) {
+        c.beginPath();
+        for (var a = 0; a <= 5.2; a += 0.25) { var r = cs * (0.06 + a * 0.065), ang = a + rot + k * 2.1; var qx = cx + Math.cos(ang) * r, qy = cy + Math.sin(ang) * r * 0.62; if (a === 0) c.moveTo(qx, qy); else c.lineTo(qx, qy); }
+        c.stroke();
+      }
+    }
+    c.restore();
+  }
+  function guideWave(c, px, py, cs, dir, now, seed) {
+    var cx = px + cs / 2, cy = py + cs / 2, bob = reduced ? 0 : Math.sin(now / 420 + seed) * cs * 0.03;
+    c.save(); c.translate(cx, cy + bob); c.rotate(dir * Math.PI / 2);
+    c.strokeStyle = 'rgba(214,226,255,.85)'; c.lineWidth = Math.max(1.6, cs * 0.06); c.lineCap = 'round'; c.lineJoin = 'round';
+    // A curling wave with an arrowhead: which way it will carry the boat.
+    c.beginPath(); c.moveTo(0, cs * 0.26); c.bezierCurveTo(-cs * 0.12, cs * 0.12, cs * 0.12, -cs * 0.02, 0, -cs * 0.18); c.stroke();
+    c.beginPath(); c.moveTo(-cs * 0.11, -cs * 0.08); c.lineTo(0, -cs * 0.22); c.lineTo(cs * 0.11, -cs * 0.08); c.stroke();
+    c.restore();
+  }
+  function guideBarrel(c, cx, cy, cs, now) {
+    var bob = reduced ? 0 : Math.sin(now / 500 + cx) * cs * 0.03, w = cs * 0.34, h = cs * 0.42;
+    c.save(); c.translate(cx, cy + bob); c.rotate(-0.12);
+    c.fillStyle = '#8a5a36'; c.beginPath(); c.ellipse(0, 0, w / 2, h / 2, 0, 0, 7); c.fill();
+    c.fillStyle = '#a8703f'; c.fillRect(-w * 0.32, -h * 0.5, w * 0.64, h);
+    c.strokeStyle = '#3a2a20'; c.lineWidth = Math.max(1.2, cs * 0.035);
+    [-0.28, 0.28].forEach(function (k) { c.beginPath(); c.moveTo(-w * 0.42, h * k); c.lineTo(w * 0.42, h * k); c.stroke(); });
+    c.fillStyle = 'rgba(255,233,168,.9)'; c.beginPath(); c.arc(0, 0, cs * 0.04, 0, 7); c.fill();
+    c.restore();
+  }
+  function guideSerpent(c, cx, cy, cs, now, id, alpha) {
+    var t = reduced ? 0 : now / 380 + id * 2;
+    c.save(); c.globalAlpha = alpha; c.translate(cx, cy);
+    c.fillStyle = '#2f8a6a';
+    // Two humps and a head above the water, with a ripple around them.
+    [[-0.28, 0.1, 0.12], [-0.05, 0.06, 0.15]].forEach(function (hmp, i) { c.beginPath(); c.ellipse(cs * hmp[0], cs * hmp[1] - Math.abs(Math.sin(t + i)) * cs * 0.04, cs * hmp[2], cs * hmp[2] * 0.8, 0, Math.PI, 0); c.fill(); });
+    c.beginPath(); c.moveTo(cs * 0.12, cs * 0.1); c.quadraticCurveTo(cs * 0.16, -cs * 0.22, cs * 0.3, -cs * 0.2); c.quadraticCurveTo(cs * 0.4, -cs * 0.12, cs * 0.3, -cs * 0.06); c.quadraticCurveTo(cs * 0.24, -cs * 0.02, cs * 0.24, cs * 0.1); c.closePath(); c.fill();
+    c.fillStyle = '#fff6f0'; c.beginPath(); c.arc(cs * 0.3, -cs * 0.15, cs * 0.035, 0, 7); c.fill();
+    c.fillStyle = '#10202a'; c.beginPath(); c.arc(cs * 0.31, -cs * 0.15, cs * 0.018, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(200,220,255,.5)'; c.lineWidth = 1.3; c.beginPath(); c.ellipse(0, cs * 0.12, cs * 0.42, cs * 0.08, 0, 0, 7); c.stroke();
+    c.restore();
+  }
+  // A serpent caught in the light has dived: only its bubbles rise.
+  function guideBubbles(c, cx, cy, cs, now, id) {
+    c.save();
+    for (var i = 0; i < 6; i++) {
+      var period = 1500, t = reduced ? 0.5 : ((now + i * 260 + id * 400) % period) / period;
+      var x = cx + Math.sin(i * 2.3 + id) * cs * 0.2 + Math.sin(t * 6 + i) * cs * 0.03, y = cy + cs * 0.18 - t * cs * 0.4;
+      c.globalAlpha = 0.85 * (1 - t); c.strokeStyle = '#d6e2ff'; c.lineWidth = 1.4;
+      c.beginPath(); c.arc(x, y, cs * (0.03 + 0.03 * (i % 3)), 0, 7); c.stroke();
+    }
+    c.globalAlpha = 0.5; c.strokeStyle = 'rgba(200,220,255,.6)'; c.beginPath(); c.ellipse(cx, cy + cs * 0.2, cs * 0.3, cs * 0.06, 0, 0, 7); c.stroke();
+    c.restore();
+  }
+  function guideBoat(c, cx, cy, cs, now, sailUp, alpha, spin) {
+    var rock = reduced ? 0 : Math.sin(now / 600) * 0.06;
+    c.save(); c.globalAlpha = alpha; c.translate(cx, cy + cs * 0.08); c.rotate(rock + spin * Math.PI * 2);
+    c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(0, cs * 0.2, cs * 0.36, cs * 0.07, 0, 0, 7); c.fill();
+    c.fillStyle = '#7a4b32'; c.beginPath(); c.moveTo(-cs * 0.36, 0); c.lineTo(cs * 0.36, 0); c.lineTo(cs * 0.24, cs * 0.17); c.lineTo(-cs * 0.24, cs * 0.17); c.closePath(); c.fill();
+    c.fillStyle = '#9a6644'; c.fillRect(-cs * 0.36, -cs * 0.02, cs * 0.72, cs * 0.05);
+    c.strokeStyle = '#3a2a20'; c.lineWidth = Math.max(1.5, cs * 0.03); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -cs * 0.44); c.stroke();
+    if (sailUp) { c.fillStyle = '#fff6f0'; c.beginPath(); c.moveTo(cs * 0.02, -cs * 0.42); c.lineTo(cs * 0.26, -cs * 0.06); c.lineTo(cs * 0.02, -cs * 0.06); c.closePath(); c.fill(); c.fillStyle = '#f3dccb'; c.beginPath(); c.moveTo(-cs * 0.02, -cs * 0.36); c.lineTo(-cs * 0.18, -cs * 0.06); c.lineTo(-cs * 0.02, -cs * 0.06); c.closePath(); c.fill(); }
+    else { c.fillStyle = '#e8d2c0'; c.fillRect(-cs * 0.02, -cs * 0.12, cs * 0.2, cs * 0.06); }
+    c.fillStyle = '#ffd27a'; c.beginPath(); c.arc(-cs * 0.22, -cs * 0.08, cs * 0.045, 0, 7); c.fill();
+    c.restore();
+  }
+  function guideBeam(c, cx, cy, dir, cs, n, k, ghost, clip) {
+    var a = dir * 2 * Math.PI / Gd.BEAM_STEPS - Math.PI / 2, len = cs * n * 1.5, half = 15 * Math.PI / 180;
+    var g = c.createRadialGradient(cx, cy - cs * 0.62, 0, cx, cy - cs * 0.62, len);
+    g.addColorStop(0, ghost ? 'rgba(255,214,130,.24)' : 'rgba(255,214,130,' + (0.5 * k) + ')'); g.addColorStop(0.6, ghost ? 'rgba(255,214,130,.1)' : 'rgba(255,214,130,' + (0.18 * k) + ')'); g.addColorStop(1, 'rgba(255,214,130,0)');
+    c.save();
+    if (clip) { c.beginPath(); c.rect(clip[0], clip[1], clip[2], clip[3]); c.clip(); }
+    c.fillStyle = g; c.beginPath(); c.moveTo(cx, cy - cs * 0.62);
+    c.lineTo(cx + Math.cos(a - half) * len, cy + Math.sin(a - half) * len); c.lineTo(cx + Math.cos(a + half) * len, cy + Math.sin(a + half) * len); c.closePath(); c.fill();
+    if (ghost) { c.setLineDash([cs * 0.15, cs * 0.12]); c.strokeStyle = 'rgba(255,233,168,.45)'; c.lineWidth = 1.5; c.stroke(); }
+    c.restore();
+  }
+
+  /* ---------- Input ---------- */
+  function guidePointer(ev) {
+    if (!guide || guide.cover || !guideMine()) return;
+    var G = guide.G, role = guideRole(), r = ev.currentTarget.getBoundingClientRect(), mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    var cam = guideCamera(role, { x: G.boat.x, y: G.boat.y }), cs = cam.cs;
+    if (role === 'keeper' && G.phase === 'keeper') {
+      // Aim from the lighthouse towards the tap, snapped to one of 16 directions.
+      var lx = cam.ox + (G.c + 0.5) * cs, ly = cam.oy + (G.c + 0.5) * cs, dx = mx - lx, dy = my - ly;
+      if (Math.hypot(dx, dy) < cs * 0.4) return;
+      var ang = Math.atan2(dx, -dy); if (ang < 0) ang += Math.PI * 2;
+      var d = Math.round(ang / (2 * Math.PI) * Gd.BEAM_STEPS) % Gd.BEAM_STEPS;
+      if (d !== guide.aim) pluck(523.25 + d * 12, 0, 0.03, 0.3);
+      guide.aim = d; guideHud();
+      return;
+    }
+    if (role === 'boat' && G.phase === 'boat') {
+      var x = Math.floor((mx - cam.ox) / cs), y = Math.floor((my - cam.oy) / cs);
+      var w = Gd.catchable(G).filter(function (q) { return q.x === x && q.y === y; })[0];
+      if (w) guideAct({ a: 'move', x: x, y: y });
+    }
+  }
+  function guideKey(ev) {
+    if (!guide || guide.cover || $('sheetHost').firstChild) return;
+    var G = guide.G, role = guideRole();
+    if (!guideMine()) return;
+    if (role === 'keeper' && G.phase === 'keeper') {
+      if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') { guide.aim = ((guide.aim < 0 ? 0 : guide.aim) + (ev.key === 'ArrowLeft' ? -1 : 1) + Gd.BEAM_STEPS) % Gd.BEAM_STEPS; guideHud(); ev.preventDefault(); }
+      else if (ev.key === 'Enter' && guide.aim >= 0) guideAct({ a: 'beam', dir: guide.aim });
+    } else if (role === 'boat' && G.phase === 'boat') {
+      var want = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }[ev.key];
+      if (want !== undefined) {
+        var w = Gd.catchable(G).filter(function (q) { return q.dir === want; })[0];
+        if (w) guideAct({ a: 'move', x: w.x, y: w.y });
+        ev.preventDefault();
+      } else if (ev.key === ' ') { guideAct({ a: 'wait' }); ev.preventDefault(); }
+    }
+  }
+  document.addEventListener('keydown', guideKey);
+
+  /* ---------- End of a game ---------- */
+  function guideEnd() {
+    var G = guide.G, won = G.ended === 'won';
+    if (won) { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { pluck(f, i * 0.12, 0.07, 1.6); }); }
+    else { pluck(220, 0, 0.08, 1.2); pluck(174.6, 0.2, 0.07, 1.4); }
+    track('guide_end', { result: G.ended, rounds: G.round, size: G.size, hard: G.hard });
+    var s = sheet('<div class="g-end">' + (won ? guideIconSvg('keeper') : '') +
+      '<h2>' + (won ? 'Home safe!' : 'Lost at sea') + '</h2>' +
+      '<p>' + (won ? 'The boat reached the lighthouse.' : 'The boat ran out of lives in the dark.') + '</p>' +
+      '<div class="lsum"><span>Rounds<b class="notr">' + (G.round + 1) + '</b></span><span>Lives left<b class="notr">' + Math.max(0, G.lives) + '</b></span><span>Map<b>' + Gd.SIZE_NAMES[G.size] + (G.hard ? ' · Hard' : '') + '</b></span></div>' +
+      (guide.online ? '<button class="primary" id="again">Play again</button><button class="secondary" id="gLobby">Back to the room</button>' :
+        '<button class="primary" id="gNew">New map</button><button class="secondary" id="gMenu">Back to the menu</button>') + '</div>', 'start');
+    if (s.querySelector('#gNew')) s.querySelector('#gNew').onclick = function () { closeSheet(); var o = Object.assign({}, guide.opts, { seed: 1 + Math.floor(Math.random() * 1e9) }); openGuide(o); };
+    if (s.querySelector('#gMenu')) s.querySelector('#gMenu').onclick = function () { closeSheet(); closeGuide(); guideMenu(); };
+    if (s.querySelector('#again')) s.querySelector('#again').onclick = function () { netSend({ t: 'again' }); this.disabled = true; this.textContent = 'Waiting for your partner…'; };
+    if (s.querySelector('#gLobby')) s.querySelector('#gLobby').onclick = function () { netSend({ t: 'lobby' }); closeSheet(); closeGuide(); };
+  }
+  function guideLeave() {
+    var s = sheet('<h2>Leave this game?</h2><p>' + (guide.online ? 'Your partner will be left alone at sea.' : 'This map will be lost.') + '</p><button class="primary" id="gStay">Keep playing</button><button class="secondary" id="gGo">Leave</button>', 'start');
+    s.querySelector('#gStay').onclick = closeSheet;
+    s.querySelector('#gGo').onclick = function () { closeSheet(); var online = guide.online; closeGuide(); if (online) { netSend({ t: 'leave' }); netClose(); onlineSheet('home'); } else guideMenu(); };
+  }
+
+  /* ---------- Menu ---------- */
+  function guideMenu() {
+    var o = load('unwind.guideOpts', { size: 1, hard: false });
+    var seg = function (key, opts, cls) { return '<div class="sizes lseg ' + (cls || '') + '" role="group">' + opts.map(function (v) { return '<button data-g="' + key + '" data-v="' + v[0] + '" aria-pressed="' + (String(o[key]) === String(v[0])) + '">' + v[1] + '</button>'; }).join('') + '</div>'; };
+    var s = sheet('<div class="row"><h2>Guiding Light</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+      '<p class="note">A game for two. One of you keeps the lighthouse, the other sails a little boat home through a dark, foggy sea. The keeper\'s beam is the only light out there.</p>' +
+      '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('size', [[0, 'Small'], [1, 'Medium'], [2, 'Large']], 'o3') +
+      '<div class="setting"><span>Difficulty<small>' + (o.hard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]) +
+      '<button class="obig" id="gOnline"><b>Play online</b><span>Each of you on your own phone. Host a room and send your partner the code.</span></button>' +
+      '<button class="obig" id="gLocal"><b>Play on one device</b><span>Pass the phone between turns. No peeking!</span></button>' +
+      '<div class="chapter">How to play</div><div class="modes"><button id="gTutKeeper"><b>The keeper</b><span>Shine the light, find the boat, hold back the serpents.</span></button><button id="gTutBoat"><b>The captain</b><span>Catch waves, dodge danger, sail home.</span></button>' +
+      (o.hard ? '<button id="gTutHard"><b>Hard mode</b><span>Tall rocks, wind and sail, the faulty lamp.</span></button>' : '') + '</div>', 'tall lobby');
+    s.querySelector('#x').onclick = closeSheet;
+    s.querySelectorAll('[data-g]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-g'), v = b.getAttribute('data-v'); o[k] = k === 'size' ? +v : v === 'true'; save('unwind.guideOpts', o); guideMenu(); }; });
+    s.querySelector('#gLocal').onclick = function () { openGuide({ seed: 1 + Math.floor(Math.random() * 1e9), size: o.size, hard: o.hard, local: true }); };
+    s.querySelector('#gOnline').onclick = function () { saveGuideHost(o); lobby = null; hostOnline(this, { mode: 'guide', gsize: o.size, ghard: o.hard }); };
+    s.querySelector('#gTutKeeper').onclick = function () { guideTutorial('keeper', o.hard, guideMenu); };
+    s.querySelector('#gTutBoat').onclick = function () { guideTutorial('boat', o.hard, guideMenu); };
+    if (s.querySelector('#gTutHard')) s.querySelector('#gTutHard').onclick = function () { guideTutorial('hard', true, guideMenu); };
+  }
+  function saveGuideHost(o) { save('unwind.guideOpts', o); }
+
+  /* ---------- Tutorials: short pages, each with a small moving picture drawn by the game itself ---------- */
+  var GUIDE_TUT = {
+    keeper: [
+      { t: 'You keep the lighthouse', p: 'The sea is dark and foggy. Your partner\'s boat is somewhere out there, and you cannot see it. Your job is to light the way so the boat can reach the lighthouse in the middle.', scene: 'intro' },
+      { t: 'Aim and shine', p: 'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you.', scene: 'beam' },
+      { t: 'Find the boat', p: 'You only see the boat when the beam is on it. When your light touches the boat or a tile next to it, the captain sees the whole lit path to the lighthouse.', scene: 'find' },
+      { t: 'Hold back the serpents', p: 'Sea serpents roam in the fog and bite the boat. A serpent caught in your light dives and cannot move this round. Bubbles show where it is.', scene: 'serpent' },
+      { t: 'Light the way, or guard it?', p: 'Every turn is a choice: search for the boat, show it a safe path, or pin down a serpent that is getting close. Talk to each other!', scene: 'choice' }
+    ],
+    boat: [
+      { t: 'You sail the boat', p: 'You only see the tiles around your boat. Somewhere in the dark is the lighthouse in the middle of the map. Stop next to it to win.', scene: 'intro' },
+      { t: 'Catch a wave', p: 'Tap a wave on or next to your boat: it carries the boat one tile its way. Waves change every round. If none goes your way, wait.', scene: 'waves' },
+      { t: 'Follow the light', p: 'When the keeper\'s beam touches you or a tile next to you, you see the whole lit path to the lighthouse.', scene: 'find' },
+      { t: 'Out on the water', p: 'Rocks block your way. Whirlpools spin you off in a random direction. Barrels hold an extra life or an extra flare. Sailing off the edge of the map costs a life, and serpents bite.', scene: 'hazards' },
+      { t: 'Flares', p: 'A flare lets you see two tiles around you for this turn. Only you see it: the keeper does not.', scene: 'flare' }
+    ],
+    hard: [
+      { t: 'Tall rocks', p: 'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light and the captain\'s view. Look around them.', scene: 'tall' },
+      { t: 'Wind and sail', p: 'The wind is shown in the top left. With your sail up, a wave that goes with the wind carries you two tiles, and against the wind none. Side winds change nothing. Lower the sail to ignore the wind.', scene: 'wind' },
+      { t: 'A faulty lamp', p: 'The lamp only works every other round. On the dark rounds the captain sails on alone. Serpents are faster too: they move two tiles in a straight line.', scene: 'lamp' }
+    ]
+  };
+  function guideTutorial(kind, hard, after) {
+    var pages = GUIDE_TUT[kind].slice();
+    if (hard && kind !== 'hard') pages = pages.concat(GUIDE_TUT.hard);
+    var i = 0, raf = 0;
+    var render = function () {
+      var pg = pages[i];
+      var s = sheet('<div class="row"><h2>' + pg.t + '</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
+        '<canvas class="g-tutcv" width="560" height="300" aria-hidden="true"></canvas><p>' + pg.p + '</p>' +
+        '<div class="g-tutnav"><span class="notr">' + (i + 1) + ' / ' + pages.length + '</span><button class="secondary" id="gPrev"' + (i ? '' : ' disabled') + '>Back</button><button class="primary" id="gNext">' + (i < pages.length - 1 ? 'Next' : 'Got it') + '</button></div>', 'tutorial');
+      var done = function () { cancelAnimationFrame(raf); closeSheet(); if (after) after(); };
+      s.querySelector('#x').onclick = done;
+      s.querySelector('#gPrev').onclick = function () { if (i > 0) { i--; cancelAnimationFrame(raf); render(); } };
+      s.querySelector('#gNext').onclick = function () { if (i < pages.length - 1) { i++; cancelAnimationFrame(raf); render(); } else done(); };
+      var cv = s.querySelector('.g-tutcv'), c = cv.getContext('2d');
+      var loop = function (now) { if (!cv.isConnected) return; guideScene(c, cv.width, cv.height, pg.scene, now); raf = requestAnimationFrame(loop); };
+      raf = requestAnimationFrame(loop);
+    };
+    render();
+  }
+  // First time in each role (and on Hard), the right tutorial opens by itself.
+  function guideFirstTutorial() {
+    if (!guide) return;
+    var role = guideRole(), tu = progress.tutorials = progress.tutorials || {};
+    var key = 'guide-' + role, hk = 'guide-hard';
+    if (!tu[key]) { tu[key] = 1; if (guide.G.hard) tu[hk] = 1; save('unwind.progress2', progress); guideTutorial(role, guide.G.hard); }
+    else if (guide.G.hard && !tu[hk]) { tu[hk] = 1; save('unwind.progress2', progress); guideTutorial('hard', true); }
+  }
+  // Little scenes for the tutorial pages, drawn with the same pieces as the game.
+  function guideScene(c, w, h, kind, now) {
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.fillStyle = '#0a1029'; c.fillRect(0, 0, w, h);
+    var cols = 9, rows = 5, cs = Math.min(w / cols, h / rows), ox = (w - cols * cs) / 2, oy = (h - rows * cs) / 2;
+    var X = function (x) { return ox + x * cs; }, Y = function (y) { return oy + y * cs; };
+    var tile = function (x, y, lit) { c.fillStyle = lit ? '#2b3c74' : '#1f2d5e'; c.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5); };
+    var fog = function (x, y, k) { c.fillStyle = 'rgba(6,9,24,' + (k || 0.86) + ')'; c.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5); };
+    var lh = function (x, y) { var img = lighthouseImage(), lk = cs * 1.15 / 85; if (img.complete && img.naturalWidth) c.drawImage(img, X(x) + cs / 2 - 20 * lk, Y(y) + cs * 0.85 - 110 * lk, 40 * lk, 126 * lk); };
+    var fakeG = { n: 99, grid: [] };
+    var terrain = function (x, y, t) { fakeG.grid = []; fakeG.n = 1; fakeG.grid[0] = t; guideTerrain(c, fakeG, 0, 0, X(x), Y(y), cs, now, 1); };
+    var t = (now % 6000) / 6000, x, y;
+    for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) tile(x, y, false);
+    if (kind === 'intro' || kind === 'choice') {
+      lh(4, 2);
+      guideBoat(c, X(1) + cs / 2, Y(3) + cs / 2, cs, now, true, 1, 0);
+      if (kind === 'choice') { guideBeam(c, X(4) + cs / 2, Y(2) + cs / 2, 11, cs, 6, 1, false); guideSerpent(c, X(7) + cs / 2, Y(1) + cs / 2, cs, now, 0, 1); }
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) if (!(x === 4 && y === 2) && Math.abs(x - 1) + Math.abs(y - 3) > 1) fog(x, y, kind === 'choice' ? 0.6 : 0.86);
+    } else if (kind === 'beam') {
+      var d = (Math.floor(t * 16) + 10) % 16;
+      lh(4, 2); guideBeam(c, X(4) + cs / 2, Y(2) + cs / 2, d, cs, 6, 1, false);
+      terrain(1, 1, Gd.ROCK); terrain(7, 3, Gd.WHIRL);
+    } else if (kind === 'find') {
+      lh(6, 2); guideBeam(c, X(6) + cs / 2, Y(2) + cs / 2, 12, cs, 8, 0.6 + 0.4 * Math.sin(now / 400), false);
+      guideBoat(c, X(1) + cs / 2, Y(2) + cs / 2, cs, now, true, 1, 0);
+      for (x = 2; x <= 5; x++) { c.fillStyle = 'rgba(255,226,150,.12)'; c.fillRect(X(x), Y(2), cs, cs); }
+      c.strokeStyle = 'rgba(255,233,168,.7)'; c.setLineDash([6, 6]); c.lineWidth = 2; c.beginPath(); c.moveTo(X(1.5) + cs * 0.4, Y(2.5)); c.lineTo(X(5.5), Y(2.5)); c.stroke(); c.setLineDash([]);
+    } else if (kind === 'serpent') {
+      lh(1, 2); guideBeam(c, X(1) + cs / 2, Y(2) + cs / 2, 4, cs, 9, 1, false);
+      guideBubbles(c, X(5) + cs / 2, Y(2) + cs / 2, cs, now, 1);
+      var sx = 6 + Math.round(Math.sin(now / 900)), sy = 4;
+      guideSerpent(c, X(sx) + cs / 2, Y(sy) + cs / 2, cs, now, 2, 1);
+      for (x = 0; x < cols; x++) for (y = 0; y < rows; y++) if (y !== 2 && !(y === 4 && Math.abs(x - sx) <= 1)) fog(x, y, 0.55);
+    } else if (kind === 'waves') {
+      var bx = 4, by = 2;
+      [[3, 1, 0], [5, 2, 1], [4, 3, 3], [3, 3, 2]].forEach(function (q) { guideWave(c, X(q[0]), Y(q[1]), cs, (q[2] + Math.floor(now / 2000)) % 4, now, q[0]); });
+      [[3, 1], [5, 2], [4, 3], [3, 3]].forEach(function (q) { c.strokeStyle = 'rgba(255,233,168,' + (0.55 + 0.25 * Math.sin(now / 260)) + ')'; c.lineWidth = 2; c.beginPath(); c.arc(X(q[0]) + cs / 2, Y(q[1]) + cs / 2, cs * 0.42, 0, 7); c.stroke(); });
+      guideBoat(c, X(bx) + cs / 2, Y(by) + cs / 2, cs, now, true, 1, 0);
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) if (Math.max(Math.abs(x - bx), Math.abs(y - by)) > 1) fog(x, y);
+    } else if (kind === 'hazards') {
+      terrain(1, 2, Gd.ROCK); terrain(3, 2, Gd.WHIRL); guideBarrel(c, X(5) + cs / 2, Y(2) + cs / 2, cs, now); guideSerpent(c, X(7) + cs / 2, Y(2) + cs / 2, cs, now, 0, 1);
+      c.fillStyle = '#e8e2ff'; c.font = '600 ' + Math.round(cs * 0.22) + 'px system-ui'; c.textAlign = 'center';
+      [['Rock', 1], ['Whirlpool', 3], ['Barrel', 5], ['Serpent', 7]].forEach(function (l) { c.fillText(window.UnwindI18n ? window.UnwindI18n.t(l[0]) : l[0], X(l[1]) + cs / 2, Y(3) + cs * 0.55); });
+    } else if (kind === 'flare') {
+      var R = Math.sin(now / 700) > 0 ? 2 : 1;
+      guideBoat(c, X(4) + cs / 2, Y(2) + cs / 2, cs, now, true, 1, 0); terrain(6, 1, Gd.WHIRL); guideBarrel(c, X(2) + cs / 2, Y(4) + cs / 2, cs, now);
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) if (Math.max(Math.abs(x - 4), Math.abs(y - 2)) > R) fog(x, y);
+      if (R === 2) { var fg = c.createRadialGradient(X(4) + cs / 2, Y(2) + cs / 2, 0, X(4) + cs / 2, Y(2) + cs / 2, cs * 2.6); fg.addColorStop(0, 'rgba(255,190,120,.25)'); fg.addColorStop(1, 'rgba(255,190,120,0)'); c.fillStyle = fg; c.fillRect(0, 0, w, h); }
+    } else if (kind === 'tall') {
+      lh(1, 2); terrain(4, 2, Gd.BIG);
+      guideBeam(c, X(1) + cs / 2, Y(2) + cs / 2, 4, cs, 9, 1, false);
+      for (x = 5; x < cols; x++) fog(x, 2, 0.8);
+      for (x = 0; x < cols; x++) for (y = 0; y < rows; y++) if (y !== 2) fog(x, y, 0.6);
+    } else if (kind === 'wind') {
+      var up = Math.floor(now / 2500) % 2 === 0, k2 = (now % 2500) / 2500, e = k2 < 0.6 ? k2 / 0.6 : 1;
+      var dist = up ? 2 : 1;
+      guideWave(c, X(2), Y(2), cs, 1, now, 1);
+      guideBoat(c, X(1 + e * dist) + cs / 2, Y(2) + cs / 2, cs, now, up, 1, 0);
+      c.save(); c.translate(X(7) + cs / 2, Y(0.5) + cs / 2); c.strokeStyle = '#e8e2ff'; c.lineWidth = 3; c.beginPath(); c.moveTo(-cs * 0.3, 0); c.lineTo(cs * 0.3, 0); c.moveTo(cs * 0.12, -cs * 0.16); c.lineTo(cs * 0.3, 0); c.lineTo(cs * 0.12, cs * 0.16); c.stroke(); c.restore();
+      c.fillStyle = '#e8e2ff'; c.font = '600 ' + Math.round(cs * 0.22) + 'px system-ui'; c.textAlign = 'center';
+      c.fillText(window.UnwindI18n ? window.UnwindI18n.t(up ? 'Sail up: 2 tiles' : 'Sail down: 1 tile') : '', X(4) + cs / 2, Y(4) + cs * 0.5);
+    } else if (kind === 'lamp') {
+      var lit = Math.floor(now / 1600) % 2 === 0;
+      lh(4, 2); if (lit) guideBeam(c, X(4) + cs / 2, Y(2) + cs / 2, 12, cs, 6, 1, false);
+      for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) if (!(x === 4 && y === 2) && (!lit || y !== 2 || x > 4)) fog(x, y, 0.7);
+    }
+  }
+
+  /* ---------- Online: the server relays each action, and every phone applies it the same way ---------- */
+  function onGuideStart(m, you) {
+    var S = m.settings;
+    openGuide({ seed: m.seed, size: S.gsize || 0, hard: !!S.ghard, local: false, online: true, role: you === 0 ? 'keeper' : 'boat' });
+    guide.applied = 0;
+    netSend({ t: 'loaded' });
+  }
+  function onGuideEvent(m) {
+    if (!guide || !guide.online) return false;
+    if (m.t === 'gact') { if (m.n === undefined || m.n === guide.applied) { guide.applied++; guideApply(m.role, m.act); } return true; }
+    if (m.t === 'log') {
+      (m.events || []).filter(function (e) { return e.t === 'gact'; }).forEach(function (e) { if (e.n >= guide.applied) { guide.applied = e.n + 1; Gd.apply(guide.G, e.role, e.act); } });
+      guide.anim = null; guideHud();
+      if (guide.G.ended) guideEnd();
+      return true;
+    }
+    if (m.t === 'nope') { guide.busyUntil = 0; guideToast(m.why === 'turn' ? 'It is not your turn yet.' : 'That move is not allowed.'); return true; }
+    if (m.t === 'left') {
+      // Guiding Light needs both players, so the game ends here.
+      if (guide.G.ended) return true;
+      var lt = sheet('<h2>Your partner left</h2><p>' + (m.name || 'Your partner') + ' left the game, so this sea is closed. You can go back to the room or play again later.</p><button class="primary" id="gLobby2">Back to the room</button><button class="secondary" id="gMenu2">Back to the menu</button>', 'start');
+      lt.querySelector('#gLobby2').onclick = function () { netSend({ t: 'lobby' }); closeSheet(); closeGuide(); };
+      lt.querySelector('#gMenu2').onclick = function () { closeSheet(); closeGuide(); netSend({ t: 'leave' }); netClose(); guideMenu(); };
+      return true;
+    }
+    if (m.t === 'offline') { showToast(m.name + ' lost connection. Waiting for them to come back…'); return true; }
+    if (m.t === 'back') { showToast(m.name + ' is back.'); return true; }
+    if (m.t === 'votes') { var vb = $('sheetHost').querySelector('#again'); if (vb) vb.textContent = 'Play again (' + m.count + '/' + m.total + ')'; return true; }
+    if (m.t === 'go' || m.t === 'paused' || m.t === 'clock' || m.t === 'end') return true;
+    return true;
+  }
+
+  // The screen's own buttons and the sea itself.
+  (function () {
+    var el = guideEl(); if (!el) return;
+    var cv = el.querySelector('canvas'), dragging = false;
+    cv.addEventListener('pointerdown', function (ev) { dragging = true; audio(); guidePointer(ev); });
+    cv.addEventListener('pointermove', function (ev) { if (dragging && guide && guideRole() === 'keeper') guidePointer(ev); });
+    window.addEventListener('pointerup', function () { dragging = false; });
+    el.querySelector('.g-close').onclick = function () { audio(); if (guide) guideLeave(); };
+    el.querySelector('.g-help').onclick = function () { if (guide) guideTutorial(guideRole(), guide.G.hard); };
+    el.querySelector('.g-peek').onclick = function () { if (guide) { guide.peek = !guide.peek; guideHud(); } };
+  })();
+
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     tutorial: function (k) { showTutorial([].concat(k), 0, false); },
+    guide: function () { return guide ? { phase: guide.G.phase, round: guide.G.round, boat: guide.G.boat, lives: guide.G.lives, flares: guide.G.flares, ended: guide.G.ended, cover: guide.cover, busy: performance.now() < guide.busyUntil, catchable: Gd.catchable(guide.G), n: guide.G.n, c: guide.G.c, hard: guide.G.hard, wind: guide.G.wind, sail: guide.G.sail, lit: guide.G.lit.length } : null; },
+    guideOpen: function (o) { openGuide(o); },
+    onlineJoin: function (code) { joinOnline(code, function () {}); },
+    guideAct: function (a) { guideAct(a); },
+    // The wave that brings the boat closest to home by sailing distance (for tests).
+    guideBest: function () {
+      var G = guide.G, n = G.n, dist = [], q = [], i;
+      for (i = 0; i < n * n; i++) dist.push(-1);
+      for (var y = G.c - 1; y <= G.c + 1; y++) for (var x = G.c - 1; x <= G.c + 1; x++) if (x !== G.c || y !== G.c) { dist[y * n + x] = 0; q.push([x, y]); }
+      for (i = 0; i < q.length; i++) for (var k = 0; k < 4; k++) { var nx = q[i][0] + Gd.DX[k], ny = q[i][1] + Gd.DY[k]; if (!Gd.inside(G, nx, ny) || dist[ny * n + nx] >= 0) continue; var tt = G.grid[ny * n + nx]; if (tt !== 0 && tt !== 3) continue; dist[ny * n + nx] = dist[q[i][1] * n + q[i][0]] + 1; q.push([nx, ny]); }
+      var here = dist[G.boat.y * n + G.boat.x], best = null, bv = here;
+      Gd.catchable(G).forEach(function (w) { var st = Math.max(1, Gd.stepsFor(G, w.dir)), tx = G.boat.x + Gd.DX[w.dir] * st, ty = G.boat.y + Gd.DY[w.dir] * st; if (!Gd.inside(G, tx, ty)) return; var v = dist[ty * n + tx]; if (v >= 0 && v < bv && Gd.serpentAt(G, tx, ty) < 0) { bv = v; best = w; } });
+      return best && G.hard && Gd.stepsFor(G, best.dir) === 0 ? { sail: true } : best;
+    },
+    guideUncover: function () { if (guide && guide.cover) guideCover(false); },
+    guidePeek: function (v) { if (guide) { guide.peek = v; guideHud(); } },
     // Draws a row of birds at fixed moments of the flap onto a fresh canvas and returns it as an image.
     birdFrames: function (n) {
       var cv = document.createElement('canvas'), keep = ctx; cv.width = 120 * n; cv.height = 130; ctx = cv.getContext('2d');

@@ -84,8 +84,10 @@
     }
     return ac;
   }
-  var introMusic = false;
+  var introMusic = false, guideTheme = false;
   function wantedTheme() {
+    // Guiding Light plays at night by the lighthouse.
+    if (guideTheme) return M.THEMES.map(function (t) { return t.id; }).indexOf('moonlit-coast');
     if (audioPrefs.theme !== 'auto') {
       var i = M.THEMES.map(function (t) { return t.id; }).indexOf(audioPrefs.theme);
       if (i >= 0) return i;
@@ -1920,6 +1922,7 @@
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
         (load('unwind.lastRoom', '') ? '<button class="obig orejoin" id="oRejoin" hidden><b>Back to your game</b><span>Room ' + load('unwind.lastRoom', '') + ' is still going. Jump back onto your board.</span></button>' : '') +
         '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
+        '<button class="obig oguide" id="oGuide"><b>Guiding Light</b><span>A game for two: one keeps the lighthouse, the other sails home through the fog.</span></button>' +
         '<div class="chapter">Join a room</div>' +
         '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
         '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
@@ -1944,6 +1947,7 @@
     nameIn.oninput = saveName;
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
     card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; hostOnline(this); };
+    card.querySelector('#oGuide').onclick = function () { saveName(); guideMenu(); };
     fetch(netBase() + '/').then(function (r) { return r.text(); }).then(function (t) { var v = t.match(/Version (\d+)/), el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server ' + (v ? 'version ' + v[1] : 'version 1–5') ; }).catch(function () { var el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server not reachable'; });
     var rj = card.querySelector('#oRejoin');
     if (rj) {
@@ -1990,7 +1994,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-g';
+  var BUILD = '2026.11.25-h';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2057,6 +2061,7 @@
     L.seats = []; L.players.forEach(function (p) { if (p.seat >= 0) L.seats[p.seat] = p; });
     L.amHost = room.host === me; L.view = L.amHost ? 'host' : 'guest'; L.joined = !L.amHost;
     if (room.started) return;
+    if (guide && guide.online) { closeGuide(); if ($('sheetHost').firstChild) closeSheet(); fresh = true; }
     if (fresh || !$('lobbyCard')) sheet('<div id="lobbyCard"></div>', 'tall lobby');
     lobbySheet(true);
   }
@@ -2067,6 +2072,14 @@
     if ($('sheetHost').firstChild) closeSheet();
     var S = m.settings, me = netPid(), names = [], you = 0;
     m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
+    if (S.mode === 'guide') {
+      if (lobby) lobby.timers.forEach(clearTimeout);
+      lobby = null; save('unwind.lastRoom', net.code);
+      // A reconnect during the same game keeps the board; the log fills in what was missed.
+      if (guide && guide.online && guide.seed === m.seed) return;
+      onGuideStart(m, you); guide.seed = m.seed; net.ready = true;
+      return;
+    }
     var spec = Object.assign(coopSpec(S.size), { n: S.players, lives: (S.hard ? 1 : 3) * S.players, off: S.off || {}, names: names, combos: S.hard ? 2 : 0 });
     if (lobby) lobby.timers.forEach(clearTimeout);
     lobby = null;
@@ -2092,7 +2105,7 @@
     openCoop(m.seed, false, spec);
   }
   /* ---------- Online game: every phone applies the server's events in the same order ---------- */
-  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1, go: 1, clock: 1 };
+  var GAME_EVENTS = { tap: 1, bounce: 1, shot: 1, hit: 1, end: 1, paused: 1, log: 1, nope: 1, left: 1, offline: 1, back: 1, votes: 1, go: 1, clock: 1, gact: 1 };
   var coopGo = true;
   // Every phone is ready: the loader lifts on all of them together, and a timed room starts its shared clock.
   function onlineGo(m) {
@@ -2111,6 +2124,7 @@
   }
   var netApplying = false;
   function netGame(m) {
+    if (guide && guide.online) { onGuideEvent(m); return; }
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
     if (m.t === 'log') {
       var evs = m.events || [];
@@ -2257,9 +2271,9 @@
     buzz(30);
   }
   function coopSyncLivesTo(n) { coop.lives = n; coop.boards.forEach(function (B) { if (B.state) B.state.lives = n; }); }
-  function hostOnline(btn) {
+  function hostOnline(btn, extra) {
     if (btn) { btn.disabled = true; btn.querySelector('b').textContent = 'Creating room…'; }
-    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: { players: 2 } }) })
+    netFetch('/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: Object.assign({ players: 2 }, extra || {}) }) })
       .then(function (r) { if (!r.code) throw new Error('no code'); netConnect(r.code); })
       .catch(function () { onlineError('Could not reach the online server. Check your connection and try again.'); });
   }
@@ -2293,7 +2307,8 @@
     var waitingFor = S.players - L.players.length, notReady = L.players.filter(function (p) { return !p.ready; }).length;
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
-    var html = '<div class="row"><h2>Co-op room</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
+    var gm = S.mode === 'guide';
+    var html = '<div class="row"><h2>' + (gm ? 'Guiding Light room' : 'Co-op room') + '</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
     if (L.status) html += '<p class="lstatus">' + L.status + '</p>';
     if (!L.joined && !L.online) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
     html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.online ? (L.players.filter(function (q) { return q.host; })[0] || me).name : L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
@@ -2304,11 +2319,22 @@
       var p = L.players[i];
       if (!p) { html += '<li class="empty"><span class="dot"></span><span class="nm">Waiting for a player…</span></li>'; continue; }
       var isHost = host || L.joined ? p.host : i === 1, you = host || L.joined ? p.you : i === 0;
-      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm"><b>' + p.name + '</b>' + (you ? ' <em>(you)</em>' : '') + '<small>Board ' + (lobby.seats.indexOf(p) + 1) + (isHost ? ' · <i class="crown" title="Host">♛ Host</i>' : '') + '</small></span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
+      html += '<li><span class="dot" style="background:' + colors.twins[i % colors.twins.length] + '">' + p.name.charAt(0) + '</span><span class="nm"><b>' + p.name + '</b>' + (you ? ' <em>(you)</em>' : '') + '<small>' + (gm ? (lobby.seats.indexOf(p) === 0 ? 'Lighthouse keeper' : 'Boat captain') : 'Board ' + (lobby.seats.indexOf(p) + 1)) + (isHost ? ' · <i class="crown" title="Host">♛ Host</i>' : '') + '</small></span><span class="st ' + (p.ready ? 'on' : '') + '">' + (p.ready ? 'Ready' : 'Not ready') + '</span>' + (host && !p.you ? '<button class="kick" data-kick="' + i + '" aria-label="Remove ' + p.name + '">&times;</button>' : '') + '</li>';
     }
     html += '</ul>';
+    if (gm) {
+      // Guiding Light: two roles instead of boards. Tap one, then the other, to swap who plays which.
+      html += '<div class="chapter">Roles' + (host ? ' · tap both to swap' : '') + '</div><div class="lboards n2 lroles">' + [['Lighthouse keeper', 'keeper'], ['Boat captain', 'boat']].map(function (rl, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><span class="lroleicon">' + guideIconSvg(rl[1]) + '</span><b>' + rl[0] + '</b><small>' + (p ? p.name : 'Free') + '</small></button>'; }).join('') + '</div>';
+      html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+      if (host) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
+      html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
+      html += '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('gsize', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]);
+      html += '<div class="setting"><span>Difficulty<small>' + (S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
+      html += '<div class="lsum"><span>Lives<b>3</b></span><span>Players<b>2</b></span><span>Win<b>The boat reaches the lighthouse</b></span></div>';
+    } else {
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
+    if (host && L.online) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
     html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and combo arrows that mix up to 3 effects' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
@@ -2316,6 +2342,7 @@
     html += '<div class="setting"><span>Board size<small>The same for every player. Bigger boards can be zoomed.</small></span></div>' + seg('size', [[1, '1x'], [2, '2x'], [3, '3x'], [5, '5x']]);
     html += '<button class="typesbtn" id="lTypes"><span>Arrow types<small>' + typesLabel(S.off, true) + '</small></span><b>›</b></button>';
     html += '<div class="lsum"><span>Shared lives<b>' + lives + '</b></span><span>Shared timer<b>' + (S.timed ? 'Yes' : 'No') + '</b></span><span>Win<b>All boards cleared</b></span></div>';
+    }
     html += '<button class="lready' + (me.ready ? ' on' : '') + '" id="lReady">' + (me.ready ? 'Ready ✓ (tap to cancel)' : 'I\'m ready') + '</button>';
     if (host) html += '<button class="primary" id="lStart"' + (all ? '' : ' disabled') + '>' + (all ? 'Start game' : waitingFor > 0 ? 'Waiting for ' + waitingFor + (waitingFor === 1 ? ' player to join' : ' players to join') : 'Waiting for ' + notReady + (notReady === 1 ? ' player to be ready' : ' players to be ready')) + '</button>';
     else html += '<p class="lwait">' + (all ? 'Everyone is ready. Waiting for the host to start…' : 'The game starts when everyone is ready and the host starts it.') + '</p>';
@@ -2336,7 +2363,7 @@
     card.querySelector('#lNameRnd').onclick = function () { me.name = lobbyName(); save('unwind.onlineName', me.name); L.askName = false; if (L.online) netSend({ t: 'name', name: me.name }); lobbySheet(true); };
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
-      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' ? +v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
+      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' || k === 'gsize' ? +v : k === 'mode' ? v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
       if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
@@ -2345,7 +2372,7 @@
       me.ready = false;
       lobbySheet(true);
     }; });
-    card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { if (L.online) { netSend({ t: 'settings', settings: { off: off } }); return; } S.off = off; me.ready = false; lobbySheet(true); }, !host); };
+    if (card.querySelector('#lTypes')) card.querySelector('#lTypes').onclick = function () { arrowTypesBox(S.off, true, function (off) { if (L.online) { netSend({ t: 'settings', settings: { off: off } }); return; } S.off = off; me.ready = false; lobbySheet(true); }, !host); };
     card.querySelectorAll('[data-sw]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-sw'); S[k] = !S[k]; me.ready = false; lobbySheet(true); }; });
     // Dragging a board onto another swaps their players too.
     if (host) card.querySelectorAll('[data-seat]').forEach(function (b) {
@@ -4588,7 +4615,7 @@
     var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
       (current && current.coop && coop && coop.online && !ended ? '<button class="lleave smleave" data-go="leave">Leave online game</button>' : '') +
-      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="settings">Settings</button></div>' +
+      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="guide">Guiding Light</button><button data-go="settings">Settings</button></div>' +
       languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.<br>Build ' + BUILD + '</p>';
     var s = sheet(html, 'start');
     s.classList.add('startsheet');
@@ -4600,6 +4627,7 @@
       else if (what === 'levels') levelsSheet();
       else if (what === 'open') levelsSheet('endless');
       else if (what === 'online') onlineSheet('home');
+      else if (what === 'guide') guideMenu();
       else if (what === 'settings') settingsSheet();
       else if (what === 'leave') { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); }
     };
@@ -6056,10 +6084,27 @@
 
   window.addEventListener('resize', function () { layout(); });
   window.addEventListener('hashchange', function () { if (location.hash === '#debug') debugSheet(); });
+  /*__GUIDE_UI__*/
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
     tutorial: function (k) { showTutorial([].concat(k), 0, false); },
+    guide: function () { return guide ? { phase: guide.G.phase, round: guide.G.round, boat: guide.G.boat, lives: guide.G.lives, flares: guide.G.flares, ended: guide.G.ended, cover: guide.cover, busy: performance.now() < guide.busyUntil, catchable: Gd.catchable(guide.G), n: guide.G.n, c: guide.G.c, hard: guide.G.hard, wind: guide.G.wind, sail: guide.G.sail, lit: guide.G.lit.length } : null; },
+    guideOpen: function (o) { openGuide(o); },
+    onlineJoin: function (code) { joinOnline(code, function () {}); },
+    guideAct: function (a) { guideAct(a); },
+    // The wave that brings the boat closest to home by sailing distance (for tests).
+    guideBest: function () {
+      var G = guide.G, n = G.n, dist = [], q = [], i;
+      for (i = 0; i < n * n; i++) dist.push(-1);
+      for (var y = G.c - 1; y <= G.c + 1; y++) for (var x = G.c - 1; x <= G.c + 1; x++) if (x !== G.c || y !== G.c) { dist[y * n + x] = 0; q.push([x, y]); }
+      for (i = 0; i < q.length; i++) for (var k = 0; k < 4; k++) { var nx = q[i][0] + Gd.DX[k], ny = q[i][1] + Gd.DY[k]; if (!Gd.inside(G, nx, ny) || dist[ny * n + nx] >= 0) continue; var tt = G.grid[ny * n + nx]; if (tt !== 0 && tt !== 3) continue; dist[ny * n + nx] = dist[q[i][1] * n + q[i][0]] + 1; q.push([nx, ny]); }
+      var here = dist[G.boat.y * n + G.boat.x], best = null, bv = here;
+      Gd.catchable(G).forEach(function (w) { var st = Math.max(1, Gd.stepsFor(G, w.dir)), tx = G.boat.x + Gd.DX[w.dir] * st, ty = G.boat.y + Gd.DY[w.dir] * st; if (!Gd.inside(G, tx, ty)) return; var v = dist[ty * n + tx]; if (v >= 0 && v < bv && Gd.serpentAt(G, tx, ty) < 0) { bv = v; best = w; } });
+      return best && G.hard && Gd.stepsFor(G, best.dir) === 0 ? { sail: true } : best;
+    },
+    guideUncover: function () { if (guide && guide.cover) guideCover(false); },
+    guidePeek: function (v) { if (guide) { guide.peek = v; guideHud(); } },
     // Draws a row of birds at fixed moments of the flap onto a fresh canvas and returns it as an image.
     birdFrames: function (n) {
       var cv = document.createElement('canvas'), keep = ctx; cv.width = 120 * n; cv.height = 130; ctx = cv.getContext('2d');
