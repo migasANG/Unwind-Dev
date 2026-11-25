@@ -3,6 +3,77 @@
 window.UnwindI18n = (function () {
   var PT = {
     'Unwind': 'Unwind',
+    'The Poem': 'O Poema',
+    'Matchday': 'Dia de Jogo',
+    'Woodland': 'Bosque',
+    'Kick the ball into the goal on the right. The goal on the left is your own.': 'Chuta a bola para a baliza da direita. A baliza da esquerda é a tua.',
+    'Red cards that run out stay on the pitch for good. Clear the way in time.': 'Os cartões vermelhos que acabam ficam em campo para sempre. Abre caminho a tempo.',
+    'Five boards. Sometimes the way forward starts by going back.': 'Cinco tabuleiros. Às vezes, para avançar, é preciso recuar primeiro.',
+    'Push the bird onto the slingshot, then throw it at the wooden wall.': 'Empurra o pássaro para a fisga e depois atira-o contra a parede de madeira.',
+    'A thrown bird now breaks the first arrow it hits. Birds can slide to other boards.': 'Agora um pássaro atirado parte a primeira seta em que acertar. Os pássaros podem deslizar para outros tabuleiros.',
+    'Three boards and two birds. One wall is in the way of the slingshot itself.': 'Três tabuleiros e dois pássaros. Há uma parede no caminho da própria fisga.',
+    'Push the letters into their slots to write a line of the poem.': 'Empurra as letras para os seus espaços para escrever um verso do poema.',
+    'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.': 'Níveis a solo em vários tabuleiros ao mesmo tempo. Jogas em todos, e as setas gémeas partilhadas e atiradoras ligam-nos.',
+    'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.': 'Uma bola e uma fila de tabuleiros. Uma seta que acerta na bola chuta-a. Marca na baliza da direita; a da esquerda é a tua. Só setas normais e de cartão vermelho, e os cartões vermelhos que acabam ficam para sempre.',
+    'Push birds onto the slingshot with arrows, then throw them to break wooden walls. From level 2, a thrown bird also breaks the first arrow it hits. Clear every arrow to win.': 'Empurra pássaros para a fisga com setas e depois atira-os para partir paredes de madeira. A partir do nível 2, um pássaro atirado também parte a primeira seta em que acertar. Tira todas as setas para ganhar.',
+    'One level, one board for each line. Compass arrows push the letters sideways, and letters with nothing under them fall. Fill every slot to write the line, and read the whole poem at the end.': 'Um nível, um tabuleiro por verso. As setas bússola empurram as letras para o lado, e as letras sem nada por baixo caem. Preenche todos os espaços para escrever o verso, e lê o poema inteiro no fim.',
+    'This line is written.': 'Este verso está escrito.',
+    'Line 2 of 4: fill every slot to write it.': 'Verso 2 de 4: preenche todos os espaços para o escrever.',
+    'Line 3 of 4: fill every slot to write it.': 'Verso 3 de 4: preenche todos os espaços para o escrever.',
+    'Line 4 of 4: fill every slot to write it.': 'Verso 4 de 4: preenche todos os espaços para o escrever.',
+    'Letters only move sideways.': 'As letras só se mexem para os lados.',
+    'Something is in the way: it cannot move there.': 'Há algo no caminho: não se pode mexer para ali.',
+    'Own goal! That costs a life. The ball goes back to the centre spot.': 'Autogolo! Custa uma vida. A bola volta ao centro.',
+    'Out! That costs a life. The ball goes back to the centre spot.': 'Fora! Custa uma vida. A bola volta ao centro.',
+    'The bird flew away.': 'O pássaro voou para longe.',
+    'The bird is on the slingshot. Tap the slingshot to throw it.': 'O pássaro está na fisga. Toca na fisga para o atirar.',
+    'Push a bird onto the slingshot with an arrow.': 'Empurra um pássaro para a fisga com uma seta.',
+    'Choose where to throw the bird.': 'Escolhe para onde atirar o pássaro.',
+    'Something is right in front of it.': 'Há algo mesmo à frente.',
+    'No moves left: these letters cannot reach their slots any more.': 'Sem jogadas: estas letras já não chegam aos seus espaços.',
+    'No moves left: the ball can no longer reach the goal.': 'Sem jogadas: a bola já não consegue chegar à baliza.',
+    'No moves left: some arrows can never leave now.': 'Sem jogadas: há setas que já nunca vão poder sair.',
+    'A wooden wall is in the way. A bird thrown from the slingshot can break it.': 'Há uma parede de madeira no caminho. Um pássaro atirado da fisga consegue parti-la.',
+    'Your goal': 'A tua baliza',
+    'Score here': 'Marca aqui',
+    'GOAL!': 'GOLO!',
+    'Continue': 'Continuar',
+    'No moves left': 'Sem jogadas',
+    'The ball can no longer reach the goal from here. Try a different order.': 'Daqui a bola já não chega à baliza. Experimenta outra ordem.',
+    'These letters can no longer reach their slots. Try a different order.': 'Estas letras já não chegam aos seus espaços. Experimenta outra ordem.',
+    'Some arrows can never leave now. Try a different order.': 'Há setas que já nunca vão poder sair. Experimenta outra ordem.',
+    'Read the poem again': 'Ler o poema outra vez',
+    'The whole poem, with its music.': 'O poema inteiro, com a sua música.',
+    'Boarding Up specials': 'Especiais de Tabuleiros em Grupo',
+    'Matchday: the ball': 'Dia de Jogo: a bola',
+    'Woodland: birds and the slingshot': 'Bosque: pássaros e a fisga',
+    'Birds that break arrows': 'Pássaros que partem setas',
+    'The Poem: letters and slots': 'O Poema: letras e espaços',
+    'An arrow that hits the ball kicks it and stays put. The ball rolls until something stops it, even across boards. Score on the right; the left goal is yours. Goalkeepers never move, and run-out red cards stay for good.': 'Uma seta que acerta na bola chuta-a e fica onde está. A bola rola até algo a parar, mesmo entre tabuleiros. Marca à direita; a baliza da esquerda é a tua. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
+    'Arrows push birds, which slide until something stops them, even onto other boards. A bird that slides onto the slingshot sits on it: tap the slingshot, then a direction, to throw it. It breaks the first wooden wall it meets.': 'As setas empurram pássaros, que deslizam até algo os parar, mesmo para outros tabuleiros. Um pássaro que desliza para a fisga fica lá: toca na fisga e depois numa direção para o atirar. Parte a primeira parede de madeira que encontrar.',
+    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. It is not a launch.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Não conta como lançamento.',
+    'Fill every slot with its letter to write a line. Letters fall when nothing holds them up, and a compass arrow that hits a letter pushes it one tile sideways.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras caem quando nada as segura, e uma seta bússola que acerta numa letra empurra-a uma casa para o lado.',
+    'Slingshot and birds': 'Fisga e pássaros',
+    'Birds break arrows': 'Os pássaros partem setas',
+    'An arrow that hits the ball kicks it and stays. The ball rolls until something stops it, even onto the next board. Score in the goal on the RIGHT: the left one is yours, and an own goal or a ball off the pitch costs a life. Goalkeepers never move, and red cards that run out stay for good.': 'Uma seta que acerta na bola chuta-a e fica. A bola rola até algo a parar, mesmo para o tabuleiro seguinte. Marca na baliza da DIREITA: a da esquerda é a tua, e um autogolo ou uma bola fora custa uma vida. Os guarda-redes nunca se mexem, e os cartões vermelhos que acabam ficam para sempre.',
+    'An arrow that hits a bird pushes it, and it slides until something stops it. A bird that slides onto the slingshot sits on it. Tap the slingshot, then a direction, to throw the bird. It breaks the first wooden wall it meets. Clear every arrow to win.': 'Uma seta que acerta num pássaro empurra-o, e ele desliza até algo o parar. Um pássaro que desliza para a fisga fica lá. Toca na fisga e depois numa direção para atirar o pássaro. Parte a primeira parede de madeira que encontrar. Tira todas as setas para ganhar.',
+    'From Woodland 2 on, a thrown bird also breaks the first arrow it hits, then drops on the tile before it. Breaking an arrow is not a launch. Use it to free arrows that block each other.': 'A partir do Bosque 2, um pássaro atirado também parte a primeira seta em que acertar e cai na casa antes dela. Partir uma seta não conta como lançamento. Usa isto para soltar setas que se bloqueiam uma à outra.',
+    'Fill every slot with its letter to write a line. Letters with nothing under them fall. A compass arrow that hits a letter pushes it one tile sideways and stays. Compass arrows still turn each time an arrow leaves. Finish a board to read the line, then the next board opens.': 'Preenche cada espaço com a sua letra para escrever um verso. As letras sem nada por baixo caem. Uma seta bússola que acerta numa letra empurra-a uma casa para o lado e fica. As setas bússola continuam a rodar sempre que sai uma seta. Acaba um tabuleiro para ler o verso, e abre-se o seguinte.',
+    'Clear the ball\'s way first': 'Primeiro abre caminho à bola',
+    'An arrow that hits the ball kicks it': 'Uma seta que acerta na bola chuta-a',
+    'Goal! Always score on the right': 'Golo! Marca sempre à direita',
+    'An arrow pushes the bird onto the slingshot': 'Uma seta empurra o pássaro para a fisga',
+    'Tap the slingshot to aim': 'Toca na fisga para apontar',
+    'The bird breaks the wooden wall': 'O pássaro parte a parede de madeira',
+    'Arrows push birds out of the way': 'As setas empurram os pássaros para fora do caminho',
+    'Now the arrow can leave': 'Agora a seta pode sair',
+    'These two arrows block each other': 'Estas duas setas bloqueiam-se uma à outra',
+    'Aim the slingshot at one of them': 'Aponta a fisga a uma delas',
+    'The bird breaks the arrow it hits': 'O pássaro parte a seta em que acerta',
+    'Now the other one can leave': 'Agora a outra pode sair',
+    'An arrow leaves, so the letter falls into its slot': 'Sai uma seta, por isso a letra cai no seu espaço',
+    'A compass arrow pushes a letter one tile sideways': 'Uma seta bússola empurra uma letra uma casa para o lado',
+    'Fill every slot to write the line': 'Preenche todos os espaços para escrever o verso',
     'Calm': 'Calmo', 'Hard': 'Difícil', 'Timed': 'Cronometrado', 'Seasons': 'Estações', 'Winter': 'Inverno', 'Spring': 'Primavera', 'Summer': 'Verão', 'Autumn': 'Outono',
     'Dawn': 'Amanhecer', 'Morning': 'Manhã', 'Noon': 'Meio-dia', 'Dusk': 'Anoitecer', 'Night': 'Noite', 'Default': 'Automático', 'Background': 'Fundo',
     'Change it any time. Your board stays as it is.': 'Muda quando quiseres. O teu tabuleiro fica como está.',
@@ -76,6 +147,7 @@ window.UnwindI18n = (function () {
 [/^(.+) lost connection\. Waiting for them to come back…$/, '$1 perdeu a ligação. À espera que volte…'], [/^(.+) is back\.$/, '$1 voltou.'], [/^Room ([A-Z0-9-]+) is still going\. Jump back onto your board\.$/, 'A sala $1 ainda está a decorrer. Volta para o teu tabuleiro.'],
 [/^Try again \((\d)\/(\d)\)$/, 'Tentar outra vez ($1/$2)'], [/^(Golden ticket|Thaw|Sent off) (\d)$/, function (m, g, n) { return ({ 'Golden ticket': 'Bilhete dourado', 'Thaw': 'Degelo', 'Sent off': 'Expulsos' })[g] + ' ' + n; }], [/^Boarding Up (\d)$/, 'Tabuleiros em Grupo $1'],
 [/^Open Waters on (\d) boards\. You play every one of them\.$/, 'Águas Abertas em $1 tabuleiros. Jogas em todos.'],
+    [/^The ball rolled on to board (\d+)\.$/, 'A bola rolou para o tabuleiro $1.'], [/^The bird slid on to board (\d+)\.$/, 'O pássaro deslizou para o tabuleiro $1.'], [/^The bird landed on board (\d+)\.$/, 'O pássaro aterrou no tabuleiro $1.'],
     [/^Your sniper would hit this arrow on board (\d+)\.$/, 'O teu atirador acertava nesta seta do tabuleiro $1.'],
     [/^Your sniper would fly straight across board (\d+)\.$/, 'O teu atirador atravessava o tabuleiro $1 sem acertar em nada.'],
     [/^Your sniper would stop here on board (\d+)\.$/, 'O teu atirador parava aqui no tabuleiro $1.'],
@@ -91,6 +163,7 @@ window.UnwindI18n = (function () {
     if (PT[s]) return PT[s];
     var m = s.match(/^(Level|Hard|Timed|Winter|Spring|Summer|Autumn|Open Waters|Open Water) (\d+)$/);
     var bm = s.match(/^Board (\d+) of (\d)$/); if (bm) return 'Tabuleiro ' + bm[1] + ' de ' + bm[2];
+    var sm = s.match(/^(Matchday|Woodland) (\d+)$/); if (sm) return (sm[1] === 'Matchday' ? 'Dia de Jogo ' : 'Bosque ') + sm[2];
     if (m) return NAMED[m[1]] + ' ' + m[2];
     if ((m = s.match(/^(\d+) effects$/))) return m[1] + ' efeitos';
     if ((m = s.match(/^Best (.+)$/))) return 'Recorde ' + m[1];
@@ -110,7 +183,7 @@ window.UnwindI18n = (function () {
     return text.replace(body, out);
   }
   var lang = 'en', originals = new WeakMap(), attrs = ['aria-label', 'title'], obs = null;
-  function skip(n) { var p = n.parentNode; return !p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || (p.classList && p.classList.contains('notr')); }
+  function skip(n) { var p = n.parentNode; return !p || p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || (p.classList && p.classList.contains('notr')) || !!(p.closest && p.closest('.notr')); }
   function doText(n) {
     if (skip(n)) return;
     var rec = originals.get(n);

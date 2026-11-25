@@ -98,4 +98,18 @@ t('reverse arrows swap tip on every launch, leave from either end, and their lev
  ALL.filter(x=>x.arrows.some(a=>a.uno!==undefined)).forEach(x=>{const y=E.prepare(JSON.parse(JSON.stringify(x)));assert(E.solve(y,E.newState(y),800000).solved)});
  assert(L.hard.concat(L.timed,L.winter,L.spring,L.summer,L.autumn).filter(x=>x.arrows.some(a=>a.uno!==undefined)).length>=12);
 });
+t('Boarding Up specials: every level is winnable, keepers never play, red cards stay, birds and letters follow their rules',()=>{
+ const G=require('./gen-specials.js');
+ Object.keys(E.SPECIALS).filter(k=>!k.startsWith('__')).forEach(k=>['en','pt'].forEach(lang=>{const room=E.specialRoom(k,lang);
+  const rooms=room.kind==='poem'?room.boards.map(L=>Object.assign({},room,{boards:[L]})):[room];
+  rooms.forEach((r,i)=>{const s=G.solve(r,1500000);assert(s.best&&s.best.cost===0,k+' '+lang+' '+i+' not winnable without losing a life')});}));
+ // Keepers can never be played; on a pitch, a red card that runs out stays even when nothing else is left.
+ const fb=E.specialRoom('fb1');fb.boards.forEach(L=>{const S=E.newState(L);L.arrows.filter(a=>a.keeper).forEach(a=>{assert(!E.isReady(S,a));assert(E.tap(L,S,a.id).notReady)})});
+ const L=E.prepare({w:4,h:2,lives:3,redStay:true,arrows:[{id:0,kind:'plain',cells:[[0,0],[1,0]],dir:1,red:1},{id:1,kind:'plain',cells:[[0,1],[1,1]],dir:1}]});const S=E.newState(L);E.tap(L,S,1);assert(E.isRedCarded(S,L.arrows[0]),'red card should stay');
+ // A ball rolls until stopped and crosses into the next board; a bird is caught by an empty slingshot; letters only move sideways and fall.
+ const r1=E.specialRoom('fb1'),st=r1.boards.map(x=>E.newState(x));const t1=E.roomTap(r1.boards,st,1,0,r1.kick);assert(t1.ball&&t1.ball.result==='moved'&&t1.ball.b===2);assert.deepEqual(E.findProp(st[2],0)&&[E.findProp(st[2],0).x,E.findProp(st[2],0).y],[2,2]);
+ const sl=E.specialRoom('sl1'),ss=[E.newState(sl.boards[0])];E.roomTap(sl.boards,ss,0,0,null);assert.equal(ss[0].loaded,0,'bird should be on the slingshot');
+ const th=E.throwBird(sl.boards,ss,0,3);assert(th.broke&&!th.gone);assert.equal(ss[0].loaded,-1);
+ const po=E.specialRoom('poem'),pl=po.boards[0],ps=E.newState(pl);assert.equal(E.settle(pl,ps).length,0,'letters start at rest');
+});
 console.log(n,'test groups passed');

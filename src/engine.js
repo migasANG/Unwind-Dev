@@ -38,6 +38,11 @@
     // A flower's position in the queue is the launch on which a bee takes it.
     level.flowerAt = {};
     (level.flowers || []).forEach(function (f, i) { level.flowerAt[f[1] * level.w + f[0]] = i; });
+    // Boarding Up specials: wooden walls on the edges between tiles, a slingshot, letter slots and goals.
+    level.wallAt = null; level.slotAt = null; level.slingAt = -1;
+    if (level.walls && level.walls.length) { level.wallAt = {}; level.walls.forEach(function (w) { level.wallAt[(w[2] === 'r' ? 'v' : 'h') + w[0] + '_' + w[1]] = true; }); }
+    if (level.slots && level.slots.length) { level.slotAt = {}; level.slots.forEach(function (sl) { level.slotAt[sl.y * level.w + sl.x] = sl.ch; }); }
+    if (level.sling) level.slingAt = level.sling.y * level.w + level.sling.x;
     return level;
   }
   function newState(level) {
@@ -45,7 +50,8 @@
       removed: level.arrows.map(function () { return false; }),
       launches: 0,
       lives: level.lives === null ? null : (level.lives || 3),
-      history: [], frozen: {}, burning: {}, snaps: [], eventDone: false, ghostFlip: 0, arrowsRef: level.arrows
+      history: [], frozen: {}, burning: {}, snaps: [], eventDone: false, ghostFlip: 0, arrowsRef: level.arrows,
+      props: (level.props || []).map(function (p) { return Object.assign({}, p); }), broken: {}, loaded: (level.props || []).reduce(function (v, p) { return p.loaded ? p.id : v; }, -1), redStay: !!level.redStay
     };
   }
   // The season effects a board uses. Pre-made levels have one, and open water can combine several.
@@ -138,6 +144,7 @@
   // Whether this tile would stop an arrow: fire, a flower, or another solid arrow.
   function tileBlocks(level, state, a, partner, key) {
     if (state.burning && state.burning[key] > state.launches) return true;
+    if (propAt(level, state, key) >= 0) return true;
     if (level.flowerAt && flowerStands(level, state, key)) return true;
     var o = level.grid[key];
     return o !== -1 && o !== a.id && o !== partner && !state.removed[o] && !isGhost(state, level.arrows[o]);
@@ -147,6 +154,8 @@
   function check(level, state, a) {
     var d = dirOf(a, state), h = tipOf(a, state), x = h[0], y = h[1], dist = 0, partner = partnerOf(a), path = [], guard = 0, phased = false;
     for (;;) {
+      // A wooden wall on the edge it is about to cross stops it, like any obstacle.
+      if (level.wallAt && wallOn(level, state, x, y, d)) return { clear: false, wall: edgeKey(x, y, d), blocker: -5, dist: dist + 0.5, dir: dirOf(a, state), endDir: d, path: path };
       x += DX[d]; y += DY[d]; dist++;
       if (x < 0 || y < 0 || x >= level.w || y >= level.h) return { clear: true, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       if (++guard > 400) return { clear: false, blocker: a.id, dist: 1, dir: dirOf(a, state), endDir: d, path: [] };
@@ -160,6 +169,8 @@
         var nextOn = nx >= 0 && ny >= 0 && nx < level.w && ny < level.h, nextKey = ny * level.w + nx;
         if (!nextOn || (level.mirrorAt && level.mirrorAt[nextKey]) || !tileBlocks(level, state, a, partner, nextKey)) { phased = true; continue; }
       }
+      var pi = state.props && state.props.length ? propAt(level, state, key) : -1;
+      if (pi >= 0) return { clear: false, prop: pi, blocker: -4, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       if (state.burning && state.burning[key] > state.launches) return { clear: false, fire: true, blocker: -2, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       if (level.flowerAt && flowerStands(level, state, key)) return { clear: false, flower: true, flowerKey: key, blocker: -3, dist: dist, dir: dirOf(a, state), endDir: d, path: path };
       var o = level.grid[key];
@@ -173,6 +184,9 @@
   // A red card arrow not played in time is sent off until only sent-off arrows remain.
   function hasRedCard(state, a) { return !!a.red && state.launches >= a.red; }
   function isRedCarded(state, a) {
+    // A goalkeeper is never played, and on a football pitch a red card is for good.
+    if (a.keeper) return true;
+    if (hasRedCard(state, a) && state.redStay) return true;
     if (!hasRedCard(state, a) || (state.redLift && state.redLift[a.id])) return false;
     var list = state.arrowsRef;
     if (!list) return true;
@@ -213,6 +227,13 @@
       if (state.safe) ensurePlay(level, state);
       return { ok: false, thawed: ice.map(function (r) { return r.check.blocker; }), results: results, failed: false };
     }
+    // Hitting a ball, a bird or a letter pushes it. The arrow stays where it is and no life is lost.
+    var shoves = hit.filter(function (r) { return r.check.prop !== undefined; });
+    if (shoves.length && shoves.length === hit.length) {
+      var pushed = shoves.map(function (r) { return pushProp(level, state, r.check.prop, r.check.endDir); });
+      state.falls = level.gravity ? settle(level, state) : [];
+      return { ok: false, pushed: pushed, results: results, failed: false };
+    }
     if (hit.length) {
       if (state.lives !== null) state.lives--;
       return { ok: false, results: results, failed: state.lives === 0 };
@@ -238,6 +259,8 @@
       }
       state.beeTaken = due || null;
     }
+    // Letters with nothing under them drop down.
+    state.falls = level.gravity ? settle(level, state) : [];
     unstickGhosts(level, state);
     // Season boards run this check after their effects, once the board has settled.
     if (state.safe && !effectsOf(level).length) ensurePlay(level, state);
@@ -266,7 +289,7 @@
   }
   // If nothing can move and a ghost is waiting, it turns solid so the board never freezes up.
   function unstickGhosts(level, state) {
-    if (isWon(state) || !isStuck(level, state)) return false;
+    if (level.special || isWon(state) || !isStuck(level, state)) return false;
     if (level.arrows.some(function (a) { return !state.removed[a.id] && (a.ghostPhase !== undefined || a.uno !== undefined); })) {
       state.ghostFlip = (state.ghostFlip || 0) + 1;
       if (!isStuck(level, state)) return true;
@@ -304,6 +327,188 @@
     return out;
   }
   function isWon(state) { return state.removed.every(Boolean); }
+
+  /* ---------- Boarding Up specials: a football, birds and a slingshot, and letters that fall ---------- */
+  // The edge between a tile and its neighbour in direction d, the same key from either side.
+  function edgeKey(x, y, d) { return d === 1 ? 'v' + x + '_' + y : d === 3 ? 'v' + (x - 1) + '_' + y : d === 2 ? 'h' + x + '_' + y : 'h' + x + '_' + (y - 1); }
+  function wallOn(level, state, x, y, d) { var k = edgeKey(x, y, d); return !!(level.wallAt && level.wallAt[k] && !(state.broken && state.broken[k])); }
+  function propAt(level, state, key) {
+    var ps = state.props || [];
+    for (var i = 0; i < ps.length; i++) if (!ps[i].gone && ps[i].y * level.w + ps[i].x === key) return i;
+    return -1;
+  }
+  // Balls, birds and letters stop at any arrow (even a ghost) and any other prop. The slingshot is part of
+  // the ground: arrows pass over it, and only a bird sitting on it is in the way.
+  function cellTaken(level, state, key, self) {
+    var o = level.grid[key];
+    if (o !== -1 && !state.removed[o]) return true;
+    var pi = propAt(level, state, key);
+    return pi >= 0 && state.props[pi] !== self;
+  }
+  // A ball or a bird slides until something stops it. A letter moves one tile, and only sideways.
+  // A bird that slides onto an empty slingshot is caught there. Leaving the board is reported as exit.
+  function slideProp(level, state, p, d) {
+    var x = p.x, y = p.y, path = [[x, y]], out = { id: p.id, kind: p.kind, from: [x, y], path: path, exit: null, loaded: false }, was = p.loaded;
+    if (p.kind === 'letter' && (d === 0 || d === 2)) { out.to = [x, y]; out.moved = false; return out; }
+    for (var guard = 0; guard < 400; guard++) {
+      if (wallOn(level, state, x, y, d)) { out.wall = edgeKey(x, y, d); break; }
+      var nx = x + DX[d], ny = y + DY[d];
+      if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) { if (p.kind !== 'letter') out.exit = { dir: d, x: x, y: y }; break; }
+      var k = ny * level.w + nx;
+      if (cellTaken(level, state, k, p)) break;
+      if (k === level.slingAt && p.kind === 'bird' && (state.loaded === -1 || state.loaded === p.id)) { x = nx; y = ny; path.push([x, y]); out.loaded = true; break; }
+      x = nx; y = ny; path.push([x, y]);
+      if (p.kind === 'letter') break;
+    }
+    if (out.exit) p.gone = true; else { p.x = x; p.y = y; }
+    out.to = out.exit ? null : [x, y]; out.moved = path.length > 1 || !!out.exit;
+    // A bird pushed off the slingshot is no longer loaded; one that slid onto it is.
+    if (was && out.moved && !out.loaded) { p.loaded = false; if (state.loaded === p.id) state.loaded = -1; }
+    if (out.loaded) { p.loaded = true; state.loaded = p.id; }
+    return out;
+  }
+  function pushProp(level, state, i, d) { return slideProp(level, state, state.props[i], d); }
+  // Would pushing this prop this way move it at all?
+  function pushMoves(level, state, p, d) {
+    if (p.kind === 'letter' && (d === 0 || d === 2)) return false;
+    if (wallOn(level, state, p.x, p.y, d)) return false;
+    var nx = p.x + DX[d], ny = p.y + DY[d];
+    if (nx < 0 || ny < 0 || nx >= level.w || ny >= level.h) return p.kind !== 'letter';
+    return !cellTaken(level, state, ny * level.w + nx, p);
+  }
+  // Letters fall until they land in a slot, on an arrow, on another letter or on the bottom row.
+  function settle(level, state) {
+    var falls = {}, order = [], moved = true, guard = 0, w = level.w;
+    var held = function (p) { return level.slotAt && level.slotAt[p.y * w + p.x] !== undefined; };
+    while (moved && guard++ < 100) {
+      moved = false;
+      (state.props || []).filter(function (p) { return p.kind === 'letter' && !p.gone; }).sort(function (a, b) { return b.y - a.y; }).forEach(function (p) {
+        if (held(p) || p.y + 1 >= level.h || cellTaken(level, state, (p.y + 1) * w + p.x, p)) return;
+        if (!falls[p.id]) { falls[p.id] = { id: p.id, from: [p.x, p.y] }; order.push(p.id); }
+        while (p.y + 1 < level.h && !cellTaken(level, state, (p.y + 1) * w + p.x, p)) { p.y++; if (held(p)) break; }
+        falls[p.id].to = [p.x, p.y]; moved = true;
+      });
+    }
+    return order.map(function (id) { return falls[id]; });
+  }
+  function slotsDone(level, state) {
+    if (!level.slots || !level.slots.length) return false;
+    return level.slots.every(function (sl) { var i = propAt(level, state, sl.y * level.w + sl.x); return i >= 0 && state.props[i].ch === sl.ch; });
+  }
+  function findProp(state, id) { for (var i = 0; i < (state.props || []).length; i++) if (state.props[i].id === id) return state.props[i]; return null; }
+  // Is anything at all left to do on this board: a launch, a push that moves something, or a loaded slingshot?
+  function anyMove(level, state) {
+    if (state.loaded !== -1 && state.loaded !== undefined) return true;
+    return level.arrows.some(function (a) {
+      if (state.removed[a.id] || !group(level, a, state).every(function (m) { return isReady(state, m); })) return false;
+      var c = check(level, state, a);
+      if (c.clear) return true;
+      return c.prop !== undefined && pushMoves(level, state, state.props[c.prop], c.endDir);
+    });
+  }
+  /* A row of boards: a ball or a bird rolls across board edges. A ball scores through a goal on the outer edge.
+     A bird pushed off the outer edge flies away. */
+  function carry(boards, states, b, push) {
+    var segs = [{ b: b, path: push.path.concat([[push.exit.x + DX[push.exit.dir], push.exit.y + DY[push.exit.dir]]]), exit: true }];
+    var p = findProp(states[b], push.id), exit = push.exit;
+    for (var guard = 0; guard < 20; guard++) {
+      var d = exit.dir, L = boards[b];
+      var nb = d === 1 ? b + 1 : d === 3 ? b - 1 : -1;
+      if (nb < 0 || nb >= boards.length) {
+        states[b].props = states[b].props.filter(function (x) { return x !== p; });
+        if (p.kind !== 'ball') return { segs: segs, result: 'lost' };
+        var g = (L.goals || []).filter(function (gl) { return gl.side === d && gl.ys.indexOf(exit.y) >= 0; })[0];
+        return { segs: segs, result: g ? (g.own ? 'own' : 'goal') : 'out' };
+      }
+      var L2 = boards[nb], S2 = states[nb], ex = d === 1 ? 0 : L2.w - 1, k0 = exit.y * L2.w + ex;
+      if (exit.y >= L2.h || cellTaken(L2, S2, k0, p)) {
+        // The next board is blocked right at its edge: it stops on the edge of this one.
+        p.gone = false; p.x = exit.x; p.y = exit.y;
+        segs[segs.length - 1].path.pop(); segs[segs.length - 1].exit = false;
+        return { segs: segs, result: 'moved', b: b, at: [exit.x, exit.y] };
+      }
+      states[b].props = states[b].props.filter(function (x) { return x !== p; });
+      p.gone = false; p.x = d === 1 ? -1 : L2.w; p.y = exit.y;
+      S2.props.push(p);
+      var r = slideProp(L2, S2, p, d);
+      segs.push({ b: nb, path: r.path, exit: !!r.exit });
+      if (!r.exit) return { segs: segs, result: 'moved', b: nb, at: r.to, loaded: r.loaded };
+      segs[segs.length - 1].path = r.path.concat([[r.exit.x + DX[d], r.exit.y + DY[d]]]);
+      b = nb; exit = r.exit;
+    }
+    return { segs: segs, result: 'out' };
+  }
+  // A thrown bird flies straight, across board edges too. A wooden wall breaks; on boards where birds are strong,
+  // an arrow it meets is destroyed. Either way the bird drops on the last free tile before it. It passes through
+  // ghosts. Anything else stops it there. Off the outer edge it flies away.
+  function throwBird(boards, states, b, d) {
+    var S0 = states[b], p = S0.loaded === -1 ? null : findProp(S0, S0.loaded);
+    if (!p) return null;
+    var L = boards[b], S = S0, x = p.x, y = p.y, path = [[x, y]], segs = [{ b: b, path: path }], land = { b: b, x: x, y: y, seg: 0, at: 0 };
+    var out = { id: p.id, segs: segs, broke: null, destroyed: null, gone: false, impact: null };
+    for (var guard = 0; guard < 400; guard++) {
+      if (wallOn(L, S, x, y, d)) { out.broke = { b: segs.length - 1 >= 0 ? segs[segs.length - 1].b : b, key: edgeKey(x, y, d) }; out.impact = { b: segs[segs.length - 1].b, p: [x + DX[d] * 0.5, y + DY[d] * 0.5] }; break; }
+      var nx = x + DX[d], ny = y + DY[d], cb = segs[segs.length - 1].b;
+      if (nx < 0 || ny < 0 || nx >= L.w || ny >= L.h) {
+        var nb = d === 1 ? cb + 1 : d === 3 ? cb - 1 : -1;
+        path.push([nx, ny]);
+        if (nb < 0 || nb >= boards.length || ny >= boards[nb].h) { out.gone = true; break; }
+        L = boards[nb]; S = states[nb]; x = d === 1 ? -1 : L.w; path = [[x, y]]; segs.push({ b: nb, path: path });
+        continue;
+      }
+      var k = ny * L.w + nx, o = L.grid[k];
+      if (o !== -1 && !S.removed[o] && isGhost(S, L.arrows[o])) { x = nx; y = ny; path.push([x, y]); continue; }
+      if (o !== -1 && !S.removed[o]) {
+        if (L.birdsBreak) out.destroyed = { b: cb, id: o };
+        out.impact = { b: cb, p: [nx, ny] };
+        break;
+      }
+      if (propAt(L, S, k) >= 0) { out.impact = { b: cb, p: [nx, ny] }; break; }
+      x = nx; y = ny; path.push([x, y]);
+      land = { b: cb, x: x, y: y, seg: segs.length - 1, at: path.length - 1 };
+    }
+    var still = land.b === b && land.x === p.x && land.y === p.y;
+    if (still && !out.broke && !out.destroyed && !out.gone) { out.noop = true; return out; }
+    if (out.broke) states[out.broke.b].broken[out.broke.key] = true;
+    if (out.destroyed) states[out.destroyed.b].removed[out.destroyed.id] = true;
+    // The flight drawn ends where the bird lands, or where it left the last board.
+    if (!out.gone) { segs.length = land.seg + 1; segs[land.seg].path.length = land.at + 1; }
+    var LL = boards[land.b], SL = states[land.b];
+    if (out.gone) { S0.props = S0.props.filter(function (q) { return q !== p; }); p.loaded = false; S0.loaded = -1; }
+    else if (!still) {
+      p.loaded = false; S0.loaded = -1; p.x = land.x; p.y = land.y;
+      if (land.b !== b) { S0.props = S0.props.filter(function (q) { return q !== p; }); states[land.b].props.push(p); }
+      // Landing on an empty slingshot loads it.
+      if (land.y * LL.w + land.x === LL.slingAt && SL.loaded === -1) { p.loaded = true; SL.loaded = p.id; out.loaded = true; }
+    }
+    out.to = out.gone ? null : { b: land.b, x: land.x, y: land.y }; out.stays = still;
+    return out;
+  }
+  // After an out or an own goal the ball goes back to the centre spot.
+  function resetBall(boards, states, kick) {
+    var ball = null;
+    states.forEach(function (S) { (S.props || []).forEach(function (p) { if (p.kind === 'ball') ball = p; }); S.props = (S.props || []).filter(function (p) { return p.kind !== 'ball'; }); });
+    if (!ball) return null;
+    ball.gone = false; ball.x = kick.x; ball.y = kick.y;
+    states[kick.b].props.push(ball);
+    return ball;
+  }
+  // One tap on a board of a room, with the ball carried across boards. Out and own goals cost a life.
+  function roomTap(boards, states, b, id, kick) {
+    var L = boards[b], S = states[b], res = tap(L, S, id), out = { res: res, ball: null };
+    (res.pushed || []).forEach(function (pu) {
+      if (!pu.exit) return;
+      if (pu.kind === 'bird') { (out.birds = out.birds || []).push(carry(boards, states, b, pu)); return; }
+      if (pu.kind !== 'ball') return;
+      out.ball = carry(boards, states, b, pu);
+      if (out.ball.result === 'out' || out.ball.result === 'own') {
+        if (S.lives !== null) S.lives--;
+        resetBall(boards, states, kick);
+        res.failed = S.lives === 0;
+      }
+    });
+    return out;
+  }
   // An arrow that would hit a frozen arrow counts as a useful move.
   function iceHits(level, state) {
     var out = [];
@@ -1078,9 +1283,98 @@
   }
   function timeLimitFor(launches) { return Math.round((10 + launches * 3.2) / 5) * 5; }
 
+
+  /* ---------- Boarding Up specials: hand-made levels ---------- */
+  // An arrow is written as its cells, tail first, head last ("x,y x,y"). A one-tile arrow names its direction.
+  function specArrow(id, txt, more) {
+    var cells = txt.split(' ').map(function (c) { return c.split(',').map(Number); }), n = cells.length, dir = more && more.dir;
+    if (n > 1) { var h = cells[n - 1], q = cells[n - 2]; dir = h[1] < q[1] ? 0 : h[0] > q[0] ? 1 : h[1] > q[1] ? 2 : 3; }
+    var a = Object.assign({ id: id, kind: 'plain', cells: cells, dir: dir }, more || {});
+    if (a.dir === undefined) a.dir = 0;
+    return a;
+  }
+  var SPECIALS = {
+    // Matchday: a row of boards and one ball. Score on the right; the goal on the left is your own.
+    fb1: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 1, x: 2, y: 2 }, lives: 5, boards: [
+      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
+      [['0,2 1,2'], ['2,0 2,1'], ['4,4 4,3'], ['0,4 1,4']],
+      [['1,0 2,0', { red: 1 }], ['2,4 2,3'], ['0,1 1,1'], ['0,4 1,4'], ['3,4 3,3', { red: 2 }]]
+    ] },
+    fb2: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 1, x: 2, y: 2 }, lives: 5, boards: [
+      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
+      [['2,0 2,1'], ['3,4 2,4', { red: 2 }], ['0,3 1,3'], ['4,2 3,2'], ['4,0 4,1']],
+      [['3,3 4,3', { red: 1 }], ['0,3 1,3'], ['2,0 3,0'], ['1,1 1,0']],
+      [['1,3 1,4'], ['2,4 2,3', { red: 2 }], ['2,0 1,0'], ['4,0 4,1', { red: 1 }]]
+    ] },
+    fb3: { kind: 'football', w: 5, h: 5, goal: [1, 2, 3], kick: { b: 2, x: 2, y: 2 }, lives: 5, boards: [
+      [['3,0 4,0'], ['4,4 3,4'], ['2,4 2,3']],
+      [['1,2 1,3'], ['2,4 2,3'], ['1,0 2,0', { red: 2 }], ['0,1 1,1'], ['4,4 4,3']],
+      [['4,2 3,2'], ['2,1 2,0', { red: 1 }], ['0,4 1,4'], ['0,0 1,0']],
+      [['1,1 2,1', { red: 2 }], ['4,1 4,2'], ['0,3 1,3'], ['3,4 3,3'], ['4,0 3,0']],
+      [['4,1 4,0'], ['2,1 3,1', { red: 2 }], ['3,4 3,3', { red: 1 }], ['0,4 1,4'], ['1,0 0,0']]
+    ] },
+    // Woodland: push birds onto the slingshot, then throw them at the wooden walls. From level 2, birds break arrows too.
+    sl1: { kind: 'sling', lives: 4, boards: [
+      { w: 6, h: 6, sling: [4, 1], birds: [[4, 3]], walls: [[1, 1, 'r']], arrows: [['4,5 4,4'], ['0,1 1,1'], ['0,4 1,4'], ['5,3 5,2'], ['2,3 2,2']] }
+    ] },
+    sl2: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+      { w: 5, h: 5, sling: [1, 3], walls: [], arrows: [['0,1 1,1'], ['4,1 3,1 2,1'], ['2,4 3,4', { ghostPhase: 1 }], ['4,2 4,3']] },
+      { w: 5, h: 5, birds: [[1, 3]], walls: [], arrows: [['4,3 3,3'], ['4,0 3,0 2,0', { phase: true }], ['1,1 1,0'], ['0,0 0,1']] }
+    ] },
+    sl3: { kind: 'sling', lives: 4, birdsBreak: true, boards: [
+      { w: 6, h: 6, birds: [[3, 1]], walls: [], arrows: [['1,1 2,1'], ['0,4 1,4 2,4', { phase: true }], ['4,5 4,4'], ['0,2 0,3', { ghostPhase: 1 }]] },
+      { w: 6, h: 6, sling: [2, 1], birds: [[2, 3]], walls: [[2, 1, 'b']], arrows: [['2,5 2,4'], ['5,5 4,5 3,5', { phase: true }], ['0,4 0,5']] },
+      { w: 6, h: 6, walls: [], arrows: [['2,0 2,1'], ['2,4 2,3'], ['1,3 1,2'], ['4,0 4,1'], ['4,4 4,3'], ['0,5 1,5', { ghostPhase: 0 }]] }
+    ] },
+    // The Poem: one level, one board per line. Compass arrows push letters into their slots; letters fall.
+    poem: { kind: 'poem', lives: 5, boards: [
+      { w: 5, h: 5, word: 'SEA', pt: 'MAR', line: 'Breathe out, and let the {SEA}', ptLine: 'Respira, e deixa o {MAR}', letters: [[2,  2,  0],  [2,  0,  1],  [3,  2,  2]], slots: [[1,  4],  [2,  4],  [3,  4]], arrows: [['4,1', { kind: 'compass', dir: 0 }], ['4,2', { kind: 'compass', dir: 1 }], ['3,3', { kind: 'compass', dir: 2 }], ['3,1', { kind: 'compass', dir: 0 }], ['2,1', { kind: 'compass', dir: 3 }], ['2,3', { kind: 'compass', dir: 2 }]] },
+      { w: 5, h: 6, word: 'DAY', pt: 'DIA', line: 'carry the long {DAY} away;', ptLine: 'levar o longo {DIA} embora;', letters: [[2,  1,  0],  [3,  0,  1],  [2,  3,  2]], slots: [[1,  5],  [2,  5],  [3,  5]], arrows: [['0,2', { kind: 'compass', dir: 3 }], ['4,4', { kind: 'compass', dir: 1 }], ['4,1', { kind: 'compass', dir: 3 }], ['2,4', { kind: 'compass', dir: 3 }], ['3,1', { kind: 'compass', dir: 3 }], ['2,2', { kind: 'compass', dir: 3 }], ['1,3', { kind: 'compass', dir: 1 }]] },
+      { w: 6, h: 6, word: 'STAR', pt: 'LUAR', line: 'beneath a quiet {STAR},', ptLine: 'sob um {LUAR} sereno,', letters: [[4,  0,  0],  [1,  2,  1],  [3,  3,  2],  [4,  3,  3]], slots: [[1,  5],  [2,  5],  [3,  5],  [4,  5]], arrows: [['5,4', { kind: 'compass', dir: 0 }], ['1,4', { kind: 'compass', dir: 3 }], ['3,4', { kind: 'compass', dir: 2 }], ['0,2', { kind: 'compass', dir: 0 }], ['1,3', { kind: 'compass', dir: 2 }], ['4,4', { kind: 'compass', dir: 1 }], ['4,1', { kind: 'compass', dir: 2 }], ['4,2', { kind: 'compass', dir: 1 }]] },
+      { w: 6, h: 6, word: 'HOME', pt: 'CASA', line: 'the heart finds its way {HOME}.', ptLine: 'o coração volta a {CASA}.', letters: [[1,  2,  0],  [3,  0,  1],  [4,  3,  2],  [2,  3,  3]], slots: [[1,  5],  [2,  5],  [3,  5],  [4,  5]], arrows: [['0,1', { kind: 'compass', dir: 0 }], ['1,3', { kind: 'compass', dir: 1 }], ['5,3', { kind: 'compass', dir: 2 }], ['4,4', { kind: 'compass', dir: 0 }], ['3,1', { kind: 'compass', dir: 3 }], ['5,1', { kind: 'compass', dir: 3 }], ['1,4', { kind: 'compass', dir: 1 }], ['2,4', { kind: 'compass', dir: 2 }]] }
+    ] }
+  };
+  var BIRD_COLORS = ['#3d8bf2', '#f2b035', '#4fb06d', '#e8669a', '#9b6bd8'];
+  // Builds a room of boards for a special level. lang picks the poem's word.
+  function specialRoom(key, lang, def) {
+    var d = def || SPECIALS[key], boards = [], base = { lives: d.lives, hints: 0, timeLimit: null, season: null, flowers: null, mirrors: [], special: d.kind };
+    var arrowsOf = function (list) { return list.map(function (a, i) { return specArrow(i, a[0], a[1]); }); };
+    if (d.kind === 'football') {
+      var n = d.boards.length, ym = d.goal[Math.floor(d.goal.length / 2)];
+      d.boards.forEach(function (list, b) {
+        var arrows = arrowsOf(list), goals = [];
+        // Keepers stand in front of both goals: they can never be played and never move.
+        if (b === 0) { arrows.push(specArrow(arrows.length, '0,' + ym + ' 1,' + ym, { red: 1, keeper: true })); goals.push({ side: 3, ys: d.goal.slice(), own: true }); }
+        if (b === n - 1) { arrows.push(specArrow(arrows.length, (d.w - 1) + ',' + ym + ' ' + (d.w - 2) + ',' + ym, { red: 1, keeper: true })); goals.push({ side: 1, ys: d.goal.slice(), own: false }); }
+        var props = b === d.kick.b ? [{ id: 0, kind: 'ball', x: d.kick.x, y: d.kick.y }] : [];
+        boards.push(prepare(Object.assign({ w: d.w, h: d.h, arrows: arrows, props: props, goals: goals, redStay: true }, base)));
+      });
+      return { kind: d.kind, key: key, boards: boards, groups: [], kick: d.kick, lives: d.lives, n: n, layout: 'row' };
+    }
+    var bird = 0;
+    d.boards.forEach(function (bd) {
+      var lvl = Object.assign({ w: bd.w, h: bd.h, arrows: arrowsOf(bd.arrows), props: [] }, base);
+      if (d.kind === 'sling') {
+        if (bd.sling) lvl.sling = { x: bd.sling[0], y: bd.sling[1] };
+        lvl.walls = bd.walls || []; lvl.birdsBreak = !!d.birdsBreak;
+        lvl.props = (bd.birds || []).map(function (c) { var i = bird++; return { id: i, kind: 'bird', x: c[0], y: c[1], color: BIRD_COLORS[i % BIRD_COLORS.length], loaded: !!(bd.sling && bd.sling[0] === c[0] && bd.sling[1] === c[1]) }; });
+      } else {
+        var word = lang === 'pt' ? bd.pt : bd.word;
+        lvl.gravity = true; lvl.word = word; lvl.line = lang === 'pt' ? bd.ptLine : bd.line;
+        lvl.props = bd.letters.map(function (c, i) { return { id: i, kind: 'letter', x: c[0], y: c[1], ch: word.charAt(c[2] === undefined ? i : c[2]) }; });
+        lvl.slots = bd.slots.map(function (c, i) { return { x: c[0], y: c[1], ch: word.charAt(i) }; });
+      }
+      boards.push(prepare(lvl));
+    });
+    return { kind: d.kind, key: key, boards: boards, groups: [], lives: d.lives, n: boards.length, layout: 'row' };
+  }
+
+
   return {
     TUTORIALS: TUTORIALS, applyTypes: applyTypes, coopRoom: coopRoom, coopNeighbour: coopNeighbour, TURN: TURN, ensurePlay: ensurePlay, boardClearable: boardClearable, traitCount: traitCount, tutorialStart: tutorialStart, tutorialSpin: tutorialSpin, isReady: isReady, paired: paired, unstickGhosts: unstickGhosts, isGhost: isGhost, tipOf: tipOf, tipAtTail: tipAtTail, hasRedCard: hasRedCard, isRedCarded: isRedCarded, effectsOf: effectsOf, hasEffect: hasEffect, endlessBoard: endlessBoard, endlessSpec: endlessSpec, timeLimitFor: timeLimitFor, iceHits: iceHits, seasonStep: seasonStep, resetBoard: resetBoard, pivotOptions: pivotOptions, DX: DX, DY: DY, rng32: rng32, prepare: prepare, newState: newState, headOf: headOf, dirOf: dirOf,
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
+    SPECIALS: SPECIALS, specialRoom: specialRoom, BIRD_COLORS: BIRD_COLORS,
+    edgeKey: edgeKey, wallOn: wallOn, propAt: propAt, slideProp: slideProp, pushMoves: pushMoves, settle: settle, slotsDone: slotsDone, findProp: findProp, anyMove: anyMove, carry: carry, throwBird: throwBird, resetBall: resetBall, roomTap: roomTap,
     isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
 });
