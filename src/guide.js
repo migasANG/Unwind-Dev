@@ -136,7 +136,7 @@
     }
     G.startFlares = Math.floor(between(0, 3));
     // Serpents are the one thing that is not left to chance: a set number for each size, starting away from the boat.
-    var nSerpents = (hard ? [5, 8, 12] : [3, 5, 7])[size] || 5;
+    var nSerpents = (hard ? [3, 4, 5] : [2, 3, 4])[size] || 3;
     for (i = 0; i < nSerpents; i++) {
       var p = take(function (x, y) { return cheb(x, y, s[0], s[1]) >= 5; });
       if (p) G.serpents.push({ x: p[0], y: p[1], frozen: false, id: i, hunt: null, goal: null });
@@ -152,7 +152,7 @@
     if (!G) throw new Error('no map');
     G.seed = seed | 0; G.size = size; G.hard = hard;
     G.round = 0; G.lives = 3; G.flares = G.startFlares; G.sail = true;
-    G.beam = -1; G.lit = []; G.litOut = []; G.flare = false; G.flareUsed = false;
+    G.beam = -1; G.lit = []; G.litOut = []; G.lastLit = []; G.lastLitOut = []; G.flare = false; G.flareUsed = false;
     G.ended = null; G.moves = 0; G.hits = 0;
     G.keeperSeen = {}; G.boatSeen = {};
     G.lampOut = false; G.waited = false;
@@ -416,6 +416,8 @@
     G.round++;
     G.flare = false; G.flareUsed = false;
     G.serpents.forEach(function (s) { s.frozen = false; });
+    // The keeper remembers last round's lit tiles for one round only.
+    G.lastLit = G.lit; G.lastLitOut = G.litOut || [];
     G.lit = []; G.litOut = []; G.beam = -1;
     G.wind = windFor(G);
     G.waves = wavesFor(G);

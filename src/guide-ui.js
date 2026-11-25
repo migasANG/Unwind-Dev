@@ -236,8 +236,11 @@
       V = Object.assign({}, G, { beam: A.before.beam, lit: A.before.lit, litOut: A.before.litOut, flare: A.before.flare });
       if (at > A.boatDur) fadeK = Math.max(0, 1 - (at - A.boatDur) / Math.max(1, A.snakeAt - A.boatDur - 80));
     }
-    // What this player can see right now, and what they remember (nothing on Hard: the fog closes in again).
-    var see = {}, outSee = {}, mem = G.hard ? {} : role === 'keeper' ? G.keeperSeen : G.boatSeen, showBoat = false, lightVisible = false;
+    // What this player can see right now, and what they remember. The keeper remembers only what last round's
+    // beam showed; the captain remembers every tile seen on Normal, and nothing on Hard.
+    var see = {}, outSee = {}, mem = {}, memOut = {}, showBoat = false, lightVisible = false;
+    if (role === 'keeper') { (G.lastLit || []).forEach(function (k) { mem[k] = 1; }); if (G.hard) (G.lastLitOut || []).forEach(function (k) { memOut[k] = 1; }); }
+    else if (!G.hard) mem = G.boatSeen;
     if (guide.peek) { for (var i = 0; i < G.n * G.n; i++) see[i] = 1; showBoat = true; lightVisible = true; }
     else if (role === 'keeper') {
       var kv = Gd.keeperView(V); see = kv.cells; outSee = kv.out; lightVisible = true;
@@ -256,7 +259,7 @@
     for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
       var px = X(x), py = Y(y);
       if (!Gd.inside(G, x, y)) {
-        if (hideEdge) { ctx2.fillStyle = outVis(x, y) ? (Gd.isLit(V, x, y) ? '#2b3c74' : '#1f2d5e') : fogTile; ctx2.fillRect(px, py, cs + 0.5, cs + 0.5); }
+        if (hideEdge) { ctx2.fillStyle = outVis(x, y) ? (Gd.isLit(V, x, y) ? '#2b3c74' : '#1f2d5e') : memOut[Gd.outKey(G, x, y)] ? '#141e44' : fogTile; ctx2.fillRect(px, py, cs + 0.5, cs + 0.5); }
         continue;
       }
       var idx = y * G.n + x, vis = !!see[idx], rem = !!mem[idx];
@@ -342,7 +345,7 @@
       for (y = hideEdge ? y0 : Math.max(0, y0); y <= (hideEdge ? y1 : Math.min(G.n - 1, y1)); y++) for (x = hideEdge ? x0 : Math.max(0, x0); x <= (hideEdge ? x1 : Math.min(G.n - 1, x1)); x++) {
         var i4 = y * G.n + x, out4 = !Gd.inside(G, x, y);
         if (out4 ? outVis(x, y) : see[i4]) continue;
-        ctx2.fillStyle = !out4 && mem[i4] ? 'rgba(6,9,24,.5)' : fogA;
+        ctx2.fillStyle = (out4 ? memOut[Gd.outKey(G, x, y)] : mem[i4]) ? 'rgba(6,9,24,.5)' : fogA;
         ctx2.fillRect(X(x), Y(y), cs + 0.5, cs + 0.5);
       }
       // The keeper knows the map: a faint grid and its outline show through the fog.
@@ -686,7 +689,7 @@
   var GUIDE_TUT = {
     keeper: [
       { t: 'You keep the lighthouse', p: 'The sea is dark and foggy. Your partner\'s boat is somewhere out there, and you cannot see it. Your job is to light the way so the boat can reach the lighthouse in the middle.', scene: 'intro' },
-      { t: 'Aim and shine', p: 'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you.', scene: 'beam' },
+      { t: 'Aim and shine', p: 'Each turn, tap the sea to aim the beam, then press Shine. The beam crosses the whole map. Only what it lights is visible to you, and you remember it dimly for one more round before the fog takes it back.', scene: 'beam' },
       { t: 'Find the boat', p: 'You only see the boat when the beam is on it. When your light touches the boat or a tile next to it, the captain sees the whole lit path to the lighthouse.', scene: 'find' },
       { t: 'Hold back the serpents', p: 'Sea serpents roam the fog looking for the boat, taking two steps a round and turning as they please. Once one spots it, it hunts it down. A serpent caught in your light dives and stays down until the light goes out at the end of the round. Bubbles show where it is. When a serpent bites the boat it is gone, but a new one appears somewhere else.', scene: 'serpent' },
       { t: 'Light the way, or guard it?', p: 'Every turn is a choice: search for the boat, show it a safe path, or pin down a serpent that is getting close. Talk to each other!', scene: 'choice' }
@@ -702,7 +705,7 @@
       { t: 'Tall rocks', p: 'On Hard, tall rocks stand in the sea. They block the boat, and they also block the light, for the keeper and for the captain. Look around them.', scene: 'tall' },
       { t: 'Wind and sail', p: 'The wind direction is shown in the top left, and it can turn. With your sail up, a wave that goes with the wind carries you two tiles in one move, and against the wind you do not move. Side winds change nothing. Lower the sail to ignore the wind.', scene: 'wind' },
       { t: 'A faulty lamp', p: 'After every shine the light goes out. On the keeper\'s next turn, press Rekindle the light: that round stays dark, and the light works again the round after.', scene: 'lamp' },
-      { t: 'No resting', p: 'On Hard the captain cannot wait two rounds in a row. There are more serpents, and they are faster: three steps a round. And the fog closes in again behind you: nobody remembers what they saw last round.', scene: 'hazards' }
+      { t: 'No resting', p: 'On Hard the captain cannot wait two rounds in a row. Serpents are faster: three steps a round. And the fog closes in again behind the boat: the captain does not remember where it has been.', scene: 'hazards' }
     ]
   };
   function guideTutorial(kind, hard, after) {
