@@ -515,16 +515,22 @@
     // of the levels above keeps its numbers.
     { set: 'light', title: 'Guiding Light 2.0 1', guide2: 0 },
     { set: 'light', title: 'Guiding Light 2.0 2', guide2: 1 },
-    { set: 'light', title: 'Guiding Light 2.0 3', guide2: 2 }
+    { set: 'light', title: 'Guiding Light 2.0 3', guide2: 2 },
+    // Guiding Light 3.0 on one device: both roles pass the phone, to try the online game offline.
+    { set: 'light3', title: 'Guiding Light 3.0 1', guide3: { size: 0, hard: false } },
+    { set: 'light3', title: 'Guiding Light 3.0 2', guide3: { size: 1, hard: false } },
+    { set: 'light3', title: 'Guiding Light 3.0 3', guide3: { size: 2, hard: true } }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
     ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.'],
-    ['light', 'Guiding Light 2.0', 'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.']];
+    ['light', 'Guiding Light 2.0', 'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.'],
+    ['light3', 'Guiding Light 3.0', 'The online memory-and-talk game, on one device. Pass the phone: the keeper glimpses the sea for five seconds and draws the chart, then the captain plans the route by the chart and the radar. 1: small sea. 2: medium sea. 3: large sea, Hard.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
     if (b.guide2 !== undefined) { openGuide2(b.guide2, i); return; }
+    if (b.guide3) { openGuide3Local(b.guide3, i); return; }
     if (b.special) {
       withLoading(function () {
         openCoopRoom(function () {
@@ -2007,7 +2013,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-c';
+  var BUILD = '2026.11.26-d';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {

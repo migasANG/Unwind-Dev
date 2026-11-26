@@ -53,17 +53,49 @@
   function onGuide3Start(m, you) {
     var S = m.settings;
     if ($('sheetHost').firstChild) closeSheet();
-    g3 = { G: G3.create(m.seed, { size: S.gsize || 0, hard: !!S.ghard }), seed: m.seed, role: you === 0 ? 'keeper' : 'boat', applied: 0, until: 0, angle: 0, lit: [], picker: null,
-      plan: '', pings: [], anim: null, sent: {}, toasts: [], revealAt: 0 };
+    g3Init(m.seed, { size: S.gsize || 0, hard: !!S.ghard }, you === 0 ? 'keeper' : 'boat', false, -1);
+    netSend({ t: 'loaded' });
+  }
+  function g3Init(seed, opts, role, local, bu) {
+    g3 = { G: G3.create(seed, opts), seed: seed, opts: opts, role: role, local: local, bu: bu, applied: 0, until: 0, angle: 0, lit: [], picker: null,
+      plan: '', pings: [], anim: null, sent: {}, toasts: [], revealAt: 0, cover: null };
     var el = g3El();
-    el.hidden = false; el.classList.toggle('g3-keeper', g3.role === 'keeper'); el.classList.toggle('g3-boat', g3.role === 'boat');
+    el.hidden = false; g3RoleClass();
+    el.querySelector('.g-cover').hidden = true;
     document.body.classList.add('guideon');
     guideMusic(true);
     g3Paint(); g3Layout(); g3Hud();
-    track('guide3_start', { size: S.gsize, hard: !!S.ghard, role: g3.role });
-    netSend({ t: 'loaded' });
+    track('guide3_start', { size: opts.size, hard: !!opts.hard, role: role, local: !!local });
     if (!(progress.tutorials && progress.tutorials.guide3)) { progress.tutorials = progress.tutorials || {}; progress.tutorials.guide3 = 1; save('unwind.progress2', progress); g3Help(); }
     if (!g3.loop) g3Loop();
+  }
+  function g3RoleClass() { var el = g3El(); el.classList.toggle('g3-keeper', g3.role === 'keeper'); el.classList.toggle('g3-boat', g3.role === 'boat'); }
+  /* ---------- One device: both roles take turns with the phone (offline, from Boarding Up) ---------- */
+  function openGuide3Local(opts, bu) {
+    if ($('sheetHost').firstChild) closeSheet();
+    g3Init(1 + Math.floor(Math.random() * 1e9), opts, 'boat', true, bu);
+  }
+  function g3Holder(phase) { return phase === 'light' || phase === 'write' ? 'keeper' : 'boat'; }
+  // The step's clock only starts once the right player has the phone and says so.
+  function g3Local(act) {
+    var G = g3.G, before = G.phase;
+    g3Apply(g3.role, act, 0);
+    if (!g3 || G.phase === before || G.ended) return;
+    var who = g3Holder(G.phase), ms = G3.PHASE_MS[G.phase] || 0;
+    if (who !== g3.role) { g3.role = who; g3RoleClass(); g3Cover(ms); }
+    else if (ms) g3.until = performance.now() + ms;
+    g3Hud();
+  }
+  function g3Cover(ms) {
+    var c = g3El().querySelector('.g-cover'), keeper = g3.role === 'keeper';
+    g3.until = 0; g3.cover = true; g3.picker = null;
+    c.querySelector('h2').textContent = keeper ? 'Pass the phone to the keeper' : 'Pass the phone to the captain';
+    c.querySelector('p').textContent = keeper ? 'Captain, look away! The light is about to shine on the real sea.' : 'Keeper, hand over. The captain has 15 seconds to plan the route.';
+    c.querySelector('.primary').textContent = keeper ? 'I am the keeper' : 'I am the captain';
+    c.querySelector('.g-passicon').innerHTML = guideIconSvg(keeper ? 'keeper' : 'boat');
+    c.hidden = false;
+    c.querySelector('.primary').onclick = function () { if (!g3) return; c.hidden = true; g3.cover = null; if (ms) g3.until = performance.now() + ms; g3Hud(); };
+    window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
   }
   function g3Paint() { g3.paint = { n: g3.G.n, grid: g3.G.grid.map(function (t) { return t === G3.ROCK ? Gd.ROCK : t === G3.TALL ? Gd.BIG : t === G3.WHIRL ? Gd.WHIRL : Gd.WATER; }) }; }
   function closeGuide3() {
@@ -119,7 +151,7 @@
     if (m.t === 'back') { showToast(m.name + ' is back.'); return; }
     if (m.t === 'votes') { var vb = $('sheetHost').querySelector('#again'); if (vb) vb.textContent = 'Play again (' + m.count + '/' + m.total + ')'; return; }
   }
-  function g3Send(act) { netSend({ t: 'gact', act: act }); }
+  function g3Send(act) { if (g3.local) g3Local(act); else netSend({ t: 'gact', act: act }); }
   // When a timed step runs out, its owner's phone asks the server to move on (once; the server checks the clock).
   function g3Clock(now) {
     var G = g3.G, p = G.phase;
@@ -134,7 +166,7 @@
   /* ---------- Around the chart ---------- */
   function g3Hud() {
     var G = g3.G, el = g3El(), me = g3.role, ph = G3_PHASE[G.phase] || ['', ''];
-    el.querySelector('.g-role').textContent = me === 'keeper' ? 'Lighthouse keeper' : 'Boat captain';
+    el.querySelector('.g-role').textContent = (me === 'keeper' ? 'Lighthouse keeper' : 'Boat captain') + (g3.local ? ' · one device' : '');
     el.querySelector('.g3-turn b').textContent = String(Math.max(1, G.turn));
     el.querySelector('.g-lives').innerHTML = Array.apply(null, Array(G.maxLives)).map(function (_, i) { return '<svg viewBox="-1 -1 26 24"' + (i < G.lives ? '' : ' class="gone"') + ' aria-hidden="true"><path d="M12 21 C 5 15 1 11.5 1 7 A5.5 5.5 0 0 1 12 4.5 A5.5 5.5 0 0 1 23 7 C23 11.5 19 15 12 21Z"/></svg>'; }).join('');
     el.querySelector('.g3-gold b').textContent = G.got + ' / ' + G.treasure.length;
@@ -155,6 +187,7 @@
         btns = '<div class="g3-pad"><button data-step="W" aria-label="West">←</button><button data-step="N" aria-label="North">↑</button><button data-step="S" aria-label="South">↓</button><button data-step="E" aria-label="East">→</button></div><button id="g3Undo"' + (g3.plan ? '' : ' disabled') + '>Undo</button><button class="primary" id="g3Ready">Sail</button>';
       } else msg = 'The captain is planning the route. Tap a square to ping it.';
     }
+    if (g3.cover) { msg = ''; btns = ''; }
     el.querySelector('.g-msg').textContent = msg;
     var bt = el.querySelector('.g-btns'); bt.innerHTML = btns;
     var q = function (id) { return bt.querySelector(id); };
@@ -195,7 +228,7 @@
     // The phase clock.
     var left = G3.PHASE_MS[G.phase] && g3.until ? Math.max(0, g3.until - now) : 0, bar = el.querySelector('.g3-clock i'), secs = el.querySelector('.g3-ph span');
     bar.style.transform = 'scaleX(' + (G3.PHASE_MS[G.phase] ? left / G3.PHASE_MS[G.phase] : 0) + ')';
-    secs.textContent = G3.PHASE_MS[G.phase] ? Math.ceil(left / 1000) + 's' : '';
+    secs.textContent = G3.PHASE_MS[G.phase] && g3.until ? Math.ceil(left / 1000) + 's' : '';
     // The keeper's beam reveals the real sea while the light is on.
     var lighting = me === 'keeper' && G.phase === 'light' && !G.ended, lit = {};
     if (lighting) G3.litCells(G, g3.angle).forEach(function (k) { lit[k] = 1; });
@@ -212,7 +245,7 @@
     c.fillStyle = 'rgba(238,240,255,.7)'; c.font = '600 ' + Math.max(9, Math.round(cs * 0.36)) + 'px Fredoka, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     for (var i = 0; i < G.n; i++) { c.fillText(String.fromCharCode(65 + i), X(i) + cs / 2, Y(0) - cs * 0.38); c.fillText(String(i + 1), X(0) - cs * 0.42, Y(i) + cs / 2); }
     // The beam itself.
-    if (lighting) g3Beam(c, X(G.c) + cs / 2, Y(G.c) + cs / 2, g3.angle, cs * G.n * 1.5);
+    if (lighting) { c.save(); c.beginPath(); c.rect(X(0), Y(0), G.n * cs, G.n * cs); c.clip(); g3Beam(c, X(G.c) + cs / 2, Y(G.c) + cs / 2, g3.angle, cs * G.n * 1.5); c.restore(); }
     // The chart the keeper drew (both players see it).
     Object.keys(G.marks).forEach(function (kk) { var mx = +kk % G.n, my = Math.floor(+kk / G.n); g3Mark(c, X(mx) + cs / 2, Y(my) + cs / 2, cs, G.marks[kk], lighting && lit[kk] ? 0.55 : 1); });
     // A rock the boat ran into shows where it was, for the rest of that turn.
@@ -316,7 +349,7 @@
     g3.angle = Math.atan2(t.px - lx, -(t.py - ly));
   }
   function g3Down(ev) {
-    if (!g3 || g3.G.ended) return;
+    if (!g3 || g3.G.ended || g3.cover) return;
     var G = g3.G, t = g3Tile(ev);
     if (g3.role === 'keeper' && G.phase === 'light') { g3.aiming = true; g3Aim(ev); return; }
     if (!G3.inside(G, t.x, t.y)) { g3.picker = null; g3Hud(); return; }
@@ -342,6 +375,7 @@
     window.addEventListener('pointerup', function () { if (g3) g3.aiming = false; });
     el.querySelector('.g-close').onclick = function () {
       if (!g3) return;
+      if (g3.local) { var bu = g3.bu; closeGuide3(); levelsSheet('boarding'); return; }
       var s = sheet('<h2>Leave this game?</h2><p>Your partner will be left alone at sea.</p><button class="primary" id="g3Stay">Keep playing</button><button class="secondary" id="g3Go">Leave</button>', 'start');
       s.querySelector('#g3Stay').onclick = closeSheet;
       s.querySelector('#g3Go').onclick = function () { closeSheet(); closeGuide3(); netSend({ t: 'leave' }); netClose(); guide3Menu(); };
@@ -364,7 +398,18 @@
     var G = g3.G, won = G.ended === 'won';
     if (won) [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { pluck(f, i * 0.12, 0.07, 1.6); });
     else { pluck(220, 0, 0.08, 1.2); pluck(174.6, 0.2, 0.07, 1.4); }
-    track('guide3_end', { result: G.ended, turns: G.turn, treasure: G.got, lives: G.lives, role: g3.role });
+    track('guide3_end', { result: G.ended, turns: G.turn, treasure: G.got, lives: G.lives, role: g3.role, local: !!g3.local });
+    if (g3.local) {
+      var bu = g3.bu, opts = g3.opts, id = 'bu-' + (bu + 1);
+      if (won && bu >= 0) { progress.done[id] = true; if (G.lives === G.maxLives) progress.perfect[id] = true; save('unwind.progress2', progress); }
+      var ls = sheet('<div class="g-end"><h2>' + (won ? 'Home safe!' : 'Lost at sea') + '</h2><p>' + (won ? 'The boat reached the lighthouse.' : 'The boat ran out of lives.') + '</p><p>The fog has lifted: now you can see the whole sea.</p>' +
+        '<div class="lsum"><span>Turns<b class="notr">' + G.turn + '</b></span><span>Treasure<b class="notr">' + G.got + ' / ' + G.treasure.length + '</b></span><span>Lives left<b class="notr">' + Math.max(0, G.lives) + '</b></span></div>' +
+        '<button class="primary" id="g3New">New map</button><button class="secondary" id="g3Look">Look at the sea</button><button class="secondary" id="g3Levels">Back to levels</button></div>', 'start');
+      ls.querySelector('#g3New').onclick = function () { closeSheet(); openGuide3Local(opts, bu); };
+      ls.querySelector('#g3Look').onclick = function () { closeSheet(); var bt = g3El().querySelector('.g-btns'); bt.innerHTML = '<button class="primary" id="g3Back">Done</button>'; bt.querySelector('#g3Back').onclick = g3End; };
+      ls.querySelector('#g3Levels').onclick = function () { closeSheet(); closeGuide3(); levelsSheet('boarding'); };
+      return;
+    }
     var s = sheet('<div class="g-end"><h2>' + (won ? 'Home safe!' : 'Lost at sea') + '</h2><p>' + (won ? 'The boat reached the lighthouse.' : 'The boat ran out of lives.') + '</p><p>The fog has lifted: now you can both see the whole sea.</p>' +
       '<div class="lsum"><span>Turns<b class="notr">' + G.turn + '</b></span><span>Treasure<b class="notr">' + G.got + ' / ' + G.treasure.length + '</b></span><span>Lives left<b class="notr">' + Math.max(0, G.lives) + '</b></span></div>' +
       '<button class="primary" id="again">Play again</button><button class="secondary" id="g3Look">Look at the sea</button><button class="secondary" id="g3Lobby">Back to the room</button></div>', 'start');
