@@ -185,20 +185,27 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 #guide .g-btns button[aria-pressed="false"],#guide2 .g-btns button[aria-pressed="false"],#guide3 .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
 #guide.hard .g-msg{min-height:1.3em}
 #guide3 .g-toast.bad{background:rgba(255,128,128,.95);color:#2a1020}
-#guide3 .g3-ph{gap:8px}#guide3 .g3-ph span{color:#7dff9a;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
-#guide3 .g3-clock{height:4px;margin:0 max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));border-radius:2px;background:rgba(238,240,255,.1);overflow:hidden}
-#guide3 .g3-clock i{display:block;height:100%;background:#ffe9a8;transform-origin:left;transform:scaleX(0)}
 #guide3 .g3-picker{position:absolute;z-index:2;display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:16px;background:rgba(18,28,64,.97);border:1px solid rgba(255,233,168,.35);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:calc(100% - 16px)}
 #guide3 .g3-picker button{width:48px;height:52px;border-radius:12px;background:rgba(238,240,255,.08);color:#eef0ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:600}
 #guide3 .g3-picker svg{width:24px;height:24px}
+#guide3 .g3-crew{gap:6px;padding-left:5px}
+#guide3 .g3-sailor{display:block;width:26px;height:26px}
+#guide3 .g3-sailor svg{width:26px;height:26px;display:block}
+#guide3 .g3-crew.hit .g3-sailor{animation:heartbreak .7s ease}
+#guide3 .g3-phrow{display:flex;justify-content:center;padding:0 16px 8px}
+#guide3 .g3-phase{position:relative;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 10px;border-radius:17px;background:rgba(255,233,168,.14);border:1px solid rgba(255,233,168,.3);color:#ffe9a8;font-weight:600;font-size:1rem;overflow:hidden;white-space:nowrap;transition:background .3s}
+#guide3 .g3-phase .g3-phicon svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#guide3 .g3-phase span{font-variant-numeric:tabular-nums;color:#eef0ff}
+#guide3 .g3-phase span:empty{display:none}
+#guide3 .g3-phase.timed span::before{content:"· ";opacity:.6}
+#guide3 .g3-phase.low span{color:#ff9d8a}
+#guide3 .g3-phase .g3-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,233,168,.15)}
+#guide3 .g3-phase .g3-bar i{display:block;height:100%;background:#ffe9a8;transform-origin:left;transform:scaleX(0)}
+#guide3 .g3-phase:not(.timed) .g3-bar{display:none}
+#guide3.g3-boat .g3-phase{background:rgba(90,255,160,.1);border-color:rgba(90,255,160,.3);color:#9dffc4}
+#guide3.g3-boat .g3-phase .g3-bar i{background:#9dffc4}
 #guide3 .g3-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
 #guide3 .g3-head .place p{color:#cfd6ff}
-#guide3 .g3-sailors{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-#guide3 .g3-crew{display:flex;gap:3px}
-#guide3 .g3-crew svg{width:24px;height:24px;transition:transform .5s cubic-bezier(.3,1.6,.5,1),opacity .5s ease,filter .5s ease}
-#guide3 .g3-crew svg.gone{opacity:.32;filter:grayscale(1);transform:scale(.82)}
-#guide3 .g3-crew svg.lost{animation:heartbreak .7s ease}
-#guide3 .g3-crewlabel{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
 #guide3 .g3-opts{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px;color:#eef0ff}
 #guide3 .g3-opts svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
 #guide3 .g3-nav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,84px);justify-content:center;gap:4px;padding:2px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
@@ -211,11 +218,11 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 #guide3 .g3-zoom svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 #guide3.g3-boat .g3-zoom button{background:rgba(90,255,160,.14);color:#9dffc4}
 #guide3 .g3-picker button{width:52px;height:56px}
+#guide3 .g3-picker button:disabled{opacity:.4}
 #guide3 .g3-picker canvas{position:static;inset:auto;width:28px;height:28px}
 #guide3 .g-stats{flex-wrap:nowrap;gap:5px}
 #guide3 .g-pill{padding:5px 10px;font-size:.98rem;min-height:36px}
 #guide3 .g-pill b{font-size:1.1rem}
-#guide3 .g3-ph{min-width:0}
 @media (max-width:360px){#guide3 .g-pill{padding:4px 8px;font-size:.9rem}}
 #guide2 .g2-main{flex:1;min-height:0;display:flex;flex-direction:column}
 @media (min-width:860px) and (min-aspect-ratio:5/4){#guide2 .g2-main{flex-direction:row;align-items:stretch;gap:14px;padding-right:max(16px,env(safe-area-inset-right,0px))}#guide2 .g2-main .g-stage{flex:1.4}#guide2 .g2-radio{flex:1;max-width:420px;max-height:none;margin:0 0 6px;align-self:stretch}}
@@ -662,12 +669,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
 </div>
 <div id="guide3" hidden>
-  <header class="g3-head"><div class="place"><h1>Unwind</h1><p class="g3-where" aria-live="polite"></p></div><div class="right"><div class="g3-sailors" role="img"><div class="g3-crew"></div><div class="g3-crewlabel"></div></div><button class="g3-opts" type="button" aria-label="Music and sound settings"></button></div></header>
-  <div class="g-stats"><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0 / 4</b></span><span class="g-pill g3-ph"><b>Ready</b><span class="notr"></span></span></div>
-  <div class="g3-clock"><i></i></div>
+  <header class="g3-head"><div class="place"><h1>Unwind</h1><p class="g3-where" aria-live="polite"></p></div><div class="right"><button class="g3-opts" type="button" aria-label="Music and sound settings"></button></div></header>
+  <div class="g-stats"><span class="g-pill g3-crew" role="img"><span class="g3-sailor"></span><b class="notr">3/3</b></span><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0/4</b></span></div>
+  <div class="g3-phrow"><div class="g3-phase" role="status"><i class="g3-phicon"></i><b></b><span class="notr"></span><em class="g3-bar"><i></i></em></div></div>
   <div class="g-stage"><canvas></canvas><div class="g-toast" role="status"></div><div class="g3-zoom"><button class="g3-zin" type="button" aria-label="Zoom in">+</button><button class="g3-zout" type="button" aria-label="Zoom out">−</button><button class="g3-zfit" type="button" aria-label="Show the whole chart"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div><div class="g-cover" hidden><div class="g-pass"><div class="g-passicon"></div><h2></h2><p></p><button class="primary" type="button"></button></div></div><div class="g3-picker" role="group" hidden></div></div>
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
-  <nav class="g3-nav"><button type="button" data-g3nav="menu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button><button type="button" data-g3nav="help"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button><button type="button" data-g3nav="levels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button></nav>
+  <nav class="g3-nav"><button type="button" data-g3nav="menu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button><button type="button" data-g3nav="help"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Help</button><button type="button" data-g3nav="levels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button></nav>
 </div>
 <div id="boardMap" class="notr" role="img" hidden></div>
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>

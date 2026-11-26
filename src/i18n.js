@@ -213,6 +213,17 @@ window.UnwindI18n = (function () {
     'Sailors': 'Marinheiros',
     'Find every treasure for a perfect voyage.': 'Encontra todos os tesouros para uma viagem perfeita.',
     '1 sailor': '1 marinheiro',
+    'Get ready': 'Preparar',
+    'Light': 'Luz',
+    'Chart': 'Carta',
+    'Help': 'Ajuda',
+    'Trap': 'Armadilha',
+    'Trap used': 'Armadilha usada',
+    'Help will open when this turn ends.': 'A ajuda abre quando este turno acabar.',
+    'The keeper: traps': 'O faroleiro: armadilhas',
+    'While drawing, you can also throw one trap a turn: tap a square and pick Trap. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.': 'Enquanto desenhas, também podes lançar uma armadilha por turno: toca num quadrado e escolhe Armadilha. Dura 3 turnos. Uma serpente que nade para cima dela ou para o lado, nas diagonais também, fica atordoada durante 3 turnos: afunda-se e não consegue morder.',
+    'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.': 'As rochas estão lá mesmo que ninguém as tenha desenhado: um choque custa um marinheiro. Uma mordida de serpente também, a não ser que a serpente esteja atordoada. Os remoinhos atiram o barco para longe, e uma rajada de vento empurra-o mais um quadrado. Se perderem todos os marinheiros, o barco perde-se.',
+    'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.': 'Navega para dentro do próprio farol para ganhar: passar ao lado não chega. Metade dos tesouros está no fundo, onde só o radar os vê; a outra metade flutua, onde só a luz os mostra. Passar por cima de um tesouro apanha-o. Encontra-os todos para um jogo perfeito. Toca em qualquer quadrado para o assinalar no ecrã do teu parceiro.',
     'Show all': 'Mostrar tudo',
     'Home safe!': 'Em casa, a salvo!',
     'Lost at sea…': 'Perdido no mar…',
@@ -498,6 +509,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
+    [/^A serpent swam into the trap at ([A-Z]\d+) and sank, stunned!$/, 'Uma serpente nadou para a armadilha em $1 e afundou-se, atordoada!'], [/^Sailors: (\d+) of (\d+)$/, 'Marinheiros: $1 de $2'],
     [/^Guiding Light 3\.0 · (Lighthouse keeper|Boat captain)( · one device)?$/, function (m, r, o) { return 'Luz Guia 3.0 · ' + (r === 'Boat captain' ? 'Capitão do barco' : 'Faroleiro') + (o ? ' · um dispositivo' : ''); }], [/^(\d+) sailors$/, '$1 marinheiros'], [/^Crash on a tall rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha alta em $1. Perdeu-se um marinheiro!'], [/^Crash on a rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha em $1. Perdeu-se um marinheiro!'], [/^A serpent struck at ([A-Z]\d+)\. A sailor is lost!$/, 'Uma serpente atacou em $1. Perdeu-se um marinheiro!'], [/^A gust at ([A-Z]\d+) blew the boat on!$/, 'Uma rajada em $1 empurrou o barco!'],
     [/^Plan up to (\d) moves with the arrows\.$/, 'Planeia até $1 movimentos com as setas.'], [/^Crash! A tall rock at ([A-Z]\d+)$/, 'Bum! Uma rocha alta em $1'], [/^Crash! A rock at ([A-Z]\d+)$/, 'Bum! Uma rocha em $1'], [/^A whirlpool at ([A-Z]\d+) spun the boat away!$/, 'Um remoinho em $1 atirou o barco para longe!'], [/^Treasure found at ([A-Z]\d+)!$/, 'Tesouro encontrado em $1!'], [/^A serpent bit the boat at ([A-Z]\d+)!$/, 'Uma serpente mordeu o barco em $1!'], [/^(.+) left the game, so this sea is closed\.$/, '$1 saiu do jogo, por isso este mar fechou.'], [/^(\d+) \/ (\d+)$/, '$1 / $2'],
     [/^Round (\d+)$/, 'Ronda $1'], [/^The boat reached the lighthouse in (\d+) rounds\.$/, 'O barco chegou ao farol em $1 rondas.'], [/^Guiding Light 2\.0 (\d)$/, 'Luz Guia 2.0 $1'], [/^Guiding Light 3\.0 (\d)$/, 'Luz Guia 3.0 $1'],

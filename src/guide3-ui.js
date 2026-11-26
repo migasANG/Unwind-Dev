@@ -6,7 +6,16 @@
        and serpents the radar picks up.
      The screen uses the game's usual header and footer, and the chart can be zoomed. */
   var G3 = window.UnwindGuide3, g3 = null, g3ctx = null, g3w = 0, g3h = 0, g3dpr = 1, g3off = null;
-  var G3_PHASE = { start: 'Ready to sail', light: 'The light', write: 'The chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
+  var G3_PHASE = { start: 'Get ready', light: 'Light', write: 'Chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
+  // One small picture per step, for the step banner under the counters.
+  var G3_PHICON = {
+    start: '<path d="M12 4v4M12 16v4M4 12h4M16 12h4"/><circle cx="12" cy="12" r="3"/>',
+    light: '<path d="M4 12l15-6v12z" fill="currentColor" stroke="none" opacity=".55"/><circle cx="4.5" cy="12" r="2.5"/>',
+    write: '<path d="M5 19l2-6 9-9 4 4-9 9zM14 6l4 4"/>',
+    boat: '<path d="M4 15h16l-2 4H6zM12 4v10M12 4l6 9h-6"/>',
+    next: '<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8"/>',
+    over: '<path d="M6 4v16M6 5h11l-2 4 2 4H6"/>'
+  };
   var G3_PAPER = { bg: '#ead9b0', edge: '#d9c08a', ink: '#6b4a26', line: 'rgba(107,74,38,.22)', wash: 'rgba(28,52,96,.92)' };
   var G3_RADAR = { bg: '#020c07', sea: '#03170c', line: 'rgba(90,255,160,.16)', ink: '#7dffb0', glow: 'rgba(90,255,160,' };
   function g3El() { return $('guide3'); }
@@ -37,13 +46,14 @@
     roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all: only a radar screen with the chart the keeper draws. You win together, so talk!'],
     light: ['The keeper: the light', 'Each turn starts with the light. Drag to aim the beam: for 7.5 seconds you see the real sea. Rocks, tall rocks (they hide what is behind them), whirlpools, gusts of wind, floating treasure, and the boat if the beam finds it. Remember all you can!'],
     chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. The captain sees your drawings on the radar as you make them. Done ends it early.'],
+    trap: ['The keeper: traps', 'While drawing, you can also throw one trap a turn: tap a square and pick Trap. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.'],
     radar: ['The captain: the radar', 'You only see the radar: the keeper\'s chart, your boat\'s square (like E7), and what the radar picks up within 3 squares: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
     sail: ['The captain: sailing', 'You have 30 seconds to plan up to 3 moves (2 on Hard). Tap a square next to the boat, then the next one. Tap a planned square again to take it back. Pinch, scroll or use + and − to zoom. Sail ends it early. Then press Next turn when you are both ready.'],
-    danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
-    win: ['Winning', 'Reach a square next to the lighthouse to win. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
+    danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
+    win: ['Winning', 'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
   };
   function g3Help(which, after) {
-    var keys = which === 'keeper' ? ['light', 'chart', 'danger', 'win'] : which === 'boat' ? ['radar', 'sail', 'danger', 'win'] : ['roles', 'light', 'chart', 'radar', 'sail', 'danger', 'win'];
+    var keys = which === 'keeper' ? ['light', 'chart', 'trap', 'danger', 'win'] : which === 'boat' ? ['radar', 'sail', 'danger', 'win'] : ['roles', 'light', 'chart', 'trap', 'radar', 'sail', 'danger', 'win'];
     var i = 0, first = true, done = function () { closeSheet(); if (after) after(); };
     var show = function () {
       var p = G3_PAGES[keys[i]];
@@ -68,7 +78,7 @@
       g3Help(g3.role, function () { if (!g3) return; g3.paused = false; if (paused) g3.until = performance.now() + paused; g3Hud(); });
       return;
     }
-    if (timed) { g3.helpQueued = true; g3Toast('The guide will open when this turn ends.'); return; }
+    if (timed) { g3.helpQueued = true; g3Toast('Help will open when this turn ends.'); return; }
     g3Help(g3.role);
   }
 
@@ -157,7 +167,7 @@
       var lines = [];
       G.last.events.forEach(function (e) {
         var where = e.x !== undefined ? G3.coord(e.x, e.y) : '';
-        var text = e.e === 'rock' ? (e.tall ? 'Crash on a tall rock at ' : 'Crash on a rock at ') + where + '. A sailor is lost!' : e.e === 'whirl' ? 'A whirlpool at ' + where + ' spun the boat away!' : e.e === 'wind' ? 'A gust at ' + where + ' blew the boat on!' : e.e === 'treasure' ? 'Treasure found at ' + where + '!' : e.e === 'bite' ? 'A serpent struck at ' + where + '. A sailor is lost!' : e.e === 'edge' ? 'That is the edge of the map.' : e.e === 'home' ? 'Home! The boat reached the lighthouse.' : '';
+        var text = e.e === 'rock' ? (e.tall ? 'Crash on a tall rock at ' : 'Crash on a rock at ') + where + '. A sailor is lost!' : e.e === 'whirl' ? 'A whirlpool at ' + where + ' spun the boat away!' : e.e === 'wind' ? 'A gust at ' + where + ' blew the boat on!' : e.e === 'treasure' ? 'Treasure found at ' + where + '!' : e.e === 'bite' ? 'A serpent struck at ' + where + '. A sailor is lost!' : e.e === 'edge' ? 'That is the edge of the map.' : e.e === 'home' ? 'Home! The boat reached the lighthouse.' : e.e === 'stun' ? 'A serpent swam into the trap at ' + where + ' and sank, stunned!' : '';
         if (text) lines.push([text, e.e === 'rock' || e.e === 'bite']);
       });
       lines.forEach(function (l, i) { setTimeout(function () { if (g3) g3Toast(l[0], l[1]); }, 400 + i * 1300); });
@@ -206,23 +216,28 @@
   }
 
   /* ---------- Around the chart: the header, the pills and the buttons ---------- */
-  function g3SailorSvg(gone) {
-    return '<svg viewBox="0 0 24 24"' + (gone ? ' class="gone"' : '') + ' aria-hidden="true"><path d="M4.6 10.4c.4-3.700 3.500-6 7.400-6s7 2.300 7.400 6z" fill="#fbfbff"/><circle cx="12" cy="4.600" r="1.300" fill="#e84a5f"/><rect x="4" y="9.800" width="16" height="2.600" rx="1.300" fill="#2e4fa8"/><circle cx="12" cy="16.400" r="5.100" fill="#f3c9a1"/><circle cx="10.100" cy="16" r=".85" fill="#2a2550"/><circle cx="13.900" cy="16" r=".85" fill="#2a2550"/><path d="M10.300 18.600q1.700 1.200 3.400 0" fill="none" stroke="#2a2550" stroke-width=".9" stroke-linecap="round"/></svg>';
-  }
+  // The crew counter's sailor: a round badge with a white cap and a golden anchor.
+  var G3_SAILOR = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="g3SailorClip"><circle cx="24" cy="24" r="23"/></clipPath></defs><circle cx="24" cy="24" r="23" fill="#24376f"/><g clip-path="url(#g3SailorClip)"><path d="M7 48c1-8.500 7.500-12.500 17-12.500S40 39.500 41 48z" fill="#9ccbf0"/><path d="M13.500 37.500l10.500 7 10.500-7-3.200-2.200-7.300 4.400-7.300-4.400z" fill="#2c84d6"/><rect x="20" y="27" width="8" height="10" rx="3.500" fill="#ef9f82"/><ellipse cx="24" cy="23.500" rx="8.200" ry="9.600" fill="#f8bc9e"/><path d="M15.500 24c0-4 3.800-6.500 8.500-6.500" fill="none" stroke="#fbd0b6" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M13.400 17.400C14.200 11.200 18.600 7.600 24 7.600S33.800 11.200 34.600 17.400C31.500 16.200 27.900 15.600 24 15.600S16.500 16.200 13.400 17.400z" fill="#eef5fc"/><path d="M12.800 17.200C16 15.800 19.900 15.100 24 15.100S32 15.800 35.200 17.200L34.500 19.800C31.400 18.600 27.800 18 24 18S16.600 18.600 13.500 19.800z" fill="#bcd8f0"/><g fill="none" stroke="#f5b62c" stroke-width="1.500" stroke-linecap="round"><circle cx="24" cy="9.900" r="1.300"/><path d="M24 11.200v4.400M22 12.800h4M21.100 13.900c.8 1.600 1.700 2.200 2.900 2.200s2.100-.6 2.900-2.200"/></g><path d="M21.600 40.300L24 38.400 26.400 40.300 24 42.200z" fill="#1d5ea6"/><path d="M22.600 41.600L19.600 47h3L24 43.800zM25.400 41.600L28.400 47h-3L24 43.800z" fill="#2c84d6"/></g></svg>';
   function g3Hud() {
     var G = g3.G, el = g3El(), me = g3.role;
     el.querySelector('.g3-where').textContent = 'Guiding Light 3.0 · ' + (me === 'keeper' ? 'Lighthouse keeper' : 'Boat captain') + (g3.local ? ' · one device' : '');
+    var crew = el.querySelector('.g3-crew');
+    if (!crew.querySelector('.g3-sailor').firstChild) crew.querySelector('.g3-sailor').innerHTML = G3_SAILOR;
     if (g3.crew !== G.lives) {
-      var lost = g3.crew > G.lives;
+      if (g3.crew > G.lives) { crew.classList.remove('hit'); void crew.offsetWidth; crew.classList.add('hit'); }
       g3.crew = G.lives;
-      el.querySelector('.g3-crew').innerHTML = Array.apply(null, Array(G.maxLives)).map(function (_, i) { return g3SailorSvg(i >= G.lives); }).join('');
-      if (lost) { var gone = el.querySelectorAll('.g3-crew svg')[G.lives]; if (gone) gone.classList.add('lost'); }
-      var lb = el.querySelector('.g3-crewlabel'); lb.textContent = Math.max(0, G.lives) === 1 ? '1 sailor' : Math.max(0, G.lives) + ' sailors';
-      el.querySelector('.g3-sailors').setAttribute('aria-label', lb.textContent);
+      crew.querySelector('b').textContent = Math.max(0, G.lives) + '/' + G.maxLives;
+      crew.setAttribute('aria-label', 'Sailors: ' + Math.max(0, G.lives) + ' of ' + G.maxLives);
     }
     el.querySelector('.g3-turn b').textContent = String(Math.max(1, G.turn));
-    el.querySelector('.g3-gold b').textContent = G.got + ' / ' + G.treasure.length;
-    el.querySelector('.g3-ph b').textContent = G3_PHASE[G.phase] || '';
+    el.querySelector('.g3-gold b').textContent = G.got + '/' + G.treasure.length;
+    if (g3.shownPhase !== G.phase) {
+      g3.shownPhase = G.phase;
+      var ph = el.querySelector('.g3-phase');
+      ph.querySelector('.g3-phicon').innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (G3_PHICON[G.phase] || '') + '</svg>';
+      ph.querySelector('b').textContent = G3_PHASE[G.phase] || '';
+      ph.className = 'g3-phase ' + G.phase;
+    }
     var msg = '', btns = '';
     if (G.ended) msg = G.ended === 'won' ? 'Home! The boat reached the lighthouse.' : 'The boat is lost.';
     else if (G.phase === 'start' || G.phase === 'next') {
@@ -294,8 +309,9 @@
     var c = g3ctx, G = g3.G, el = g3El();
     c.setTransform(g3dpr, 0, 0, g3dpr, 0, 0);
     var left = G3.PHASE_MS[G.phase] && g3.until ? Math.max(0, g3.until - now) : 0;
-    el.querySelector('.g3-clock i').style.transform = 'scaleX(' + (G3.PHASE_MS[G.phase] && (g3.until || g3.paused) ? (g3.paused ? 1 : left / G3.PHASE_MS[G.phase]) : 0) + ')';
-    el.querySelector('.g3-ph span').textContent = G3.PHASE_MS[G.phase] && g3.until ? Math.ceil(left / 1000) + 's' : g3.paused ? '❚❚' : '';
+    var timed = G3.PHASE_MS[G.phase] && (g3.until || g3.paused), secs = timed ? (g3.paused ? '❚❚' : Math.ceil(left / 1000) + 's') : '', ph = el.querySelector('.g3-phase');
+    if (ph.dataset.secs !== secs) { ph.dataset.secs = secs; ph.querySelector('span').textContent = secs; ph.classList.toggle('timed', !!secs); ph.classList.toggle('low', !!secs && !g3.paused && left < 5000); }
+    ph.querySelector('.g3-bar i').style.transform = 'scaleX(' + (timed ? (g3.paused ? 1 : left / G3.PHASE_MS[G.phase]) : 0) + ')';
     var cam = g3Cam(), view;
     if (G.ended) view = 'sea';
     else if (g3.role === 'boat') view = 'radar';
@@ -358,7 +374,8 @@
       if (w) g3Wind(c, X(xx) + cs / 2, Y(yy) + cs / 2, cs, w.dir, now, 1);
     }
     G.treasure.forEach(function (t) { if (t.got || !lit[t.y * G.n + t.x] || (lighting && t.deep)) return; g3Chest(c, X(t.x) + cs / 2, Y(t.y) + cs / 2, cs, now, t.deep); });
-    if (!lighting) G.serpents.forEach(function (s) { guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
+    g3Traps(c, cam, now, 'sea');
+    if (!lighting) G.serpents.forEach(function (s) { if (s.stun) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); else guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
     g3Lighthouse(c, cam, lighting ? 0.9 : 0.45);
     var bp = g3BoatPos(now);
     if (lit[Math.round(bp.y) * G.n + Math.round(bp.x)]) guideBoat(c, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0);
@@ -389,6 +406,7 @@
     c.font = '700 ' + Math.round(cs * 0.36) + 'px Fredoka, system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('N', rx, ry - rr - cs * 0.22);
     c.restore();
     g3Marks(c, cam, now, true);
+    g3Traps(c, cam, now, 'paper');
     g3Crashes(c, cam);
     g3Lighthouse(c, cam, 0);
     g3Labels(c, cam, G3_PAPER.ink, G3_PAPER.bg);
@@ -403,7 +421,7 @@
     c.strokeStyle = G3_RADAR.glow + '.5)'; c.lineWidth = 2; c.strokeRect(X(0), Y(0), n * cs, n * cs);
     // The keeper's drawings, the lighthouse and the boat, all turned radar-green.
     var bp = g3BoatPos(now);
-    g3Tinted(c, function (o) { g3Marks(o, cam, now, false); g3Lighthouse(o, cam, 0); guideBoat(o, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0); }, 'rgba(110,255,170,.78)');
+    g3Tinted(c, function (o) { g3Marks(o, cam, now, false); g3Traps(o, cam, now, 'radar'); g3Lighthouse(o, cam, 0); guideBoat(o, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0); }, 'rgba(110,255,170,.78)');
     g3Crashes(c, cam);
     if (!G.ended) {
       var R = G3.RADAR, sweep = (now / 2400) % 1 * Math.PI * 2, rx = X(bp.x) + cs / 2, ry = Y(bp.y) + cs / 2, rr = (R + 0.5) * cs;
@@ -415,7 +433,7 @@
       c.restore();
       c.strokeStyle = G3_RADAR.glow + '.4)'; c.lineWidth = 1.5; for (var q = 1; q <= R; q++) { c.beginPath(); c.arc(rx, ry, (q + 0.5) * cs, 0, 7); c.stroke(); }
       c.restore();
-      if (!g3.anim) G3.radar(G).forEach(function (b) { g3Blip(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.kind, rx, ry, sweep); });
+      if (!g3.anim) G3.radar(G).forEach(function (b) { if (b.stun) { c.save(); c.globalAlpha = 0.8; guideBubbles(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.id); c.restore(); } else g3Blip(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.kind, rx, ry, sweep); });
       // The route being planned, and the squares that can come next.
       if (G.phase === 'boat') {
         var pp = G3.planPath(G, g3.plan), end = pp[pp.length - 1];
@@ -482,13 +500,45 @@
       c.beginPath(); c.moveTo(bx - cs * 0.3, by - cs * 0.3); c.lineTo(bx + cs * 0.3, by + cs * 0.3); c.moveTo(bx + cs * 0.3, by - cs * 0.3); c.lineTo(bx - cs * 0.3, by + cs * 0.3); c.stroke();
     });
   }
+  // Traps the keeper threw: the trap itself, and the squares around it where serpents get caught.
+  function g3Traps(c, cam, now, style) {
+    var G = g3.G, cs = cam.cs;
+    G.traps.forEach(function (t) {
+      var x0 = cam.ox + (t.x - 1) * cs, y0 = cam.oy + (t.y - 1) * cs, cx = cam.ox + (t.x + 0.5) * cs, cy = cam.oy + (t.y + 0.5) * cs;
+      var col = style === 'paper' ? '176,58,46' : style === 'radar' ? '120,255,180' : '255,200,110';
+      c.save(); c.beginPath(); c.rect(cam.ox, cam.oy, G.n * cs, G.n * cs); c.clip();
+      c.fillStyle = 'rgba(' + col + ',' + (style === 'paper' ? 0.08 : 0.07) + ')'; c.fillRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4);
+      c.strokeStyle = 'rgba(' + col + ',.6)'; c.lineWidth = 1.5; c.setLineDash([cs * 0.14, cs * 0.1]); c.lineDashOffset = reducedMotion() ? 0 : -now / 60;
+      c.strokeRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4); c.setLineDash([]);
+      c.restore();
+      if (style === 'paper') { c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(cx, cy, cs * 0.47, 0, 7); c.fill(); }
+      g3Trap(c, cx, cy, cs, now);
+      // How many turns it has left, as small dots.
+      var left = t.until - G.turn + 1;
+      for (var d = 0; d < left; d++) { c.fillStyle = 'rgba(' + col + ',.9)'; c.beginPath(); c.arc(cx + (d - (left - 1) / 2) * cs * 0.16, cy + cs * 0.4, cs * 0.045, 0, 7); c.fill(); }
+    });
+  }
+  // A trap: a ring of iron spikes around a glowing lantern float.
+  function g3Trap(c, cx, cy, cs, now) {
+    var s = cs / 24, pulse = reducedMotion() ? 0.8 : 0.65 + 0.35 * Math.sin(now / 300);
+    c.save(); c.translate(cx, cy);
+    var g = c.createRadialGradient(0, 0, 0, 0, 0, 9 * s); g.addColorStop(0, 'rgba(255,220,120,' + (0.55 * pulse) + ')'); g.addColorStop(1, 'rgba(255,220,120,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, 9 * s, 0, 7); c.fill();
+    c.strokeStyle = '#5a5f73'; c.lineWidth = Math.max(1.2, 1.6 * s); c.lineCap = 'round';
+    for (var k = 0; k < 8; k++) { var a = k * Math.PI / 4; c.beginPath(); c.moveTo(Math.cos(a) * 5 * s, Math.sin(a) * 5 * s); c.lineTo(Math.cos(a) * 8 * s, Math.sin(a) * 8 * s); c.stroke(); }
+    c.strokeStyle = '#8a8fa6'; c.lineWidth = Math.max(1.4, 2 * s); c.beginPath(); c.arc(0, 0, 5 * s, 0, 7); c.stroke();
+    c.fillStyle = '#e8504a'; c.beginPath(); c.arc(0, 0, 3.2 * s, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,236,170,' + pulse + ')'; c.beginPath(); c.arc(0, -0.6 * s, 1.6 * s, 0, 7); c.fill();
+    c.restore();
+  }
   function g3BoatPos(now) {
     var G = g3.G, a = g3.anim;
-    if (!a || a.path.length < 2) return { x: G.boat.x, y: G.boat.y };
+    var at = function (x, y) { return { x: x, y: y + Math.max(0, 1 - Math.hypot(x - G.c, y - G.c)) * 0.45 }; };   // docks in front of the lighthouse
+    if (!a || a.path.length < 2) return at(G.boat.x, G.boat.y);
     var segs = a.path.length - 1, f = Math.max(0, (now - a.t0) / 330);
-    if (f >= segs) { g3.anim = null; return { x: G.boat.x, y: G.boat.y }; }
+    if (f >= segs) { g3.anim = null; return at(G.boat.x, G.boat.y); }
     var k = Math.floor(f), u = f - k, p = a.path[k], q = a.path[k + 1];
-    return { x: p[0] + (q[0] - p[0]) * u, y: p[1] + (q[1] - p[1]) * u };
+    return at(p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u);
   }
   function g3Beam(c, cx, cy, angle, len) {
     c.save();
@@ -539,7 +589,7 @@
   }
 
   /* ---------- The keeper's picker: tap a square, then what is there ---------- */
-  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['clear', 'Clear'], ['danger', 'Danger'], ['erase', 'Erase'], ['ping', 'Ping']];
+  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['clear', 'Clear'], ['danger', 'Danger'], ['trap', 'Trap'], ['erase', 'Erase'], ['ping', 'Ping']];
   var G3_WINDS = [['wind-n', 'North'], ['wind-e', 'East'], ['wind-s', 'South'], ['wind-w', 'West'], ['back', 'Back']];
   function g3PickerFill() {
     var pk = g3El().querySelector('.g3-picker'), list = g3.pickWind ? G3_WINDS : G3_PICKS;
@@ -555,14 +605,16 @@
         else { c.beginPath(); c.moveTo(17, 7); c.lineTo(10, 14); c.lineTo(17, 21); c.stroke(); }
       } else {
         c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(14, 14, 13, 0, 7); c.fill();
-        g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
+        if (icon === 'trap') g3Trap(c, 14, 14, 28, 0); else g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
       }
+      if (icon === 'trap' && g3.G.trapTurn === g3.G.turn) { b.disabled = true; b.querySelector('span').textContent = 'Trap used'; }
       b.onclick = function () {
         if (!g3 || !g3.picker) return;
         var p = g3.picker;
         if (icon === 'wind') { g3.pickWind = true; g3PickerFill(); g3PlacePicker(); return; }
         if (icon === 'back') { g3.pickWind = false; g3PickerFill(); g3PlacePicker(); return; }
         if (icon === 'ping') g3Send({ a: 'ping', x: p[0], y: p[1] });
+        else if (icon === 'trap') { g3Send({ a: 'trap', x: p[0], y: p[1] }); pluck(392, 0, 0.05, 0.4); pluck(523.25, 0.06, 0.04, 0.5); }
         else g3Send({ a: 'mark', x: p[0], y: p[1], icon: icon });
         g3.picker = null; g3.pickWind = false; g3Hud();
       };

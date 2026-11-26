@@ -5,7 +5,9 @@
    Rocks are there whether or not anyone drew them. Gusts of wind come and go: a boat sailing into one is blown one
    tile further. Only the keeper's light shows them. Lives are sailors: a crash or a bite costs one.
    Treasure: half lies deep (only the radar sees it), half floats (only the light shows it). Any of it counts if the
-   boat sails over it. A win with every treasure found is perfect.
+   boat sails over it. A win with every treasure found is perfect. The boat wins by sailing into the lighthouse itself.
+   While drawing, the keeper can throw one trap a turn onto the sea. It lasts 3 turns: a serpent that swims onto it or
+   next to it (diagonals too) is stunned for 3 turns. A stunned serpent sinks out of reach and cannot bite.
    A turn: the captain presses Next turn -> light (7.5 s) -> the keeper writes (30 s, or Done) -> the captain plans up
    to 3 moves (2 on Hard) and sails (30 s, or Ready) -> the boat sails, the serpents swim -> Next turn again.
    Plain functions on a plain object: the server replays the same actions to check them. Timing is the server's job:
@@ -20,6 +22,7 @@
   var PHASE_MS = { light: 7500, write: 30000, boat: 30000 };
   var ICONS = ['rock', 'tall', 'whirl', 'wind-n', 'wind-e', 'wind-s', 'wind-w', 'treasure', 'clear', 'danger'];
   var WIND = { chance: [0.4, 0.55], max: [2, 3], turns: 3 };
+  var TRAP = { turns: 3, stun: 3 };
   var DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
   var RADAR = 3;            // the captain's radar picks up treasure and serpents this many tiles away
   var BEAM_HALF = 20 * Math.PI / 180;
@@ -53,6 +56,7 @@
     return out;
   }
   function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return G.serpents[i]; return null; }
+  function trapNear(G, x, y) { for (var i = 0; i < G.traps.length; i++) if (cheb(G.traps[i].x, G.traps[i].y, x, y) <= 1) return G.traps[i]; return null; }
   function treasureAt(G, x, y) { for (var i = 0; i < G.treasure.length; i++) if (!G.treasure[i].got && G.treasure[i].x === x && G.treasure[i].y === y) return G.treasure[i]; return null; }
   function windAt(G, x, y) { for (var i = 0; i < G.winds.length; i++) if (G.winds[i].x === x && G.winds[i].y === y) return G.winds[i]; return null; }
   // The first step of a shortest route over open water (whirlpools are avoided), or null.
@@ -132,7 +136,7 @@
     var G = null;
     for (var a = 0; a < 60 && !G; a++) G = tryMap(seed >>> 0, opts.size | 0, !!opts.hard, a);
     G.lives = G.hard ? 2 : 3; G.maxLives = G.lives; G.steps = G.hard ? 2 : 3;
-    G.winds = []; G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
+    G.winds = []; G.traps = []; G.trapTurn = 0; G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
     return G;
   }
 
@@ -149,6 +153,7 @@
       if (role !== 'boat' || (G.phase !== 'start' && G.phase !== 'next')) return { ok: false, why: 'turn' };
       G.turn++; G.phase = 'light'; G.plan = ''; G.last = null;
       gusts(G);
+      G.traps = G.traps.filter(function (t) { return t.until >= G.turn; });
       return { ok: true };
     }
     if (a === 'advance') {
@@ -166,6 +171,14 @@
       if (act.icon === 'erase') delete G.marks[k];
       else if (ICONS.indexOf(act.icon) >= 0) G.marks[k] = act.icon;
       else return { ok: false, why: 'bad' };
+      return { ok: true };
+    }
+    if (a === 'trap') {
+      // One trap a turn, thrown while drawing. It lands on any square but the lighthouse.
+      if (role !== 'keeper' || G.phase !== 'write') return { ok: false, why: 'turn' };
+      var tx = act.x | 0, ty = act.y | 0;
+      if (!inside(G, tx, ty) || (tx === G.c && ty === G.c) || G.trapTurn === G.turn) return { ok: false, why: 'bad' };
+      G.traps.push({ x: tx, y: ty, until: G.turn + TRAP.turns - 1 }); G.trapTurn = G.turn;
       return { ok: true };
     }
     if (a === 'done') {
@@ -209,7 +222,6 @@
       var d = DIRS[G.plan.charAt(i)];
       if (!enter(G, log, G.boat.x + d[0], G.boat.y + d[1], r, 0)) break;
     }
-    if (!G.ended && cheb(G.boat.x, G.boat.y, G.c, G.c) <= 1) { G.ended = 'won'; log.events.push({ e: 'home' }); }
     if (!G.ended) swim(G, log);
     G.last = log; G.plan = '';
     G.phase = G.ended ? 'over' : 'next';
@@ -218,7 +230,12 @@
   function enter(G, log, nx, ny, r, depth) {
     var t = cell(G, nx, ny);
     if (t < 0) { log.events.push({ e: 'edge', x: nx, y: ny }); return false; }
-    if (t === LIGHT) return false;
+    if (t === LIGHT) {
+      // Home: only by sailing into the lighthouse itself, not by passing next to it.
+      G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
+      G.ended = 'won'; log.events.push({ e: 'home' });
+      return false;
+    }
     if (t === ROCK || t === TALL) {
       G.lives--; log.events.push({ e: 'rock', x: nx, y: ny, tall: t === TALL }); log.bumped = [nx, ny];
       if (G.lives <= 0) G.ended = 'lost';
@@ -227,7 +244,6 @@
     G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
     if (bite(G, log)) return false;
     collect(G, log);
-    if (cheb(nx, ny, G.c, G.c) <= 1) return false;
     if (t === WHIRL) {
       // Spun away: up to three tiles in a random direction, stopping short of rocks and the edge.
       var dir = Math.floor(r() * 8), ddx = [0, 1, 1, 1, 0, -1, -1, -1][dir], ddy = [-1, -1, 0, 1, 1, 1, 0, -1][dir];
@@ -255,7 +271,7 @@
   }
   function bite(G, log) {
     var s = serpentAt(G, G.boat.x, G.boat.y);
-    if (!s) return false;
+    if (!s || s.stun) return false;
     G.lives--; log.events.push({ e: 'bite', x: s.x, y: s.y });
     respawn(G, s);
     if (G.lives <= 0) G.ended = 'lost';
@@ -266,7 +282,7 @@
     for (var t = 0; t < 400; t++) {
       var x = Math.floor(r() * G.n), y = Math.floor(r() * G.n);
       if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.boat.x, G.boat.y) < 5 || serpentAt(G, x, y) || cheb(x, y, G.c, G.c) <= 1) continue;
-      s.x = x; s.y = y; s.goal = null; return;
+      s.x = x; s.y = y; s.goal = null; s.stun = 0; return;
     }
   }
   // Serpents take one step a turn (two on Hard). Within three tiles of the boat they hunt it; otherwise they roam.
@@ -274,6 +290,8 @@
     var steps = G.hard ? 2 : 1, r = rngFor(G.seed, 900 + G.turn);
     G.serpents.forEach(function (s) {
       var path = [[s.x, s.y]];
+      // A stunned serpent stays down, out of reach, for its turns.
+      if (s.stun) { s.stun--; log.serpents.push({ id: s.id, path: path, stun: s.stun }); return; }
       for (var i = 0; i < steps && !G.ended; i++) {
         var hunt = cheb(s.x, s.y, G.boat.x, G.boat.y) <= 3, target = hunt ? [G.boat.x, G.boat.y] : s.goal;
         if (!hunt && (!target || (target[0] === s.x && target[1] === s.y))) {
@@ -283,6 +301,7 @@
         var step = firstStep(G, s.x, s.y, target[0], target[1], function (x, y) { var o = serpentAt(G, x, y); return o && o !== s; });
         if (!step) { s.goal = null; break; }
         s.x = step[0]; s.y = step[1]; path.push(step);
+        if (trapNear(G, s.x, s.y)) { s.stun = TRAP.stun; s.goal = null; log.events.push({ e: 'stun', x: s.x, y: s.y }); break; }
         if (s.x === G.boat.x && s.y === G.boat.y) {
           G.lives--; log.events.push({ e: 'bite', x: s.x, y: s.y });
           log.serpents.push({ id: s.id, path: path }); path = null;
@@ -298,7 +317,7 @@
   function radar(G) {
     var out = [];
     G.treasure.forEach(function (t) { if (!t.got && t.deep && cheb(t.x, t.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
-    G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id }); });
+    G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id, stun: s.stun || 0 }); });
     return out;
   }
   function replay(seed, opts, actions) {
@@ -313,6 +332,6 @@
     return out;
   }
 
-  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, coord: coord, cell: cell, inside: inside, cheb: cheb,
-    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS };
+  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, trapNear: trapNear, coord: coord, cell: cell, inside: inside, cheb: cheb,
+    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS, TRAP: TRAP };
 });

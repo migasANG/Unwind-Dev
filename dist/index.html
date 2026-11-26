@@ -187,20 +187,27 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 #guide .g-btns button[aria-pressed="false"],#guide2 .g-btns button[aria-pressed="false"],#guide3 .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
 #guide.hard .g-msg{min-height:1.3em}
 #guide3 .g-toast.bad{background:rgba(255,128,128,.95);color:#2a1020}
-#guide3 .g3-ph{gap:8px}#guide3 .g3-ph span{color:#7dff9a;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
-#guide3 .g3-clock{height:4px;margin:0 max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));border-radius:2px;background:rgba(238,240,255,.1);overflow:hidden}
-#guide3 .g3-clock i{display:block;height:100%;background:#ffe9a8;transform-origin:left;transform:scaleX(0)}
 #guide3 .g3-picker{position:absolute;z-index:2;display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:16px;background:rgba(18,28,64,.97);border:1px solid rgba(255,233,168,.35);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:calc(100% - 16px)}
 #guide3 .g3-picker button{width:48px;height:52px;border-radius:12px;background:rgba(238,240,255,.08);color:#eef0ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:600}
 #guide3 .g3-picker svg{width:24px;height:24px}
+#guide3 .g3-crew{gap:6px;padding-left:5px}
+#guide3 .g3-sailor{display:block;width:26px;height:26px}
+#guide3 .g3-sailor svg{width:26px;height:26px;display:block}
+#guide3 .g3-crew.hit .g3-sailor{animation:heartbreak .7s ease}
+#guide3 .g3-phrow{display:flex;justify-content:center;padding:0 16px 8px}
+#guide3 .g3-phase{position:relative;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px 0 10px;border-radius:17px;background:rgba(255,233,168,.14);border:1px solid rgba(255,233,168,.3);color:#ffe9a8;font-weight:600;font-size:1rem;overflow:hidden;white-space:nowrap;transition:background .3s}
+#guide3 .g3-phase .g3-phicon svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#guide3 .g3-phase span{font-variant-numeric:tabular-nums;color:#eef0ff}
+#guide3 .g3-phase span:empty{display:none}
+#guide3 .g3-phase.timed span::before{content:"· ";opacity:.6}
+#guide3 .g3-phase.low span{color:#ff9d8a}
+#guide3 .g3-phase .g3-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,233,168,.15)}
+#guide3 .g3-phase .g3-bar i{display:block;height:100%;background:#ffe9a8;transform-origin:left;transform:scaleX(0)}
+#guide3 .g3-phase:not(.timed) .g3-bar{display:none}
+#guide3.g3-boat .g3-phase{background:rgba(90,255,160,.1);border-color:rgba(90,255,160,.3);color:#9dffc4}
+#guide3.g3-boat .g3-phase .g3-bar i{background:#9dffc4}
 #guide3 .g3-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
 #guide3 .g3-head .place p{color:#cfd6ff}
-#guide3 .g3-sailors{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-#guide3 .g3-crew{display:flex;gap:3px}
-#guide3 .g3-crew svg{width:24px;height:24px;transition:transform .5s cubic-bezier(.3,1.6,.5,1),opacity .5s ease,filter .5s ease}
-#guide3 .g3-crew svg.gone{opacity:.32;filter:grayscale(1);transform:scale(.82)}
-#guide3 .g3-crew svg.lost{animation:heartbreak .7s ease}
-#guide3 .g3-crewlabel{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
 #guide3 .g3-opts{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px;color:#eef0ff}
 #guide3 .g3-opts svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
 #guide3 .g3-nav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,84px);justify-content:center;gap:4px;padding:2px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
@@ -213,11 +220,11 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 #guide3 .g3-zoom svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
 #guide3.g3-boat .g3-zoom button{background:rgba(90,255,160,.14);color:#9dffc4}
 #guide3 .g3-picker button{width:52px;height:56px}
+#guide3 .g3-picker button:disabled{opacity:.4}
 #guide3 .g3-picker canvas{position:static;inset:auto;width:28px;height:28px}
 #guide3 .g-stats{flex-wrap:nowrap;gap:5px}
 #guide3 .g-pill{padding:5px 10px;font-size:.98rem;min-height:36px}
 #guide3 .g-pill b{font-size:1.1rem}
-#guide3 .g3-ph{min-width:0}
 @media (max-width:360px){#guide3 .g-pill{padding:4px 8px;font-size:.9rem}}
 #guide2 .g2-main{flex:1;min-height:0;display:flex;flex-direction:column}
 @media (min-width:860px) and (min-aspect-ratio:5/4){#guide2 .g2-main{flex-direction:row;align-items:stretch;gap:14px;padding-right:max(16px,env(safe-area-inset-right,0px))}#guide2 .g2-main .g-stage{flex:1.4}#guide2 .g2-radio{flex:1;max-width:420px;max-height:none;margin:0 0 6px;align-self:stretch}}
@@ -664,12 +671,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
 </div>
 <div id="guide3" hidden>
-  <header class="g3-head"><div class="place"><h1>Unwind</h1><p class="g3-where" aria-live="polite"></p></div><div class="right"><div class="g3-sailors" role="img"><div class="g3-crew"></div><div class="g3-crewlabel"></div></div><button class="g3-opts" type="button" aria-label="Music and sound settings"></button></div></header>
-  <div class="g-stats"><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0 / 4</b></span><span class="g-pill g3-ph"><b>Ready</b><span class="notr"></span></span></div>
-  <div class="g3-clock"><i></i></div>
+  <header class="g3-head"><div class="place"><h1>Unwind</h1><p class="g3-where" aria-live="polite"></p></div><div class="right"><button class="g3-opts" type="button" aria-label="Music and sound settings"></button></div></header>
+  <div class="g-stats"><span class="g-pill g3-crew" role="img"><span class="g3-sailor"></span><b class="notr">3/3</b></span><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0/4</b></span></div>
+  <div class="g3-phrow"><div class="g3-phase" role="status"><i class="g3-phicon"></i><b></b><span class="notr"></span><em class="g3-bar"><i></i></em></div></div>
   <div class="g-stage"><canvas></canvas><div class="g-toast" role="status"></div><div class="g3-zoom"><button class="g3-zin" type="button" aria-label="Zoom in">+</button><button class="g3-zout" type="button" aria-label="Zoom out">−</button><button class="g3-zfit" type="button" aria-label="Show the whole chart"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div><div class="g-cover" hidden><div class="g-pass"><div class="g-passicon"></div><h2></h2><p></p><button class="primary" type="button"></button></div></div><div class="g3-picker" role="group" hidden></div></div>
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
-  <nav class="g3-nav"><button type="button" data-g3nav="menu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button><button type="button" data-g3nav="help"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button><button type="button" data-g3nav="levels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button></nav>
+  <nav class="g3-nav"><button type="button" data-g3nav="menu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button><button type="button" data-g3nav="help"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Help</button><button type="button" data-g3nav="levels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button></nav>
 </div>
 <div id="boardMap" class="notr" role="img" hidden></div>
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
@@ -3266,7 +3273,9 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
    Rocks are there whether or not anyone drew them. Gusts of wind come and go: a boat sailing into one is blown one
    tile further. Only the keeper's light shows them. Lives are sailors: a crash or a bite costs one.
    Treasure: half lies deep (only the radar sees it), half floats (only the light shows it). Any of it counts if the
-   boat sails over it. A win with every treasure found is perfect.
+   boat sails over it. A win with every treasure found is perfect. The boat wins by sailing into the lighthouse itself.
+   While drawing, the keeper can throw one trap a turn onto the sea. It lasts 3 turns: a serpent that swims onto it or
+   next to it (diagonals too) is stunned for 3 turns. A stunned serpent sinks out of reach and cannot bite.
    A turn: the captain presses Next turn -> light (7.5 s) -> the keeper writes (30 s, or Done) -> the captain plans up
    to 3 moves (2 on Hard) and sails (30 s, or Ready) -> the boat sails, the serpents swim -> Next turn again.
    Plain functions on a plain object: the server replays the same actions to check them. Timing is the server's job:
@@ -3281,6 +3290,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   var PHASE_MS = { light: 7500, write: 30000, boat: 30000 };
   var ICONS = ['rock', 'tall', 'whirl', 'wind-n', 'wind-e', 'wind-s', 'wind-w', 'treasure', 'clear', 'danger'];
   var WIND = { chance: [0.4, 0.55], max: [2, 3], turns: 3 };
+  var TRAP = { turns: 3, stun: 3 };
   var DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
   var RADAR = 3;            // the captain's radar picks up treasure and serpents this many tiles away
   var BEAM_HALF = 20 * Math.PI / 180;
@@ -3314,6 +3324,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     return out;
   }
   function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return G.serpents[i]; return null; }
+  function trapNear(G, x, y) { for (var i = 0; i < G.traps.length; i++) if (cheb(G.traps[i].x, G.traps[i].y, x, y) <= 1) return G.traps[i]; return null; }
   function treasureAt(G, x, y) { for (var i = 0; i < G.treasure.length; i++) if (!G.treasure[i].got && G.treasure[i].x === x && G.treasure[i].y === y) return G.treasure[i]; return null; }
   function windAt(G, x, y) { for (var i = 0; i < G.winds.length; i++) if (G.winds[i].x === x && G.winds[i].y === y) return G.winds[i]; return null; }
   // The first step of a shortest route over open water (whirlpools are avoided), or null.
@@ -3393,7 +3404,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     var G = null;
     for (var a = 0; a < 60 && !G; a++) G = tryMap(seed >>> 0, opts.size | 0, !!opts.hard, a);
     G.lives = G.hard ? 2 : 3; G.maxLives = G.lives; G.steps = G.hard ? 2 : 3;
-    G.winds = []; G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
+    G.winds = []; G.traps = []; G.trapTurn = 0; G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
     return G;
   }
 
@@ -3410,6 +3421,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       if (role !== 'boat' || (G.phase !== 'start' && G.phase !== 'next')) return { ok: false, why: 'turn' };
       G.turn++; G.phase = 'light'; G.plan = ''; G.last = null;
       gusts(G);
+      G.traps = G.traps.filter(function (t) { return t.until >= G.turn; });
       return { ok: true };
     }
     if (a === 'advance') {
@@ -3427,6 +3439,14 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       if (act.icon === 'erase') delete G.marks[k];
       else if (ICONS.indexOf(act.icon) >= 0) G.marks[k] = act.icon;
       else return { ok: false, why: 'bad' };
+      return { ok: true };
+    }
+    if (a === 'trap') {
+      // One trap a turn, thrown while drawing. It lands on any square but the lighthouse.
+      if (role !== 'keeper' || G.phase !== 'write') return { ok: false, why: 'turn' };
+      var tx = act.x | 0, ty = act.y | 0;
+      if (!inside(G, tx, ty) || (tx === G.c && ty === G.c) || G.trapTurn === G.turn) return { ok: false, why: 'bad' };
+      G.traps.push({ x: tx, y: ty, until: G.turn + TRAP.turns - 1 }); G.trapTurn = G.turn;
       return { ok: true };
     }
     if (a === 'done') {
@@ -3470,7 +3490,6 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       var d = DIRS[G.plan.charAt(i)];
       if (!enter(G, log, G.boat.x + d[0], G.boat.y + d[1], r, 0)) break;
     }
-    if (!G.ended && cheb(G.boat.x, G.boat.y, G.c, G.c) <= 1) { G.ended = 'won'; log.events.push({ e: 'home' }); }
     if (!G.ended) swim(G, log);
     G.last = log; G.plan = '';
     G.phase = G.ended ? 'over' : 'next';
@@ -3479,7 +3498,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   function enter(G, log, nx, ny, r, depth) {
     var t = cell(G, nx, ny);
     if (t < 0) { log.events.push({ e: 'edge', x: nx, y: ny }); return false; }
-    if (t === LIGHT) return false;
+    if (t === LIGHT) {
+      // Home: only by sailing into the lighthouse itself, not by passing next to it.
+      G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
+      G.ended = 'won'; log.events.push({ e: 'home' });
+      return false;
+    }
     if (t === ROCK || t === TALL) {
       G.lives--; log.events.push({ e: 'rock', x: nx, y: ny, tall: t === TALL }); log.bumped = [nx, ny];
       if (G.lives <= 0) G.ended = 'lost';
@@ -3488,7 +3512,6 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
     if (bite(G, log)) return false;
     collect(G, log);
-    if (cheb(nx, ny, G.c, G.c) <= 1) return false;
     if (t === WHIRL) {
       // Spun away: up to three tiles in a random direction, stopping short of rocks and the edge.
       var dir = Math.floor(r() * 8), ddx = [0, 1, 1, 1, 0, -1, -1, -1][dir], ddy = [-1, -1, 0, 1, 1, 1, 0, -1][dir];
@@ -3516,7 +3539,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   }
   function bite(G, log) {
     var s = serpentAt(G, G.boat.x, G.boat.y);
-    if (!s) return false;
+    if (!s || s.stun) return false;
     G.lives--; log.events.push({ e: 'bite', x: s.x, y: s.y });
     respawn(G, s);
     if (G.lives <= 0) G.ended = 'lost';
@@ -3527,7 +3550,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     for (var t = 0; t < 400; t++) {
       var x = Math.floor(r() * G.n), y = Math.floor(r() * G.n);
       if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.boat.x, G.boat.y) < 5 || serpentAt(G, x, y) || cheb(x, y, G.c, G.c) <= 1) continue;
-      s.x = x; s.y = y; s.goal = null; return;
+      s.x = x; s.y = y; s.goal = null; s.stun = 0; return;
     }
   }
   // Serpents take one step a turn (two on Hard). Within three tiles of the boat they hunt it; otherwise they roam.
@@ -3535,6 +3558,8 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     var steps = G.hard ? 2 : 1, r = rngFor(G.seed, 900 + G.turn);
     G.serpents.forEach(function (s) {
       var path = [[s.x, s.y]];
+      // A stunned serpent stays down, out of reach, for its turns.
+      if (s.stun) { s.stun--; log.serpents.push({ id: s.id, path: path, stun: s.stun }); return; }
       for (var i = 0; i < steps && !G.ended; i++) {
         var hunt = cheb(s.x, s.y, G.boat.x, G.boat.y) <= 3, target = hunt ? [G.boat.x, G.boat.y] : s.goal;
         if (!hunt && (!target || (target[0] === s.x && target[1] === s.y))) {
@@ -3544,6 +3569,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
         var step = firstStep(G, s.x, s.y, target[0], target[1], function (x, y) { var o = serpentAt(G, x, y); return o && o !== s; });
         if (!step) { s.goal = null; break; }
         s.x = step[0]; s.y = step[1]; path.push(step);
+        if (trapNear(G, s.x, s.y)) { s.stun = TRAP.stun; s.goal = null; log.events.push({ e: 'stun', x: s.x, y: s.y }); break; }
         if (s.x === G.boat.x && s.y === G.boat.y) {
           G.lives--; log.events.push({ e: 'bite', x: s.x, y: s.y });
           log.serpents.push({ id: s.id, path: path }); path = null;
@@ -3559,7 +3585,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   function radar(G) {
     var out = [];
     G.treasure.forEach(function (t) { if (!t.got && t.deep && cheb(t.x, t.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
-    G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id }); });
+    G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id, stun: s.stun || 0 }); });
     return out;
   }
   function replay(seed, opts, actions) {
@@ -3574,8 +3600,8 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     return out;
   }
 
-  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, coord: coord, cell: cell, inside: inside, cheb: cheb,
-    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS };
+  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, trapNear: trapNear, coord: coord, cell: cell, inside: inside, cheb: cheb,
+    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS, TRAP: TRAP };
 });
 
 // Portuguese (Portugal) for everything on screen. The game is written in English, and any text that
@@ -3793,6 +3819,17 @@ window.UnwindI18n = (function () {
     'Sailors': 'Marinheiros',
     'Find every treasure for a perfect voyage.': 'Encontra todos os tesouros para uma viagem perfeita.',
     '1 sailor': '1 marinheiro',
+    'Get ready': 'Preparar',
+    'Light': 'Luz',
+    'Chart': 'Carta',
+    'Help': 'Ajuda',
+    'Trap': 'Armadilha',
+    'Trap used': 'Armadilha usada',
+    'Help will open when this turn ends.': 'A ajuda abre quando este turno acabar.',
+    'The keeper: traps': 'O faroleiro: armadilhas',
+    'While drawing, you can also throw one trap a turn: tap a square and pick Trap. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.': 'Enquanto desenhas, também podes lançar uma armadilha por turno: toca num quadrado e escolhe Armadilha. Dura 3 turnos. Uma serpente que nade para cima dela ou para o lado, nas diagonais também, fica atordoada durante 3 turnos: afunda-se e não consegue morder.',
+    'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.': 'As rochas estão lá mesmo que ninguém as tenha desenhado: um choque custa um marinheiro. Uma mordida de serpente também, a não ser que a serpente esteja atordoada. Os remoinhos atiram o barco para longe, e uma rajada de vento empurra-o mais um quadrado. Se perderem todos os marinheiros, o barco perde-se.',
+    'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.': 'Navega para dentro do próprio farol para ganhar: passar ao lado não chega. Metade dos tesouros está no fundo, onde só o radar os vê; a outra metade flutua, onde só a luz os mostra. Passar por cima de um tesouro apanha-o. Encontra-os todos para um jogo perfeito. Toca em qualquer quadrado para o assinalar no ecrã do teu parceiro.',
     'Show all': 'Mostrar tudo',
     'Home safe!': 'Em casa, a salvo!',
     'Lost at sea…': 'Perdido no mar…',
@@ -4078,6 +4115,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
+    [/^A serpent swam into the trap at ([A-Z]\d+) and sank, stunned!$/, 'Uma serpente nadou para a armadilha em $1 e afundou-se, atordoada!'], [/^Sailors: (\d+) of (\d+)$/, 'Marinheiros: $1 de $2'],
     [/^Guiding Light 3\.0 · (Lighthouse keeper|Boat captain)( · one device)?$/, function (m, r, o) { return 'Luz Guia 3.0 · ' + (r === 'Boat captain' ? 'Capitão do barco' : 'Faroleiro') + (o ? ' · um dispositivo' : ''); }], [/^(\d+) sailors$/, '$1 marinheiros'], [/^Crash on a tall rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha alta em $1. Perdeu-se um marinheiro!'], [/^Crash on a rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha em $1. Perdeu-se um marinheiro!'], [/^A serpent struck at ([A-Z]\d+)\. A sailor is lost!$/, 'Uma serpente atacou em $1. Perdeu-se um marinheiro!'], [/^A gust at ([A-Z]\d+) blew the boat on!$/, 'Uma rajada em $1 empurrou o barco!'],
     [/^Plan up to (\d) moves with the arrows\.$/, 'Planeia até $1 movimentos com as setas.'], [/^Crash! A tall rock at ([A-Z]\d+)$/, 'Bum! Uma rocha alta em $1'], [/^Crash! A rock at ([A-Z]\d+)$/, 'Bum! Uma rocha em $1'], [/^A whirlpool at ([A-Z]\d+) spun the boat away!$/, 'Um remoinho em $1 atirou o barco para longe!'], [/^Treasure found at ([A-Z]\d+)!$/, 'Tesouro encontrado em $1!'], [/^A serpent bit the boat at ([A-Z]\d+)!$/, 'Uma serpente mordeu o barco em $1!'], [/^(.+) left the game, so this sea is closed\.$/, '$1 saiu do jogo, por isso este mar fechou.'], [/^(\d+) \/ (\d+)$/, '$1 / $2'],
     [/^Round (\d+)$/, 'Ronda $1'], [/^The boat reached the lighthouse in (\d+) rounds\.$/, 'O barco chegou ao farol em $1 rondas.'], [/^Guiding Light 2\.0 (\d)$/, 'Luz Guia 2.0 $1'], [/^Guiding Light 3\.0 (\d)$/, 'Luz Guia 3.0 $1'],
@@ -6191,7 +6229,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-e';
+  var BUILD = '2026.11.26-f';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -11605,7 +11643,16 @@ window.UnwindI18n = (function () {
        and serpents the radar picks up.
      The screen uses the game's usual header and footer, and the chart can be zoomed. */
   var G3 = window.UnwindGuide3, g3 = null, g3ctx = null, g3w = 0, g3h = 0, g3dpr = 1, g3off = null;
-  var G3_PHASE = { start: 'Ready to sail', light: 'The light', write: 'The chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
+  var G3_PHASE = { start: 'Get ready', light: 'Light', write: 'Chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
+  // One small picture per step, for the step banner under the counters.
+  var G3_PHICON = {
+    start: '<path d="M12 4v4M12 16v4M4 12h4M16 12h4"/><circle cx="12" cy="12" r="3"/>',
+    light: '<path d="M4 12l15-6v12z" fill="currentColor" stroke="none" opacity=".55"/><circle cx="4.5" cy="12" r="2.5"/>',
+    write: '<path d="M5 19l2-6 9-9 4 4-9 9zM14 6l4 4"/>',
+    boat: '<path d="M4 15h16l-2 4H6zM12 4v10M12 4l6 9h-6"/>',
+    next: '<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8"/>',
+    over: '<path d="M6 4v16M6 5h11l-2 4 2 4H6"/>'
+  };
   var G3_PAPER = { bg: '#ead9b0', edge: '#d9c08a', ink: '#6b4a26', line: 'rgba(107,74,38,.22)', wash: 'rgba(28,52,96,.92)' };
   var G3_RADAR = { bg: '#020c07', sea: '#03170c', line: 'rgba(90,255,160,.16)', ink: '#7dffb0', glow: 'rgba(90,255,160,' };
   function g3El() { return $('guide3'); }
@@ -11636,13 +11683,14 @@ window.UnwindI18n = (function () {
     roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all: only a radar screen with the chart the keeper draws. You win together, so talk!'],
     light: ['The keeper: the light', 'Each turn starts with the light. Drag to aim the beam: for 7.5 seconds you see the real sea. Rocks, tall rocks (they hide what is behind them), whirlpools, gusts of wind, floating treasure, and the boat if the beam finds it. Remember all you can!'],
     chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. The captain sees your drawings on the radar as you make them. Done ends it early.'],
+    trap: ['The keeper: traps', 'While drawing, you can also throw one trap a turn: tap a square and pick Trap. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.'],
     radar: ['The captain: the radar', 'You only see the radar: the keeper\'s chart, your boat\'s square (like E7), and what the radar picks up within 3 squares: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
     sail: ['The captain: sailing', 'You have 30 seconds to plan up to 3 moves (2 on Hard). Tap a square next to the boat, then the next one. Tap a planned square again to take it back. Pinch, scroll or use + and − to zoom. Sail ends it early. Then press Next turn when you are both ready.'],
-    danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
-    win: ['Winning', 'Reach a square next to the lighthouse to win. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
+    danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
+    win: ['Winning', 'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
   };
   function g3Help(which, after) {
-    var keys = which === 'keeper' ? ['light', 'chart', 'danger', 'win'] : which === 'boat' ? ['radar', 'sail', 'danger', 'win'] : ['roles', 'light', 'chart', 'radar', 'sail', 'danger', 'win'];
+    var keys = which === 'keeper' ? ['light', 'chart', 'trap', 'danger', 'win'] : which === 'boat' ? ['radar', 'sail', 'danger', 'win'] : ['roles', 'light', 'chart', 'trap', 'radar', 'sail', 'danger', 'win'];
     var i = 0, first = true, done = function () { closeSheet(); if (after) after(); };
     var show = function () {
       var p = G3_PAGES[keys[i]];
@@ -11667,7 +11715,7 @@ window.UnwindI18n = (function () {
       g3Help(g3.role, function () { if (!g3) return; g3.paused = false; if (paused) g3.until = performance.now() + paused; g3Hud(); });
       return;
     }
-    if (timed) { g3.helpQueued = true; g3Toast('The guide will open when this turn ends.'); return; }
+    if (timed) { g3.helpQueued = true; g3Toast('Help will open when this turn ends.'); return; }
     g3Help(g3.role);
   }
 
@@ -11756,7 +11804,7 @@ window.UnwindI18n = (function () {
       var lines = [];
       G.last.events.forEach(function (e) {
         var where = e.x !== undefined ? G3.coord(e.x, e.y) : '';
-        var text = e.e === 'rock' ? (e.tall ? 'Crash on a tall rock at ' : 'Crash on a rock at ') + where + '. A sailor is lost!' : e.e === 'whirl' ? 'A whirlpool at ' + where + ' spun the boat away!' : e.e === 'wind' ? 'A gust at ' + where + ' blew the boat on!' : e.e === 'treasure' ? 'Treasure found at ' + where + '!' : e.e === 'bite' ? 'A serpent struck at ' + where + '. A sailor is lost!' : e.e === 'edge' ? 'That is the edge of the map.' : e.e === 'home' ? 'Home! The boat reached the lighthouse.' : '';
+        var text = e.e === 'rock' ? (e.tall ? 'Crash on a tall rock at ' : 'Crash on a rock at ') + where + '. A sailor is lost!' : e.e === 'whirl' ? 'A whirlpool at ' + where + ' spun the boat away!' : e.e === 'wind' ? 'A gust at ' + where + ' blew the boat on!' : e.e === 'treasure' ? 'Treasure found at ' + where + '!' : e.e === 'bite' ? 'A serpent struck at ' + where + '. A sailor is lost!' : e.e === 'edge' ? 'That is the edge of the map.' : e.e === 'home' ? 'Home! The boat reached the lighthouse.' : e.e === 'stun' ? 'A serpent swam into the trap at ' + where + ' and sank, stunned!' : '';
         if (text) lines.push([text, e.e === 'rock' || e.e === 'bite']);
       });
       lines.forEach(function (l, i) { setTimeout(function () { if (g3) g3Toast(l[0], l[1]); }, 400 + i * 1300); });
@@ -11805,23 +11853,28 @@ window.UnwindI18n = (function () {
   }
 
   /* ---------- Around the chart: the header, the pills and the buttons ---------- */
-  function g3SailorSvg(gone) {
-    return '<svg viewBox="0 0 24 24"' + (gone ? ' class="gone"' : '') + ' aria-hidden="true"><path d="M4.6 10.4c.4-3.700 3.500-6 7.400-6s7 2.300 7.400 6z" fill="#fbfbff"/><circle cx="12" cy="4.600" r="1.300" fill="#e84a5f"/><rect x="4" y="9.800" width="16" height="2.600" rx="1.300" fill="#2e4fa8"/><circle cx="12" cy="16.400" r="5.100" fill="#f3c9a1"/><circle cx="10.100" cy="16" r=".85" fill="#2a2550"/><circle cx="13.900" cy="16" r=".85" fill="#2a2550"/><path d="M10.300 18.600q1.700 1.200 3.400 0" fill="none" stroke="#2a2550" stroke-width=".9" stroke-linecap="round"/></svg>';
-  }
+  // The crew counter's sailor: a round badge with a white cap and a golden anchor.
+  var G3_SAILOR = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="g3SailorClip"><circle cx="24" cy="24" r="23"/></clipPath></defs><circle cx="24" cy="24" r="23" fill="#24376f"/><g clip-path="url(#g3SailorClip)"><path d="M7 48c1-8.500 7.500-12.500 17-12.500S40 39.500 41 48z" fill="#9ccbf0"/><path d="M13.500 37.500l10.500 7 10.500-7-3.200-2.200-7.300 4.400-7.300-4.400z" fill="#2c84d6"/><rect x="20" y="27" width="8" height="10" rx="3.500" fill="#ef9f82"/><ellipse cx="24" cy="23.500" rx="8.200" ry="9.600" fill="#f8bc9e"/><path d="M15.500 24c0-4 3.800-6.500 8.500-6.500" fill="none" stroke="#fbd0b6" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M13.400 17.400C14.200 11.200 18.600 7.600 24 7.600S33.800 11.200 34.600 17.400C31.500 16.200 27.900 15.600 24 15.600S16.500 16.200 13.400 17.400z" fill="#eef5fc"/><path d="M12.800 17.200C16 15.800 19.900 15.100 24 15.100S32 15.800 35.200 17.200L34.500 19.800C31.400 18.600 27.800 18 24 18S16.600 18.600 13.500 19.800z" fill="#bcd8f0"/><g fill="none" stroke="#f5b62c" stroke-width="1.500" stroke-linecap="round"><circle cx="24" cy="9.900" r="1.300"/><path d="M24 11.200v4.400M22 12.800h4M21.100 13.900c.8 1.600 1.700 2.200 2.900 2.200s2.100-.6 2.900-2.200"/></g><path d="M21.600 40.300L24 38.400 26.400 40.300 24 42.200z" fill="#1d5ea6"/><path d="M22.600 41.600L19.600 47h3L24 43.800zM25.400 41.600L28.400 47h-3L24 43.800z" fill="#2c84d6"/></g></svg>';
   function g3Hud() {
     var G = g3.G, el = g3El(), me = g3.role;
     el.querySelector('.g3-where').textContent = 'Guiding Light 3.0 · ' + (me === 'keeper' ? 'Lighthouse keeper' : 'Boat captain') + (g3.local ? ' · one device' : '');
+    var crew = el.querySelector('.g3-crew');
+    if (!crew.querySelector('.g3-sailor').firstChild) crew.querySelector('.g3-sailor').innerHTML = G3_SAILOR;
     if (g3.crew !== G.lives) {
-      var lost = g3.crew > G.lives;
+      if (g3.crew > G.lives) { crew.classList.remove('hit'); void crew.offsetWidth; crew.classList.add('hit'); }
       g3.crew = G.lives;
-      el.querySelector('.g3-crew').innerHTML = Array.apply(null, Array(G.maxLives)).map(function (_, i) { return g3SailorSvg(i >= G.lives); }).join('');
-      if (lost) { var gone = el.querySelectorAll('.g3-crew svg')[G.lives]; if (gone) gone.classList.add('lost'); }
-      var lb = el.querySelector('.g3-crewlabel'); lb.textContent = Math.max(0, G.lives) === 1 ? '1 sailor' : Math.max(0, G.lives) + ' sailors';
-      el.querySelector('.g3-sailors').setAttribute('aria-label', lb.textContent);
+      crew.querySelector('b').textContent = Math.max(0, G.lives) + '/' + G.maxLives;
+      crew.setAttribute('aria-label', 'Sailors: ' + Math.max(0, G.lives) + ' of ' + G.maxLives);
     }
     el.querySelector('.g3-turn b').textContent = String(Math.max(1, G.turn));
-    el.querySelector('.g3-gold b').textContent = G.got + ' / ' + G.treasure.length;
-    el.querySelector('.g3-ph b').textContent = G3_PHASE[G.phase] || '';
+    el.querySelector('.g3-gold b').textContent = G.got + '/' + G.treasure.length;
+    if (g3.shownPhase !== G.phase) {
+      g3.shownPhase = G.phase;
+      var ph = el.querySelector('.g3-phase');
+      ph.querySelector('.g3-phicon').innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (G3_PHICON[G.phase] || '') + '</svg>';
+      ph.querySelector('b').textContent = G3_PHASE[G.phase] || '';
+      ph.className = 'g3-phase ' + G.phase;
+    }
     var msg = '', btns = '';
     if (G.ended) msg = G.ended === 'won' ? 'Home! The boat reached the lighthouse.' : 'The boat is lost.';
     else if (G.phase === 'start' || G.phase === 'next') {
@@ -11893,8 +11946,9 @@ window.UnwindI18n = (function () {
     var c = g3ctx, G = g3.G, el = g3El();
     c.setTransform(g3dpr, 0, 0, g3dpr, 0, 0);
     var left = G3.PHASE_MS[G.phase] && g3.until ? Math.max(0, g3.until - now) : 0;
-    el.querySelector('.g3-clock i').style.transform = 'scaleX(' + (G3.PHASE_MS[G.phase] && (g3.until || g3.paused) ? (g3.paused ? 1 : left / G3.PHASE_MS[G.phase]) : 0) + ')';
-    el.querySelector('.g3-ph span').textContent = G3.PHASE_MS[G.phase] && g3.until ? Math.ceil(left / 1000) + 's' : g3.paused ? '❚❚' : '';
+    var timed = G3.PHASE_MS[G.phase] && (g3.until || g3.paused), secs = timed ? (g3.paused ? '❚❚' : Math.ceil(left / 1000) + 's') : '', ph = el.querySelector('.g3-phase');
+    if (ph.dataset.secs !== secs) { ph.dataset.secs = secs; ph.querySelector('span').textContent = secs; ph.classList.toggle('timed', !!secs); ph.classList.toggle('low', !!secs && !g3.paused && left < 5000); }
+    ph.querySelector('.g3-bar i').style.transform = 'scaleX(' + (timed ? (g3.paused ? 1 : left / G3.PHASE_MS[G.phase]) : 0) + ')';
     var cam = g3Cam(), view;
     if (G.ended) view = 'sea';
     else if (g3.role === 'boat') view = 'radar';
@@ -11957,7 +12011,8 @@ window.UnwindI18n = (function () {
       if (w) g3Wind(c, X(xx) + cs / 2, Y(yy) + cs / 2, cs, w.dir, now, 1);
     }
     G.treasure.forEach(function (t) { if (t.got || !lit[t.y * G.n + t.x] || (lighting && t.deep)) return; g3Chest(c, X(t.x) + cs / 2, Y(t.y) + cs / 2, cs, now, t.deep); });
-    if (!lighting) G.serpents.forEach(function (s) { guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
+    g3Traps(c, cam, now, 'sea');
+    if (!lighting) G.serpents.forEach(function (s) { if (s.stun) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); else guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
     g3Lighthouse(c, cam, lighting ? 0.9 : 0.45);
     var bp = g3BoatPos(now);
     if (lit[Math.round(bp.y) * G.n + Math.round(bp.x)]) guideBoat(c, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0);
@@ -11988,6 +12043,7 @@ window.UnwindI18n = (function () {
     c.font = '700 ' + Math.round(cs * 0.36) + 'px Fredoka, system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('N', rx, ry - rr - cs * 0.22);
     c.restore();
     g3Marks(c, cam, now, true);
+    g3Traps(c, cam, now, 'paper');
     g3Crashes(c, cam);
     g3Lighthouse(c, cam, 0);
     g3Labels(c, cam, G3_PAPER.ink, G3_PAPER.bg);
@@ -12002,7 +12058,7 @@ window.UnwindI18n = (function () {
     c.strokeStyle = G3_RADAR.glow + '.5)'; c.lineWidth = 2; c.strokeRect(X(0), Y(0), n * cs, n * cs);
     // The keeper's drawings, the lighthouse and the boat, all turned radar-green.
     var bp = g3BoatPos(now);
-    g3Tinted(c, function (o) { g3Marks(o, cam, now, false); g3Lighthouse(o, cam, 0); guideBoat(o, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0); }, 'rgba(110,255,170,.78)');
+    g3Tinted(c, function (o) { g3Marks(o, cam, now, false); g3Traps(o, cam, now, 'radar'); g3Lighthouse(o, cam, 0); guideBoat(o, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0); }, 'rgba(110,255,170,.78)');
     g3Crashes(c, cam);
     if (!G.ended) {
       var R = G3.RADAR, sweep = (now / 2400) % 1 * Math.PI * 2, rx = X(bp.x) + cs / 2, ry = Y(bp.y) + cs / 2, rr = (R + 0.5) * cs;
@@ -12014,7 +12070,7 @@ window.UnwindI18n = (function () {
       c.restore();
       c.strokeStyle = G3_RADAR.glow + '.4)'; c.lineWidth = 1.5; for (var q = 1; q <= R; q++) { c.beginPath(); c.arc(rx, ry, (q + 0.5) * cs, 0, 7); c.stroke(); }
       c.restore();
-      if (!g3.anim) G3.radar(G).forEach(function (b) { g3Blip(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.kind, rx, ry, sweep); });
+      if (!g3.anim) G3.radar(G).forEach(function (b) { if (b.stun) { c.save(); c.globalAlpha = 0.8; guideBubbles(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.id); c.restore(); } else g3Blip(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.kind, rx, ry, sweep); });
       // The route being planned, and the squares that can come next.
       if (G.phase === 'boat') {
         var pp = G3.planPath(G, g3.plan), end = pp[pp.length - 1];
@@ -12081,13 +12137,45 @@ window.UnwindI18n = (function () {
       c.beginPath(); c.moveTo(bx - cs * 0.3, by - cs * 0.3); c.lineTo(bx + cs * 0.3, by + cs * 0.3); c.moveTo(bx + cs * 0.3, by - cs * 0.3); c.lineTo(bx - cs * 0.3, by + cs * 0.3); c.stroke();
     });
   }
+  // Traps the keeper threw: the trap itself, and the squares around it where serpents get caught.
+  function g3Traps(c, cam, now, style) {
+    var G = g3.G, cs = cam.cs;
+    G.traps.forEach(function (t) {
+      var x0 = cam.ox + (t.x - 1) * cs, y0 = cam.oy + (t.y - 1) * cs, cx = cam.ox + (t.x + 0.5) * cs, cy = cam.oy + (t.y + 0.5) * cs;
+      var col = style === 'paper' ? '176,58,46' : style === 'radar' ? '120,255,180' : '255,200,110';
+      c.save(); c.beginPath(); c.rect(cam.ox, cam.oy, G.n * cs, G.n * cs); c.clip();
+      c.fillStyle = 'rgba(' + col + ',' + (style === 'paper' ? 0.08 : 0.07) + ')'; c.fillRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4);
+      c.strokeStyle = 'rgba(' + col + ',.6)'; c.lineWidth = 1.5; c.setLineDash([cs * 0.14, cs * 0.1]); c.lineDashOffset = reducedMotion() ? 0 : -now / 60;
+      c.strokeRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4); c.setLineDash([]);
+      c.restore();
+      if (style === 'paper') { c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(cx, cy, cs * 0.47, 0, 7); c.fill(); }
+      g3Trap(c, cx, cy, cs, now);
+      // How many turns it has left, as small dots.
+      var left = t.until - G.turn + 1;
+      for (var d = 0; d < left; d++) { c.fillStyle = 'rgba(' + col + ',.9)'; c.beginPath(); c.arc(cx + (d - (left - 1) / 2) * cs * 0.16, cy + cs * 0.4, cs * 0.045, 0, 7); c.fill(); }
+    });
+  }
+  // A trap: a ring of iron spikes around a glowing lantern float.
+  function g3Trap(c, cx, cy, cs, now) {
+    var s = cs / 24, pulse = reducedMotion() ? 0.8 : 0.65 + 0.35 * Math.sin(now / 300);
+    c.save(); c.translate(cx, cy);
+    var g = c.createRadialGradient(0, 0, 0, 0, 0, 9 * s); g.addColorStop(0, 'rgba(255,220,120,' + (0.55 * pulse) + ')'); g.addColorStop(1, 'rgba(255,220,120,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, 9 * s, 0, 7); c.fill();
+    c.strokeStyle = '#5a5f73'; c.lineWidth = Math.max(1.2, 1.6 * s); c.lineCap = 'round';
+    for (var k = 0; k < 8; k++) { var a = k * Math.PI / 4; c.beginPath(); c.moveTo(Math.cos(a) * 5 * s, Math.sin(a) * 5 * s); c.lineTo(Math.cos(a) * 8 * s, Math.sin(a) * 8 * s); c.stroke(); }
+    c.strokeStyle = '#8a8fa6'; c.lineWidth = Math.max(1.4, 2 * s); c.beginPath(); c.arc(0, 0, 5 * s, 0, 7); c.stroke();
+    c.fillStyle = '#e8504a'; c.beginPath(); c.arc(0, 0, 3.2 * s, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,236,170,' + pulse + ')'; c.beginPath(); c.arc(0, -0.6 * s, 1.6 * s, 0, 7); c.fill();
+    c.restore();
+  }
   function g3BoatPos(now) {
     var G = g3.G, a = g3.anim;
-    if (!a || a.path.length < 2) return { x: G.boat.x, y: G.boat.y };
+    var at = function (x, y) { return { x: x, y: y + Math.max(0, 1 - Math.hypot(x - G.c, y - G.c)) * 0.45 }; };   // docks in front of the lighthouse
+    if (!a || a.path.length < 2) return at(G.boat.x, G.boat.y);
     var segs = a.path.length - 1, f = Math.max(0, (now - a.t0) / 330);
-    if (f >= segs) { g3.anim = null; return { x: G.boat.x, y: G.boat.y }; }
+    if (f >= segs) { g3.anim = null; return at(G.boat.x, G.boat.y); }
     var k = Math.floor(f), u = f - k, p = a.path[k], q = a.path[k + 1];
-    return { x: p[0] + (q[0] - p[0]) * u, y: p[1] + (q[1] - p[1]) * u };
+    return at(p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u);
   }
   function g3Beam(c, cx, cy, angle, len) {
     c.save();
@@ -12138,7 +12226,7 @@ window.UnwindI18n = (function () {
   }
 
   /* ---------- The keeper's picker: tap a square, then what is there ---------- */
-  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['clear', 'Clear'], ['danger', 'Danger'], ['erase', 'Erase'], ['ping', 'Ping']];
+  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['clear', 'Clear'], ['danger', 'Danger'], ['trap', 'Trap'], ['erase', 'Erase'], ['ping', 'Ping']];
   var G3_WINDS = [['wind-n', 'North'], ['wind-e', 'East'], ['wind-s', 'South'], ['wind-w', 'West'], ['back', 'Back']];
   function g3PickerFill() {
     var pk = g3El().querySelector('.g3-picker'), list = g3.pickWind ? G3_WINDS : G3_PICKS;
@@ -12154,14 +12242,16 @@ window.UnwindI18n = (function () {
         else { c.beginPath(); c.moveTo(17, 7); c.lineTo(10, 14); c.lineTo(17, 21); c.stroke(); }
       } else {
         c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(14, 14, 13, 0, 7); c.fill();
-        g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
+        if (icon === 'trap') g3Trap(c, 14, 14, 28, 0); else g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
       }
+      if (icon === 'trap' && g3.G.trapTurn === g3.G.turn) { b.disabled = true; b.querySelector('span').textContent = 'Trap used'; }
       b.onclick = function () {
         if (!g3 || !g3.picker) return;
         var p = g3.picker;
         if (icon === 'wind') { g3.pickWind = true; g3PickerFill(); g3PlacePicker(); return; }
         if (icon === 'back') { g3.pickWind = false; g3PickerFill(); g3PlacePicker(); return; }
         if (icon === 'ping') g3Send({ a: 'ping', x: p[0], y: p[1] });
+        else if (icon === 'trap') { g3Send({ a: 'trap', x: p[0], y: p[1] }); pluck(392, 0, 0.05, 0.4); pluck(523.25, 0.06, 0.04, 0.5); }
         else g3Send({ a: 'mark', x: p[0], y: p[1], icon: icon });
         g3.picker = null; g3.pickWind = false; g3Hud();
       };
@@ -12289,6 +12379,7 @@ window.UnwindI18n = (function () {
     g3Menu: function () { guide3Menu(); },
     g3Cam: function () { if (!g3) return null; var c = g3Cam(), r = g3El().querySelector('canvas').getBoundingClientRect(); return { cs: c.cs, ox: c.ox + r.left, oy: c.oy + r.top }; },
     g3Winds: function () { return g3 ? g3.G.winds : null; },
+    g3Traps: function () { return g3 ? g3.G.traps : null; },
     g3Plan: function (p) { g3.plan = p; g3Hud(); },
     // The wave that brings the boat closest to home by sailing distance (for tests).
     guideBest: function () {

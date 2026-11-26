@@ -2012,7 +2012,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-e';
+  var BUILD = '2026.11.26-f';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6136,6 +6136,7 @@
     g3Menu: function () { guide3Menu(); },
     g3Cam: function () { if (!g3) return null; var c = g3Cam(), r = g3El().querySelector('canvas').getBoundingClientRect(); return { cs: c.cs, ox: c.ox + r.left, oy: c.oy + r.top }; },
     g3Winds: function () { return g3 ? g3.G.winds : null; },
+    g3Traps: function () { return g3 ? g3.G.traps : null; },
     g3Plan: function (p) { g3.plan = p; g3Hud(); },
     // The wave that brings the boat closest to home by sailing distance (for tests).
     guideBest: function () {
