@@ -20,7 +20,7 @@
   var WATER = 0, ROCK = 1, TALL = 2, WHIRL = 3, LIGHT = 4;
   var SIZES = [11, 13, 15], SIZE_NAMES = ['Small', 'Medium', 'Large'];
   var PHASE_MS = { light: 7500, write: 30000, boat: 30000 };
-  var ICONS = ['rock', 'tall', 'whirl', 'wind-n', 'wind-e', 'wind-s', 'wind-w', 'treasure', 'clear', 'danger'];
+  var ICONS = ['rock', 'tall', 'whirl', 'wind-n', 'wind-e', 'wind-s', 'wind-w', 'treasure', 'serpent', 'clear', 'danger'];
   var WIND = { chance: [0.4, 0.55], max: [2, 3], turns: 3 };
   var TRAP = { turns: 3, stun: 3 };
   var DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
@@ -178,11 +178,22 @@
       if (role !== 'keeper' || G.phase !== 'write') return { ok: false, why: 'turn' };
       var tx = act.x | 0, ty = act.y | 0;
       if (!inside(G, tx, ty) || (tx === G.c && ty === G.c) || G.trapTurn === G.turn) return { ok: false, why: 'bad' };
-      G.traps.push({ x: tx, y: ty, until: G.turn + TRAP.turns - 1 }); G.trapTurn = G.turn;
+      G.traps.push({ x: tx, y: ty, until: G.turn + TRAP.turns - 1, turn: G.turn }); G.trapTurn = G.turn;
       return { ok: true };
     }
-    if (a === 'done') {
+    if (a === 'untrap') {
+      // A trap can be taken back on the turn it was thrown, and thrown again somewhere else.
       if (role !== 'keeper' || G.phase !== 'write') return { ok: false, why: 'turn' };
+      for (var ti = 0; ti < G.traps.length; ti++) {
+        var tr = G.traps[ti];
+        if (tr.x === (act.x | 0) && tr.y === (act.y | 0) && tr.turn === G.turn) { G.traps.splice(ti, 1); G.trapTurn = 0; return { ok: true }; }
+      }
+      return { ok: false, why: 'bad' };
+    }
+    if (a === 'done') {
+      // The keeper may end the light or the chart early.
+      if (role !== 'keeper' || (G.phase !== 'write' && G.phase !== 'light')) return { ok: false, why: 'turn' };
+      if (G.phase === 'light') { G.phase = 'write'; return { ok: true }; }
       G.phase = 'boat';
       return { ok: true };
     }
