@@ -95,7 +95,7 @@ body.bgswap #sky,body.bgswap #sky2{transition-duration:var(--bgfade,1.4s);transi
 .pb{display:grid;grid-template-columns:1fr auto;gap:0 10px;align-items:baseline;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .pb span{font-size:.8125rem;font-weight:600}
 .pb b{font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
-.pb small{grid-column:1/-1;font-size:.75rem;opacity:.8}
+.pb small{grid-column:1/-1;font-size:.78rem;opacity:.92}
 .pb.new{background:color-mix(in srgb,#ffc21f 30%,transparent)}
 .records{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8125rem;font-variant-numeric:tabular-nums}
 .records b{font-weight:600}
@@ -371,7 +371,7 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv .mk{position:absolute;width:16px;height:16px;top:-4px;stroke:var(--card);stroke-width:1.4;stroke-linejoin:round;paint-order:stroke}
 .lv .mk.s{right:-3px;fill:var(--mark-star,#f0a000)}
 .lv .mk.m{left:-3px;fill:var(--mark-moon,#2f86d6)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;align-items:center;margin-top:-6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;align-items:center;margin-top:-6px}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .legend svg{width:15px;height:15px;stroke:none}
 .sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:3px;border-radius:12px;background:color-mix(in srgb,currentColor 9%,transparent)}
@@ -389,9 +389,10 @@ body.bigmap header.ui{background:var(--sky-a);padding-bottom:8px}
 body.bigmap nav.ui{background:var(--sky-b);padding-top:6px}
 body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:max-content;max-width:44vw;padding:4px 14px;border-radius:14px;background:var(--card);font:600 .8125rem/1.3 var(--body)}
 .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:16px;background:color-mix(in srgb,currentColor 9%,transparent)}
-.tabs button{height:38px;border-radius:12px;font-weight:600;font-size:.78rem;padding:0 2px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tabs button{position:relative;height:40px;border-radius:12px;font-weight:600;font-size:.8rem;padding:0 2px;min-width:0;overflow:visible;line-height:1.1}
+.tabs button .mdot{top:3px;right:5px}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--card)}
-.note{font-size:.8125rem;opacity:.85;margin-top:-6px}
+.note{font-size:.875rem;opacity:.95;margin-top:-6px;line-height:1.45}
 .setting{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:500}
 .switch{width:52px;height:30px;border-radius:15px;border:1.5px solid currentColor;position:relative;flex:none}
 .switch::after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:currentColor;top:3.5px;left:4px;transition:left .2s ease}
@@ -410,7 +411,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .verdict p{margin-top:2px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
 .stats b{display:block;font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
-.stats span{font-size:.75rem;opacity:.8}
+.stats span{font-size:.78rem;opacity:.92}
 .winhearts{display:flex;justify-content:center;gap:4px}
 .winhearts svg{width:24px;height:24px;fill:var(--heart);animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
 .winhearts svg.gone{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.35}
@@ -423,7 +424,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .openbox{display:grid;gap:10px;padding:11px 16px;border-radius:16px;border:1.5px solid currentColor}
 .openbox>button{text-align:left;line-height:1.3;border:0;padding:0}
 .openbox .setting{font-size:.875rem}
-.openbox .setting span small{display:block;font-size:.75rem;font-weight:400;opacity:.8}
+.openbox .setting span small{display:block;font-size:.8rem;font-weight:400;opacity:.95;margin-top:1px}
 .now{font-size:.875rem;margin-top:-6px;opacity:.9}
 .sheet.side{justify-content:flex-start;align-items:stretch;padding:0}
 .sheet.side .card{height:100%;max-width:350px;width:90vw;border-radius:0 24px 24px 0;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:18px;padding-block:calc(18px + env(safe-area-inset-top,0px)) calc(18px + env(safe-area-inset-bottom,0px));gap:14px}
@@ -435,7 +436,7 @@ body.bigmap #caption.on{left:12px;right:auto;transform:none;bottom:calc(90px + e
 .onboard{font-size:.6875rem;font-weight:600;padding:1px 7px;border-radius:9px;background:var(--ink);color:var(--card)}
 .card.lobby{gap:14px}
 .card.lobby>*{flex:none}
-.card.lobby .setting small{display:block;font-weight:400;font-size:.75rem;opacity:.75;margin-top:1px}
+.card.lobby .setting small{display:block;font-weight:400;font-size:.8rem;opacity:.95;margin-top:1px}
 .lview{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8125rem;font-weight:600}
 .lview .sizes,.lseg{grid-template-columns:repeat(2,1fr)}
 .lseg:has(button:nth-child(4)){grid-template-columns:repeat(4,1fr)}
@@ -484,7 +485,7 @@ body.sheetopen #capTip{display:none}
 .lseg button[aria-pressed="true"][disabled]{opacity:.8}
 .switch[disabled]{opacity:.55}
 .lcode{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,currentColor 8%,transparent)}
-.lcode small{grid-column:1/-1;font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
+.lcode small{grid-column:1/-1;font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;opacity:.9}
 .lcode b{font-size:1.9rem;letter-spacing:.12em;font-variant-numeric:tabular-nums;user-select:all;-webkit-user-select:all}
 .lcode button{height:36px;padding:0 16px;border-radius:18px;background:var(--ink);color:var(--card);font-weight:600}
 .lcode p{grid-column:1/-1;font-size:.8125rem;opacity:.85;margin:4px 0 0}
@@ -526,7 +527,7 @@ body.sheetopen #capTip{display:none}
 .oback{height:36px;padding:0 12px;border-radius:18px;font-weight:600;background:color-mix(in srgb,currentColor 9%,transparent)}
 .obig{text-align:left;padding:14px 16px;border-radius:16px;border:1.5px solid currentColor;display:grid;gap:3px;line-height:1.3}
 .obig b{font-size:1.05rem}
-.obig span{font-size:.8125rem;opacity:.8}
+.obig span{font-size:.84rem;opacity:.95}
 #oHost{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .ofilter{display:flex;gap:8px;align-items:center}
 .ofilter .sizes{flex:1;grid-template-columns:repeat(3,1fr)}
@@ -535,7 +536,7 @@ body.sheetopen #capTip{display:none}
 .orooms li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,currentColor 7%,transparent)}
 .oinfo{flex:1;min-width:0;display:grid;gap:3px}
 .oinfo b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.oinfo span{font-size:.75rem;opacity:.85}
+.oinfo span{font-size:.78rem;opacity:.92}
 .otags{display:flex;flex-wrap:wrap;gap:4px}
 .otags i{font-style:normal;font-size:.6875rem;font-weight:600;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,currentColor 12%,transparent)}
 .ojoin{height:36px;padding:0 16px;border-radius:18px;background:var(--ink);color:var(--card);font-weight:700;flex:none}
@@ -553,7 +554,7 @@ body.sheetopen #capTip{display:none}
 .lcode.lpublic b{font-size:1.25rem;letter-spacing:0}
 .lseg.o3{grid-template-columns:repeat(3,1fr)}
 .typesbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:10px 14px;border-radius:14px;border:1.5px solid currentColor;font-weight:600;flex:none}
-.typesbtn small{display:block;font-weight:400;font-size:.75rem;opacity:.75;margin-top:1px}
+.typesbtn small{display:block;font-weight:400;font-size:.8rem;opacity:.95;margin-top:1px}
 .modes .openbox>.typesbtn{border:1.5px solid currentColor;padding:10px 14px;border-radius:14px}
 .typesbox .obtns button{border:1.5px solid currentColor}
 .typesbtn b{font-size:1.4rem;line-height:1;opacity:.7}
@@ -581,7 +582,7 @@ body.sheetopen #capTip{display:none}
 #begin span{font-size:.8125rem;opacity:.8;font-weight:500}
 .smenu{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .smenu button{height:48px;border-radius:16px;border:1.5px solid currentColor;font-weight:600}
-.chapter.strong{font-weight:800;opacity:1}
+.chapter.strong{font-weight:600}
 .lstatus{margin:0;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,#e85d04 14%,transparent);font-weight:600;font-size:.875rem}
 /* While a menu is open the scene behind it holds still, so the blur is drawn once instead of every frame. */
 body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast),body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.toast) *{animation-play-state:paused!important}
@@ -593,7 +594,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 .otpdash{font-size:1.6rem;font-weight:800;padding:0 2px;flex:none}
 .lplayers .nm{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:4px;row-gap:1px}
 .lplayers .nm b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-.lplayers .nm small{flex-basis:100%;font-size:.6875rem;font-weight:600;opacity:.7;display:flex;align-items:center;gap:4px}
+.lplayers .nm small{flex-basis:100%;font-size:.72rem;font-weight:600;opacity:.88;display:flex;align-items:center;gap:4px}
 .lplayers .nm .crown{margin-left:0}
 .lplayers li{gap:8px;padding:8px}
 .lcode b{white-space:nowrap;font-size:clamp(1.3rem,7.5vw,1.9rem);letter-spacing:.08em}
@@ -618,14 +619,45 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
 @keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:1}85%{opacity:.9}100%{transform:translateY(-105px);opacity:0}}
 @keyframes fly{0%,100%{transform:translate(0,0);opacity:.2}50%{transform:translate(8px,-7px);opacity:1}}
 @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+/* Tutorials: tinted, with a book badge, and a New tag until opened once */
+.modes button.tut{position:relative;padding-left:58px;border-color:var(--compass);background:color-mix(in srgb,var(--compass) 9%,transparent)}
+.modes button.tut.unseen{border-width:2px;background:color-mix(in srgb,var(--compass) 15%,transparent)}
+.tuticon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:var(--compass);color:#fff;display:grid;place-items:center}
+.tuticon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.newtag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:9px;background:var(--twin);color:#fff;font-style:normal;font-size:.7rem;font-weight:700;letter-spacing:.03em;vertical-align:2px}
+.mdot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--twin);box-shadow:0 0 0 2px var(--card)}
+.tutdrop{border:1.5px solid var(--compass);border-radius:16px;background:color-mix(in srgb,var(--compass) 7%,transparent)}
+.tutdrop summary{list-style:none;cursor:pointer;position:relative;display:flex;align-items:center;gap:8px;min-height:56px;padding:8px 40px 8px 58px}
+.tutdrop summary::-webkit-details-marker{display:none}
+.tutdrop summary b{display:block;font-weight:600}
+.tutdrop summary small{display:block;font-size:.8rem;opacity:.9}
+.tutdrop summary .newtag{margin-left:auto}
+.tutchev{position:absolute;right:16px;top:50%;font-style:normal;font-size:1.4rem;transform:translateY(-50%) rotate(90deg);transition:transform .2s ease}
+.tutdrop[open] .tutchev{transform:translateY(-50%) rotate(-90deg)}
+.tutdrop .modes{padding:0 10px 10px}
+/* Main menu */
+.mprog{display:grid;gap:6px;padding:10px 14px 12px;border-radius:16px;background:color-mix(in srgb,currentColor 7%,transparent)}
+.mprogtxt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:.84rem}
+.mprogtxt>span{font-weight:600}
+.mprogtxt b{font-weight:500}
+.mbar{height:8px;border-radius:4px;background:color-mix(in srgb,currentColor 12%,transparent);overflow:hidden}
+.mbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--compass),var(--twin))}
+.mtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mtiles button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;min-height:84px;padding:11px 14px;border-radius:18px;border:1.5px solid color-mix(in srgb,currentColor 35%,transparent);background:color-mix(in srgb,currentColor 4%,transparent);line-height:1.2}
+.mtiles button:hover{background:color-mix(in srgb,currentColor 9%,transparent)}
+.mtiles svg{width:26px;height:26px;margin-bottom:2px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mtiles b{font-weight:600;font-size:.98rem}
+.mtiles span{font-size:.8rem;opacity:.95}
+.mtiles .mdot{top:8px;right:8px}
+
 
 .lv button.done{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .lv button:disabled{opacity:.28;cursor:default}
-.chapter{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;opacity:.75;margin-bottom:-8px}
+.chapter{font-family:Fredoka,var(--body);font-size:1.15rem;font-weight:600;letter-spacing:.01em;margin:4px 0 -6px}
 .modes{display:grid;gap:8px}
 .modes button{text-align:left;padding:11px 16px;border-radius:16px;border:1.5px solid currentColor;line-height:1.3}
 .modes b{display:block;font-weight:600}
-.modes span{font-size:.8125rem;opacity:.8}
+.modes span{font-size:.84rem;opacity:.95}
 #debug pre{margin:0;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;overflow:auto;max-height:36vh;white-space:pre}
 #debug table{border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums;width:100%}
 #debug td,#debug th{text-align:right;padding:2px 6px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
@@ -3842,6 +3874,27 @@ window.UnwindI18n = (function () {
     'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.': 'As rochas estão lá mesmo que ninguém as tenha desenhado: um choque custa um marinheiro. Uma mordida de serpente também, a não ser que a serpente esteja atordoada. Os remoinhos atiram o barco para longe, e uma rajada de vento empurra-o mais um quadrado. Se perderem todos os marinheiros, o barco perde-se.',
     'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.': 'Navega para dentro do próprio farol para ganhar: passar ao lado não chega. Metade dos tesouros está no fundo, onde só o radar os vê; a outra metade flutua, onde só a luz os mostra. Passar por cima de um tesouro apanha-o. Encontra-os todos para um jogo perfeito. Toca em qualquer quadrado para o assinalar no ecrã do teu parceiro.',
     'Take back': 'Retirar',
+    'Your lake': 'O teu lago',
+    'cleared ·': 'concluídos ·',
+    'perfect': 'perfeitos',
+    'Eight kinds of levels': 'Oito tipos de níveis',
+    'New': 'Novo',
+    'Daily puzzle': 'Puzzle diário',
+    'New board each day': 'Um tabuleiro novo por dia',
+    'Rooms with friends': 'Salas com amigos',
+    '3 ways to play': '3 maneiras de jogar',
+    'Sound and music': 'Som e música',
+    'Trials': 'Provas',
+    'New tutorial': 'Tutorial novo',
+    'Poems': 'Poemas',
+    'Hard personal bests': 'Recordes pessoais do Difícil',
+    'Timed personal bests': 'Recordes pessoais do Cronometrado',
+    'Twin-shared and sniper arrows, the arrows that link boards': 'Setas gémeas e setas atiradoras, as setas que ligam tabuleiros',
+    'Three ways to play the lighthouse game.': 'Três maneiras de jogar o jogo do farol.',
+    'The first one: a keeper and a boat lost in the fog. Two players, online or on one device.': 'O primeiro: um faroleiro e um barco perdido no nevoeiro. Dois jogadores, online ou num só dispositivo.',
+    'Solo: you keep the lighthouse alone. Levels in Boarding Up.': 'Sozinho: és o faroleiro. Níveis em Tabuleiros em Grupo.',
+    'Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, or on one device in Boarding Up.': 'Memória e conversa: o faroleiro vislumbra o mar e desenha a carta, o capitão navega por radar. Online, ou num só dispositivo em Tabuleiros em Grupo.',
+    'Cleared today': 'Concluído hoje',
     'Show all': 'Mostrar tudo',
     'Home safe!': 'Em casa, a salvo!',
     'Lost at sea…': 'Perdido no mar…',
@@ -4127,6 +4180,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
+    [/^(Game build|Build) (\S+)$/, function (m, a, b) { return (a === 'Build' ? 'Versão ' : 'Versão do jogo ') + b; }],
     [/^A serpent swam into the trap at ([A-Z]\d+) and sank, stunned!$/, 'Uma serpente nadou para a armadilha em $1 e afundou-se, atordoada!'], [/^Sailors: (\d+) of (\d+)$/, 'Marinheiros: $1 de $2'],
     [/^Guiding Light 3\.0 · (Lighthouse keeper|Boat captain)( · one device)?$/, function (m, r, o) { return 'Luz Guia 3.0 · ' + (r === 'Boat captain' ? 'Capitão do barco' : 'Faroleiro') + (o ? ' · um dispositivo' : ''); }], [/^(\d+) sailors$/, '$1 marinheiros'], [/^Crash on a tall rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha alta em $1. Perdeu-se um marinheiro!'], [/^Crash on a rock at ([A-Z]\d+)\. A sailor is lost!$/, 'Choque numa rocha em $1. Perdeu-se um marinheiro!'], [/^A serpent struck at ([A-Z]\d+)\. A sailor is lost!$/, 'Uma serpente atacou em $1. Perdeu-se um marinheiro!'], [/^A gust at ([A-Z]\d+) blew the boat on!$/, 'Uma rajada em $1 empurrou o barco!'],
     [/^Plan up to (\d) moves with the arrows\.$/, 'Planeia até $1 movimentos com as setas.'], [/^Crash! A tall rock at ([A-Z]\d+)$/, 'Bum! Uma rocha alta em $1'], [/^Crash! A rock at ([A-Z]\d+)$/, 'Bum! Uma rocha em $1'], [/^A whirlpool at ([A-Z]\d+) spun the boat away!$/, 'Um remoinho em $1 atirou o barco para longe!'], [/^Treasure found at ([A-Z]\d+)!$/, 'Tesouro encontrado em $1!'], [/^A serpent bit the boat at ([A-Z]\d+)!$/, 'Uma serpente mordeu o barco em $1!'], [/^(.+) left the game, so this sea is closed\.$/, '$1 saiu do jogo, por isso este mar fechou.'], [/^(\d+) \/ (\d+)$/, '$1 / $2'],
@@ -5639,7 +5693,7 @@ window.UnwindI18n = (function () {
       };
     }
   };
-  function openCoopTutorial(key) { openCoopRoom(COOP_TUTORIALS[key], ['Ana', 'Bruno']); }
+  function openCoopTutorial(key) { markTut(key); openCoopRoom(COOP_TUTORIALS[key], ['Ana', 'Bruno']); }
   function coopRestart() { var make = coop.make, names = coop.room.names, you = coop.you; withLoading(function () { openCoopRoom(make, names); if (you) { coop.you = you; coopSwitch(you); } }); }
   // Building boards can take a moment, so a loading card shows first. Its spinner runs on the compositor, so it keeps turning.
   var loadingSync = false, loadingHold = false;
@@ -6170,9 +6224,9 @@ window.UnwindI18n = (function () {
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
         (load('unwind.lastRoom', '') ? '<button class="obig orejoin" id="oRejoin" hidden><b>Back to your game</b><span>Room ' + load('unwind.lastRoom', '') + ' is still going. Jump back onto your board.</span></button>' : '') +
         // The same choices, in the same order, as the Online tab of the levels menu.
+        onlineTutorials('mTutTwins', 'mTutSniper') +
         '<div class="chapter strong">Play with friends</div><div class="modes"><button id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>' +
         '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="oGuide"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button><button id="oGuide3"><b>Guiding Light 3.0</b><span>Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, two players.</span></button></div>' +
-        '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
         '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mSimRoom"><b>Room preview (simulated)</b><span>The room screen with pretend players, no server needed.</span></button></div>' +
         '<p class="note" style="text-align:center" id="oVer">Game build ' + BUILD + '</p>' +
         '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><div class="otp" id="oOtp" role="group" aria-label="Room code">' + [0, 1, 2, 3, 4, 5].map(function (i) { return (i === 3 ? '<span class="otpdash" aria-hidden="true">-</span>' : '') + '<input class="otpc" data-i="' + i + '" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Character ' + (i + 1) + '">'; }).join('') + '</div><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
@@ -6241,7 +6295,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-h';
+  var BUILD = '2026.11.26-i';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -8960,7 +9014,7 @@ window.UnwindI18n = (function () {
         else openEndless();
       } else if (c.mode === 'endless' || owc) openEndless();
       else if (c.mode === 'challenge') { if (c.index < CHALLENGES.length - 1) openChallenge(c.index + 1); else levelsSheet('extra'); }
-      else if (c.mode === 'poem') levelsSheet('extra');
+      else if (c.mode === 'poem') levelsSheet('poems');
       else if (bu >= 0) { if (bu < BOARDING.length - 1) openBoarding(bu + 1); else levelsSheet('boarding'); }
       else levelsSheet();
     };
@@ -9006,7 +9060,7 @@ window.UnwindI18n = (function () {
       if (c.mode === 'poem') {
         var ps = sheet('<h2>No winning moves left</h2><p>This line can no longer be written. Try it again: the lines you have already written stay written.</p><button class="primary" id="again">Try this line again</button><button class="secondary" id="toLevels">Back to challenges</button>');
         ps.querySelector('#again').onclick = function () { restart(); };
-        ps.querySelector('#toLevels').onclick = function () { levelsSheet('extra'); };
+        ps.querySelector('#toLevels').onclick = function () { levelsSheet('poems'); };
         return;
       }
       var ss = sheet('<h2>No moves left</h2><p>' + (special() === 'football' ? 'The ball can no longer reach the goal from here. Try a different order.' : special() === 'poem' ? 'These letters can no longer reach their slots. Try a different order.' : 'Some arrows can never leave now. Try a different order.') + '</p><button class="primary" id="again">Try again</button><button class="secondary" id="toLevels">Choose another level</button>');
@@ -9025,13 +9079,63 @@ window.UnwindI18n = (function () {
   var CALM_SECTIONS = [['First steps', 0, 6], ['Twins', 6, 9], ['Compass', 9, 12], ['Sleepers', 12, 15], ['Mirrors', 15, 18], ['Patient', 18, 21], ['Ghost', 21, 24], ['Phase', 24, 27], ['Red card', 27, 30], ['Reverse', 30, 33], ['Everything together', 33, 36]];
   /* The start menu. Its first tap also unlocks sound, which browsers only allow after a tap. */
   var started = false;
+  /* ---------- Tutorials: their own look, and a New tag until the player has opened them once ---------- */
+  var TUT_ICON = '<svg viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>';
+  function tutSeen(k) { return !!(progress.seenTut && progress.seenTut[k]); }
+  function markTut(k) { progress.seenTut = progress.seenTut || {}; if (!progress.seenTut[k]) { progress.seenTut[k] = 1; save('unwind.progress2', progress); } }
+  function tutButton(id, key, title, sub) {
+    return '<button id="' + id + '" class="tut' + (tutSeen(key) ? '' : ' unseen') + '" data-tut="' + key + '"><i class="tuticon" aria-hidden="true">' + TUT_ICON + '</i><b>' + title + (tutSeen(key) ? '' : ' <em class="newtag">New</em>') + '</b><span>' + sub + '</span></button>';
+  }
+  // The online tutorials, folded away at the top of the online menus.
+  function onlineTutorials(idTwins, idSniper) {
+    var fresh = !tutSeen('twins') || !tutSeen('sniper');
+    return '<details class="tutdrop"' + (fresh ? ' open' : '') + '><summary><i class="tuticon" aria-hidden="true">' + TUT_ICON + '</i><span><b>Tutorials</b><small>Twin-shared and sniper arrows, the arrows that link boards</small></span>' + (fresh ? '<em class="newtag">New</em>' : '') + '<i class="tutchev" aria-hidden="true">›</i></summary><div class="modes">' +
+      tutButton(idTwins, 'twins', 'Twin-shared arrows', 'Two boards. You control both.') + tutButton(idSniper, 'sniper', 'Sniper arrows', 'Two boards. You control both.') + '</div></details>';
+  }
+  // Every level with a moon or a star, for the main menu's progress line.
+  function lakeProgress() {
+    var ids = [];
+    Object.keys(SET_INFO).forEach(function (k) { if (SETS[k]) for (var i = 0; i < SETS[k].length; i++) ids.push(SET_INFO[k].prefix + (i + 1)); });
+    BOARDING.forEach(function (_, i) { ids.push('bu-' + (i + 1)); });
+    CHALLENGES.forEach(function (_, i) { ids.push('ch-' + (i + 1)); });
+    POEMS.forEach(function (P) { ids.push(P.id); });
+    var done = ids.filter(function (id) { return progress.done[id]; }).length, perfect = ids.filter(function (id) { return progress.perfect[id]; }).length;
+    return { total: ids.length, done: done, perfect: perfect };
+  }
+  var MENU_ICONS = {
+    levels: '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>',
+    open: '<path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+    daily: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/><path d="M9.5 14.5l2 2 3.5-3.5"/>',
+    online: '<circle cx="9" cy="9" r="3"/><circle cx="17" cy="10" r="2.4"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5M14.5 15.2c.8-.7 1.7-1 2.5-1 2 0 3.6 1.5 4 4"/>',
+    guide: '<path d="M10 21l1-11h2l1 11zM9.5 10h5l-.6-3h-3.8zM12 7V4.5"/><path d="M7 7.5L3.5 6M17 7.5l3.5-1.5" stroke-dasharray="2 1.5"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>'
+  };
+  // The three Guiding Light games, side by side.
+  function guideChooser() {
+    var s = sheet('<div class="row"><h2>Guiding Light</h2><button class="close" id="x" aria-label="Close">×</button></div><p class="note">Three ways to play the lighthouse game.</p><div class="modes">' +
+      '<button id="gcOne"><b>Guiding Light</b><span>The first one: a keeper and a boat lost in the fog. Two players, online or on one device.</span></button>' +
+      '<button id="gcTwo"><b>Guiding Light 2.0</b><span>Solo: you keep the lighthouse alone. Levels in Boarding Up.</span></button>' +
+      '<button id="gcThree"><b>Guiding Light 3.0</b><span>Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, or on one device in Boarding Up.</span></button></div>' +
+      '<button class="tomenu" id="toMenu">Go to Main Menu</button>', 'lobby');
+    s.querySelector('#x').onclick = closeSheet;
+    s.querySelector('#toMenu').onclick = startMenu;
+    s.querySelector('#gcOne').onclick = function () { guideMenu(); };
+    s.querySelector('#gcTwo').onclick = function () { levelsSheet('boarding', false, 'light'); };
+    s.querySelector('#gcThree').onclick = function () { guide3Menu(); };
+  }
   function startMenu() {
     var last = progress.last || { set: 'calm', index: 0 }, info = SET_INFO[last.set] || SET_INFO.calm;
     var where = started && $('where').textContent ? $('where').textContent : (info.label || 'Calm') + ' · Level ' + ((last.index || 0) + 1 + (info.offset || 0));
     var html = '<div class="stitle"><svg viewBox="0 0 120 40" aria-hidden="true"><path d="M6 30H40V12H70" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 4L72 12L62 20" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 30H112" stroke="' + colors.twins[0] + '" stroke-width="6" stroke-linecap="round"/><path d="M104 22L113 30L104 38" stroke="' + colors.twins[0] + '" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><h1>Unwind</h1><p>A cozy arrow puzzle on the lake</p></div>' +
       '<button class="primary" id="begin"><b>Continue</b><span>' + where + '</span></button>' +
       (current && current.coop && coop && coop.online && !ended ? '<button class="lleave smleave" data-go="leave">Leave online game</button>' : '') +
-      '<div class="smenu"><button data-go="levels">Levels</button><button data-go="open">Open Waters</button><button data-go="online">Play online</button><button data-go="guide">Guiding Light</button><button data-go="settings">Settings</button></div>' +
+      (function () {
+        var lp = lakeProgress(), tile = function (go, title, sub, dot) { return '<button data-go="' + go + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + MENU_ICONS[go] + '</svg><b>' + title + '</b><span>' + sub + '</span>' + (dot ? '<i class="mdot" aria-label="New"></i>' : '') + '</button>'; };
+        return '<div class="mprog"><div class="mprogtxt"><span>Your lake</span><b><span class="notr">' + lp.done + ' / ' + lp.total + '</span> cleared · <span class="notr">' + lp.perfect + '</span> perfect</b></div><div class="mbar" role="img" aria-label="' + Math.round(100 * lp.done / lp.total) + '%"><i style="width:' + (100 * lp.done / lp.total).toFixed(1) + '%"></i></div></div>' +
+          '<div class="mtiles">' + tile('levels', 'Levels', 'Eight kinds of levels', !tutSeen('boards')) + tile('open', 'Open Waters', 'Endless boards') +
+          tile('daily', 'Daily puzzle', progress.daily === todayKey() ? 'Cleared today' : 'New board each day') + tile('online', 'Play online', 'Rooms with friends', !tutSeen('twins') || !tutSeen('sniper')) +
+          tile('guide', 'Guiding Light', '3 ways to play') + tile('settings', 'Settings', 'Sound and music') + '</div>';
+      })() +
       languageRow() + '<p class="note" style="text-align:center">Sound on for the full experience</p><p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.<br>Build ' + BUILD + '</p>';
     var s = sheet(html, 'start');
     s.classList.add('startsheet');
@@ -9043,20 +9147,23 @@ window.UnwindI18n = (function () {
       else if (what === 'levels') levelsSheet();
       else if (what === 'open') levelsSheet('endless');
       else if (what === 'online') onlineSheet('home');
-      else if (what === 'guide') guideMenu();
+      else if (what === 'guide') guideChooser();
+      else if (what === 'daily') openDaily();
       else if (what === 'settings') settingsSheet();
       else if (what === 'leave') { netSend({ t: 'leave' }); netClose(); coop.online = null; var lastL = progress.last || { set: 'calm', index: 0 }; openLevel(lastL.set || 'calm', lastL.index || 0); }
     };
     s.querySelector('#begin').onclick = function () { go('play'); };
     s.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-go')); }; });
   }
-  function levelsSheet(tab, inPlace) {
+  function levelsSheet(tab, inPlace, scrollTo) {
     // With no tab asked for, the menu opens on the category the player last looked at.
-    tab = tab || progress.lastTab || (current && current.set) || 'calm';
+    tab = tab || progress.lastTab || (current && current.mode === 'poem' ? 'poems' : current && current.set) || 'calm';
     if (SET_INFO[tab] && SET_INFO[tab].season) tab = 'seasons';
+    if (tab === 'hard' || tab === 'timed') tab = 'trials';
     if (progress.lastTab !== tab) { progress.lastTab = tab; save('unwind.progress2', progress); }
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
-    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['hard', 'Hard'], ['timed', 'Timed'], ['seasons', 'Seasons'], ['boarding', 'Boarding Up'], ['extra', 'Challenges'], ['endless', 'Endless'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>';
+    var tabNew = { boarding: !tutSeen('boards'), online: !tutSeen('twins') || !tutSeen('sniper') };
+    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['trials', 'Trials'], ['seasons', 'Seasons'], ['boarding', 'Boarding Up'], ['extra', 'Challenges'], ['poems', 'Poems'], ['endless', 'Endless'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + (tabNew[k[0]] ? '<i class="mdot" aria-label="New tutorial"></i>' : '') + '</button>'; }).join('') + '</div>';
     var grid = function (set, from, to) {
       var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
@@ -9070,7 +9177,7 @@ window.UnwindI18n = (function () {
     else if (tab === 'boarding') {
       BOARDING_SETS.forEach(function (set, si) {
         var shown = 0;
-        html += (si ? '<div class="chapter">' + set[1] + '</div>' : '') + '<p class="note">' + set[2] + '</p>' + (si ? '' : '<div class="modes"><button id="mTutBoards"><b>How several boards work</b><span>A quick look before you start.</span></button></div>') + '<div class="lv' + (set[0] === 'poem' ? ' wide' : '') + '">' + BOARDING.map(function (b, i) {
+        html += (si ? '<div class="chapter" id="bu-' + set[0] + '">' + set[1] + '</div>' : '') + '<p class="note">' + set[2] + '</p>' + (si ? '' : '<div class="modes">' + tutButton('mTutBoards', 'boards', 'How several boards work', 'A quick look before you start.') + '</div>') + '<div class="lv' + (set[0] === 'poem' ? ' wide' : '') + '">' + BOARDING.map(function (b, i) {
           if (boardingSet(b) !== set[0]) return '';
           var id = 'bu-' + (i + 1); shown++;
           var label = set[0] === 'poem' ? 'The Poem' : String(shown);
@@ -9082,26 +9189,22 @@ window.UnwindI18n = (function () {
     else if (tab === 'seasons') {
       var blurbs = { winter: '20% chance per launch that arrows freeze. Hit them to free them.', spring: 'Flowers block the way. Each launch, a bee takes one.', summer: '25% chance per launch that tiles catch fire.', autumn: '50% chance per launch that wind spins arrows.' };
       SEASON_ORDER.forEach(function (k) { html += '<div class="chapter">' + SET_INFO[k].label + '</div><p class="note">' + blurbs[k] + '</p>' + grid(k, 0, SETS[k].length); });
-    } else {
-      html += '<p class="note">' + (tab === 'hard' ? 'Two lives, no hints, and combo arrows that mix up to 3 effects.' : 'Beat the clock on every board. Three lives.') + '</p>' + grid(tab, 0, SETS[tab].length);
+    } else if (tab === 'trials') {
+      html += '<div class="chapter">Hard</div><p class="note">Two lives, no hints, and combo arrows that mix up to 3 effects.</p>' + grid('hard', 0, SETS.hard.length);
+      html += '<div class="chapter">Timed</div><p class="note">Beat the clock on every board. Three lives.</p>' + grid('timed', 0, SETS.timed.length);
     }
     var bestList = function (set) {
       var info = SET_INFO[set], out = SETS[set].map(function (_, i) { var r = progress.records && progress.records[info.prefix + (i + 1)]; return r ? '<span>' + (i + 1 + (info.offset || 0)) + ' <b>' + recordText(r) + '</b></span>' : ''; }).join('');
-      return out ? '<div class="chapter">' + (tab === 'seasons' ? info.label + ' personal bests' : 'Personal bests') + '</div><div class="records">' + out + '</div>' : '';
+      return out ? '<div class="chapter">' + (tab === 'calm' ? 'Personal bests' : info.label + ' personal bests') + '</div><div class="records">' + out + '</div>' : '';
     };
-    if (tab !== 'extra' && tab !== 'online' && tab !== 'endless' && tab !== 'boarding') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
+    if (tab === 'calm' || tab === 'seasons' || tab === 'trials') (tab === 'seasons' ? SEASON_ORDER : tab === 'trials' ? ['hard', 'timed'] : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'online') {
+      html += onlineTutorials('mTutTwinsO', 'mTutSniperO');
       html += '<div class="chapter strong">Play with friends</div><div class="modes"><button id="mHostO"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="mPubO"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="mCodeO"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>';
       html += '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="mGuideO"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button><button id="mGuide3O"><b>Guiding Light 3.0</b><span>Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, two players.</span></button></div>';
-      html += '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
     }
     if (tab === 'extra') {
       html += '<div class="chapter strong">Daily</div><div class="modes"><button id="mDaily"><b>Today\'s puzzle</b><span>' + (progress.daily === todayKey() ? 'Cleared today. Play it again any time.' : 'One new board each day.') + '</span></button></div>';
-      html += '<div class="chapter strong">Poems of the sea</div><p class="note">Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.</p><div class="lv wide">' + POEMS.map(function (P, i) {
-        var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
-        return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + ' ' + (i + 1) + '">' + P.title + ' ' + (i + 1) + (started ? ' · Line ' + (pr.at + 1) : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
-      }).join('') + '</div>';
-      if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
       CHALLENGE_GROUPS.forEach(function (g) {
         html += '<div class="chapter strong">' + g.name + '</div><p class="note">' + g.note + '</p><div class="lv">';
         CHALLENGES.forEach(function (c, i) {
@@ -9111,6 +9214,13 @@ window.UnwindI18n = (function () {
         });
         html += '</div>';
       });
+    }
+    if (tab === 'poems') {
+      html += '<p class="note">Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.</p><div class="lv wide">' + POEMS.map(function (P, i) {
+        var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
+        return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + ' ' + (i + 1) + '">' + P.title + ' ' + (i + 1) + (started ? ' · Line ' + (pr.at + 1) : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
+      }).join('') + '</div>';
+      if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
     }
     if (tab === 'endless') {
       html += '<div class="modes"><div class="openbox"><button id="mOpen"><b>Open Waters</b><span>' + openLabel() + '</span></button>' +
@@ -9125,6 +9235,7 @@ window.UnwindI18n = (function () {
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     html += '<p class="note" style="margin:0;text-align:center">© 2026 Miguel Lima. All rights reserved.</p>';
     var s = inPlace ? sheetInPlace(html) : sheet(html, 'tall');
+    if (scrollTo) { var target = s.querySelector('#bu-' + scrollTo); if (target) setTimeout(function () { target.scrollIntoView({ block: 'start' }); }, 30); }
     s.querySelector('#toMenu').onclick = startMenu;
     s.querySelector('#x').onclick = closeSheet;
     s.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { levelsSheet(b.getAttribute('data-tab'), true); var again = $('sheetHost').querySelector('[data-tab="' + b.getAttribute('data-tab') + '"]'); if (again) again.focus({ preventScroll: true }); }; });
@@ -9146,7 +9257,7 @@ window.UnwindI18n = (function () {
     }
     if (s.querySelector('#mDaily')) s.querySelector('#mDaily').onclick = openDaily;
     s.querySelectorAll('[data-ch]').forEach(function (b) { b.onclick = function () { openChallenge(+b.getAttribute('data-ch')); }; });
-    if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { showTutorial(['boards'], 0, false, 'play'); };
+    if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { markTut('boards'); showTutorial(['boards'], 0, false, 'play'); };
     s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
     s.querySelectorAll('[data-poem]').forEach(function (b) { b.onclick = function () { openPoem(undefined, +b.getAttribute('data-poem')); }; });
     if (s.querySelector('#mPoemRead')) s.querySelector('#mPoemRead').onclick = function () { var room = E.specialRoom('poem', window.UnwindI18n.lang()); poemFinale(null, room.boards.map(function (L) { return L.line; })); };
