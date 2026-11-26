@@ -97,7 +97,11 @@
   /* ---------- Open Water's default background: each song plays once, then the scene fades to the next ---------- */
   var CYCLE = ['0', '1', '2', '3', '4', 'coast', 'winter', 'spring', 'summer', 'autumn'], CYCLE_GAP = 2000;
   var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
-  function rotating() { return !!current && (current.mode === 'endless' || !!current.coop); }
+  // Games where the backgrounds and songs rotate (and Next Theme can skip ahead): Open Waters, multi-board play,
+  // Boarding Up and the challenges.
+  function rotating() { return !!current && (current.mode === 'endless' || current.mode === 'poem' || current.mode === 'challenge' || !!current.coop); }
+  // Poems and challenges have no Rewind: Restart is the way back.
+  function noRewind() { return !!current && (current.mode === 'poem' || current.mode === 'challenge'); }
   function cycleOn() { return rotating() && backgroundChoice() === 'default'; }
   function shownBackground() { var b = backgroundChoice(); return b === 'default' ? CYCLE[bgCycle.i] : b; }
   function cycleSeconds() { return M.patternSeconds(colors.music); }
@@ -2003,7 +2007,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-a';
+  var BUILD = '2026.11.26-b';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2594,12 +2598,14 @@
     if (current.level.hints === 0 || current.coop) $('bHint').hidden = true;
     // Solo multi-board play has no one else to pause with.
     if (current.coop && coop && !coop.online && (coop.room.boarding !== undefined || coop.room.endless)) $('bRewind').hidden = true;
+    if (noRewind()) $('bRewind').hidden = true;
     $('hintLabel').textContent = 'Hint ' + hintsLeft;
     var stuck = !special() && E.isStuck(current.level, state);
     $('bRewind').classList.toggle('call', stuck);
+    $('bRestart').classList.toggle('call', stuck && noRewind());
     if (stuck && !stuckShown) {
       stuckShown = true;
-      setCaption(current.coop ? (coop && coop.room.tutorial ? current.level.caption : 'Nothing can move here yet. Check the other boards.') : current.level.arrows.some(function (x) { return !state.removed[x.id] && E.isRedCarded(state, x); }) ? 'Red cards are blocking the board. Rewind and play them in time.' : 'Nothing can move. Rewind one step.');
+      setCaption(current.coop ? (coop && coop.room.tutorial ? current.level.caption : 'Nothing can move here yet. Check the other boards.') : current.level.arrows.some(function (x) { return !state.removed[x.id] && E.isRedCarded(state, x); }) ? (noRewind() ? 'Red cards are blocking the board. Restart and play them in time.' : 'Red cards are blocking the board. Rewind and play them in time.') : noRewind() ? 'Nothing can move. Restart to try again.' : 'Nothing can move. Rewind one step.');
       track('stuck', { launches: state.launches });
     }
     // No launch right now, but cracking ice leads to one: say so, since it looks like a dead end.
@@ -6058,7 +6064,7 @@
       track('hint_used', {});
       pluck(M.hz(M.THEMES[wantedTheme()].pent[7]), 0, 0.12, 1);
     } else if (!sol.exhausted) {
-      setCaption('This board cannot clear from here. Rewind a step or two.');
+      setCaption(noRewind() ? 'This board cannot clear from here. Restart to try again.' : 'This board cannot clear from here. Rewind a step or two.');
     } else {
       var m = E.legalMoves(l, state);
       if (m.length) { hintArrow = m[0]; hintStart = performance.now(); hintsLeft--; hintsUsed++; track('hint_used', { fallback: true }); }
