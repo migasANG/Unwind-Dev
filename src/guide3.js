@@ -1,10 +1,13 @@
 /* Guiding Light 3.0: the rules, shared by the phones and the room server.
    Two players, online. The keeper (seat 0) has an empty sea chart and the lighthouse: each turn the beam shows the
-   real sea for five seconds, then the keeper draws what they remember on the chart. The captain (seat 1) never sees
-   the sea itself: only the chart the keeper drew, and a radar with the boat's coordinates, treasure and serpents.
-   Rocks are there whether or not anyone drew them.
-   A turn: the captain presses Next turn -> light (5 s) -> the keeper writes (30 s, or Done) -> the captain plans up to
-   3 moves (2 on Hard) and sails (15 s, or Ready) -> the boat sails, the serpents swim -> Next turn again.
+   real sea for 7.5 seconds, then the keeper draws what they remember on the chart. The captain (seat 1) never sees
+   the sea itself: only the chart the keeper drew, and a radar with the boat's coordinates, deep treasure and serpents.
+   Rocks are there whether or not anyone drew them. Gusts of wind come and go: a boat sailing into one is blown one
+   tile further. Only the keeper's light shows them. Lives are sailors: a crash or a bite costs one.
+   Treasure: half lies deep (only the radar sees it), half floats (only the light shows it). Any of it counts if the
+   boat sails over it. A win with every treasure found is perfect.
+   A turn: the captain presses Next turn -> light (7.5 s) -> the keeper writes (30 s, or Done) -> the captain plans up
+   to 3 moves (2 on Hard) and sails (30 s, or Ready) -> the boat sails, the serpents swim -> Next turn again.
    Plain functions on a plain object: the server replays the same actions to check them. Timing is the server's job:
    it only lets a timed step end ('advance') once its time is up. */
 (function (root, factory) {
@@ -14,8 +17,9 @@
   'use strict';
   var WATER = 0, ROCK = 1, TALL = 2, WHIRL = 3, LIGHT = 4;
   var SIZES = [11, 13, 15], SIZE_NAMES = ['Small', 'Medium', 'Large'];
-  var PHASE_MS = { light: 5000, write: 30000, boat: 15000 };
-  var ICONS = ['rock', 'tall', 'whirl', 'clear', 'danger'];
+  var PHASE_MS = { light: 7500, write: 30000, boat: 30000 };
+  var ICONS = ['rock', 'tall', 'whirl', 'wind-n', 'wind-e', 'wind-s', 'wind-w', 'treasure', 'clear', 'danger'];
+  var WIND = { chance: [0.4, 0.55], max: [2, 3], turns: 3 };
   var DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
   var RADAR = 3;            // the captain's radar picks up treasure and serpents this many tiles away
   var BEAM_HALF = 20 * Math.PI / 180;
@@ -50,6 +54,7 @@
   }
   function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return G.serpents[i]; return null; }
   function treasureAt(G, x, y) { for (var i = 0; i < G.treasure.length; i++) if (!G.treasure[i].got && G.treasure[i].x === x && G.treasure[i].y === y) return G.treasure[i]; return null; }
+  function windAt(G, x, y) { for (var i = 0; i < G.winds.length; i++) if (G.winds[i].x === x && G.winds[i].y === y) return G.winds[i]; return null; }
   // The first step of a shortest route over open water (whirlpools are avoided), or null.
   function firstStep(G, fx, fy, tx, ty, avoid) {
     var q = [[tx, ty]], seen = {}; seen[ty * G.n + tx] = 1;
@@ -107,10 +112,12 @@
     var fromBoat = reach(G, s[0], s[1]);
     var free = function (x, y, far) { return G.grid[y * n + x] === WATER && fromBoat[y * n + x] !== undefined && cheb(x, y, s[0], s[1]) >= far && cheb(x, y, c, c) > 1; };
     G.treasure = [];
-    for (var t = 0, tt = 0; t < (hard ? 4 : 3) && tt < 3000; tt++) {
+    // Half the treasure lies deep (the radar finds it), half floats on the surface (the light finds it).
+    var each = size === 2 ? 3 : 2;
+    for (var t = 0, tt = 0; t < each * 2 && tt < 3000; tt++) {
       var tx = Math.floor(r() * n), ty = Math.floor(r() * n);
       if (!free(tx, ty, 2) || G.treasure.some(function (q) { return cheb(q.x, q.y, tx, ty) < 3; })) continue;
-      G.treasure.push({ x: tx, y: ty, got: false }); t++;
+      G.treasure.push({ x: tx, y: ty, got: false, deep: t % 2 === 0 }); t++;
     }
     G.serpents = [];
     for (var sp = 0, st = 0; sp < (hard ? [2, 3, 4] : [1, 2, 3])[size] && st < 3000; st++) {
@@ -125,7 +132,7 @@
     var G = null;
     for (var a = 0; a < 60 && !G; a++) G = tryMap(seed >>> 0, opts.size | 0, !!opts.hard, a);
     G.lives = G.hard ? 2 : 3; G.maxLives = G.lives; G.steps = G.hard ? 2 : 3;
-    G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
+    G.winds = []; G.marks = {}; G.phase = 'start'; G.turn = 0; G.plan = ''; G.ended = null; G.got = 0; G.last = null; G.ping = null; G.pings = 0; G.nextSerpent = G.serpents.length;
     return G;
   }
 
@@ -141,6 +148,7 @@
     if (a === 'next') {
       if (role !== 'boat' || (G.phase !== 'start' && G.phase !== 'next')) return { ok: false, why: 'turn' };
       G.turn++; G.phase = 'light'; G.plan = ''; G.last = null;
+      gusts(G);
       return { ok: true };
     }
     if (a === 'advance') {
@@ -179,41 +187,67 @@
     return { ok: false, why: 'bad' };
   }
 
+  // Gusts of wind come and go at the start of each turn. Each blows one way and lasts a few turns.
+  function gusts(G) {
+    var h = G.hard ? 1 : 0, r = rngFor(G.seed, 2000 + G.turn);
+    G.winds = G.winds.filter(function (w) { return w.until >= G.turn; });
+    if (G.winds.length >= WIND.max[h] || r() >= WIND.chance[h]) return;
+    for (var t = 0; t < 200; t++) {
+      var x = Math.floor(r() * G.n), y = Math.floor(r() * G.n);
+      if (G.grid[y * G.n + x] !== WATER || cheb(x, y, G.c, G.c) <= 1 || cheb(x, y, G.boat.x, G.boat.y) < 2 || windAt(G, x, y) || treasureAt(G, x, y)) continue;
+      G.winds.push({ x: x, y: y, dir: 'NESW'.charAt(Math.floor(r() * 4)), until: G.turn + WIND.turns - 1 });
+      return;
+    }
+  }
   // The boat follows the captain's plan, tile by tile. Rocks are there whether drawn or not: a rock stops the boat
-  // and costs a life. A whirlpool flings it off somewhere. Then the serpents swim.
+  // and costs a sailor. A whirlpool flings it off somewhere. A gust blows it one tile on, and the plan goes on from
+  // there. Reaching the lighthouse ends the trip at once. Then the serpents swim.
   function sail(G) {
     var log = { path: [[G.boat.x, G.boat.y]], events: [], serpents: [], bumped: null };
     var r = rngFor(G.seed, 100 + G.turn);
     for (var i = 0; i < G.plan.length && !G.ended; i++) {
-      var d = DIRS[G.plan.charAt(i)], nx = G.boat.x + d[0], ny = G.boat.y + d[1], t = cell(G, nx, ny);
-      if (t < 0) { log.events.push({ e: 'edge', x: nx, y: ny }); break; }
-      if (t === ROCK || t === TALL || t === LIGHT) {
-        if (t === LIGHT) break;
-        G.lives--; log.events.push({ e: 'rock', x: nx, y: ny, tall: t === TALL }); log.bumped = [nx, ny];
-        if (G.lives <= 0) G.ended = 'lost';
-        break;
-      }
-      G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
-      if (bite(G, log)) break;
-      collect(G, log);
-      if (t === WHIRL) {
-        // Spun away: up to three tiles in a random direction, stopping short of rocks and the edge.
-        var dir = Math.floor(r() * 8), ddx = [0, 1, 1, 1, 0, -1, -1, -1][dir], ddy = [-1, -1, 0, 1, 1, 1, 0, -1][dir];
-        log.events.push({ e: 'whirl', x: nx, y: ny });
-        for (var k = 0; k < 3; k++) {
-          var wx = G.boat.x + ddx, wy = G.boat.y + ddy;
-          if (cell(G, wx, wy) !== WATER) break;
-          G.boat.x = wx; G.boat.y = wy; log.path.push([wx, wy]);
-          if (bite(G, log)) break;
-          collect(G, log);
-        }
-        break;
-      }
+      var d = DIRS[G.plan.charAt(i)];
+      if (!enter(G, log, G.boat.x + d[0], G.boat.y + d[1], r, 0)) break;
     }
     if (!G.ended && cheb(G.boat.x, G.boat.y, G.c, G.c) <= 1) { G.ended = 'won'; log.events.push({ e: 'home' }); }
     if (!G.ended) swim(G, log);
     G.last = log; G.plan = '';
     G.phase = G.ended ? 'over' : 'next';
+  }
+  // Moves the boat onto a tile. False when the boat's trip ends there.
+  function enter(G, log, nx, ny, r, depth) {
+    var t = cell(G, nx, ny);
+    if (t < 0) { log.events.push({ e: 'edge', x: nx, y: ny }); return false; }
+    if (t === LIGHT) return false;
+    if (t === ROCK || t === TALL) {
+      G.lives--; log.events.push({ e: 'rock', x: nx, y: ny, tall: t === TALL }); log.bumped = [nx, ny];
+      if (G.lives <= 0) G.ended = 'lost';
+      return false;
+    }
+    G.boat.x = nx; G.boat.y = ny; log.path.push([nx, ny]);
+    if (bite(G, log)) return false;
+    collect(G, log);
+    if (cheb(nx, ny, G.c, G.c) <= 1) return false;
+    if (t === WHIRL) {
+      // Spun away: up to three tiles in a random direction, stopping short of rocks and the edge.
+      var dir = Math.floor(r() * 8), ddx = [0, 1, 1, 1, 0, -1, -1, -1][dir], ddy = [-1, -1, 0, 1, 1, 1, 0, -1][dir];
+      log.events.push({ e: 'whirl', x: nx, y: ny });
+      for (var k = 0; k < 3; k++) {
+        var wx = G.boat.x + ddx, wy = G.boat.y + ddy;
+        if (cell(G, wx, wy) !== WATER) break;
+        G.boat.x = wx; G.boat.y = wy; log.path.push([wx, wy]);
+        if (bite(G, log)) break;
+        collect(G, log);
+      }
+      return false;
+    }
+    var w = windAt(G, nx, ny);
+    if (w && depth < 3) {
+      var wd = DIRS[w.dir];
+      log.events.push({ e: 'wind', x: nx, y: ny, dir: w.dir });
+      return enter(G, log, nx + wd[0], ny + wd[1], r, depth + 1);
+    }
+    return true;
   }
   function collect(G, log) {
     var t = treasureAt(G, G.boat.x, G.boat.y);
@@ -263,7 +297,7 @@
   // What the captain's radar shows: blips within range (treasure not yet found, serpents).
   function radar(G) {
     var out = [];
-    G.treasure.forEach(function (t) { if (!t.got && cheb(t.x, t.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
+    G.treasure.forEach(function (t) { if (!t.got && t.deep && cheb(t.x, t.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
     G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id }); });
     return out;
   }
@@ -279,6 +313,6 @@
     return out;
   }
 
-  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, coord: coord, cell: cell, inside: inside, cheb: cheb,
-    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR };
+  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, coord: coord, cell: cell, inside: inside, cheb: cheb,
+    WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS };
 });

@@ -191,8 +191,32 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 #guide3 .g3-picker{position:absolute;z-index:2;display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:16px;background:rgba(18,28,64,.97);border:1px solid rgba(255,233,168,.35);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:calc(100% - 16px)}
 #guide3 .g3-picker button{width:48px;height:52px;border-radius:12px;background:rgba(238,240,255,.08);color:#eef0ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:600}
 #guide3 .g3-picker svg{width:24px;height:24px}
-#guide3 .g3-pad{display:grid;grid-template-columns:repeat(4,48px);gap:6px}
-#guide3 .g3-pad button{width:48px;padding:0;font-size:1.4rem}
+#guide3 .g3-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
+#guide3 .g3-head .place p{color:#cfd6ff}
+#guide3 .g3-sailors{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+#guide3 .g3-crew{display:flex;gap:3px}
+#guide3 .g3-crew svg{width:24px;height:24px;transition:transform .5s cubic-bezier(.3,1.6,.5,1),opacity .5s ease,filter .5s ease}
+#guide3 .g3-crew svg.gone{opacity:.32;filter:grayscale(1);transform:scale(.82)}
+#guide3 .g3-crew svg.lost{animation:heartbreak .7s ease}
+#guide3 .g3-crewlabel{font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums}
+#guide3 .g3-opts{width:40px;height:40px;display:grid;place-items:center;margin-right:-8px;color:#eef0ff}
+#guide3 .g3-opts svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+#guide3 .g3-nav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,84px);justify-content:center;gap:4px;padding:2px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));color:#eef0ff}
+#guide3 .g3-nav button{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.75rem;font-weight:500;border-radius:14px}
+#guide3 .g3-nav button:hover{background:rgba(238,240,255,.08)}
+#guide3 .g3-nav svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#guide3 .g-bottom{min-height:84px;padding-bottom:4px}
+#guide3 .g3-zoom{position:absolute;right:max(8px,env(safe-area-inset-right,0px));bottom:8px;display:flex;flex-direction:column;gap:6px;z-index:1}
+#guide3 .g3-zoom button{width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.14);color:#eef0ff;font-size:1.3rem;line-height:1;display:grid;place-items:center}
+#guide3 .g3-zoom svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+#guide3.g3-boat .g3-zoom button{background:rgba(90,255,160,.14);color:#9dffc4}
+#guide3 .g3-picker button{width:52px;height:56px}
+#guide3 .g3-picker canvas{position:static;inset:auto;width:28px;height:28px}
+#guide3 .g-stats{flex-wrap:nowrap;gap:5px}
+#guide3 .g-pill{padding:5px 10px;font-size:.98rem;min-height:36px}
+#guide3 .g-pill b{font-size:1.1rem}
+#guide3 .g3-ph{min-width:0}
+@media (max-width:360px){#guide3 .g-pill{padding:4px 8px;font-size:.9rem}}
 #guide2 .g2-main{flex:1;min-height:0;display:flex;flex-direction:column}
 @media (min-width:860px) and (min-aspect-ratio:5/4){#guide2 .g2-main{flex-direction:row;align-items:stretch;gap:14px;padding-right:max(16px,env(safe-area-inset-right,0px))}#guide2 .g2-main .g-stage{flex:1.4}#guide2 .g2-radio{flex:1;max-width:420px;max-height:none;margin:0 0 6px;align-self:stretch}}
 #guide2 .g2-tools{display:flex;gap:6px;justify-content:center;padding:0 14px 8px}
@@ -638,11 +662,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
 </div>
 <div id="guide3" hidden>
-  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light 3.0</b><span class="g-role"></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
-  <div class="g-stats"><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g-lives"></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0 / 3</b></span><span class="g-pill g3-ph"><b>Ready</b><span class="notr"></span></span></div>
+  <header class="g3-head"><div class="place"><h1>Unwind</h1><p class="g3-where" aria-live="polite"></p></div><div class="right"><div class="g3-sailors" role="img"><div class="g3-crew"></div><div class="g3-crewlabel"></div></div><button class="g3-opts" type="button" aria-label="Music and sound settings"></button></div></header>
+  <div class="g-stats"><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0 / 4</b></span><span class="g-pill g3-ph"><b>Ready</b><span class="notr"></span></span></div>
   <div class="g3-clock"><i></i></div>
-  <div class="g-stage"><canvas></canvas><div class="g-toast" role="status"></div><div class="g-cover" hidden><div class="g-pass"><div class="g-passicon"></div><h2></h2><p></p><button class="primary" type="button"></button></div></div><div class="g3-picker" role="group" aria-label="Draw on the chart" hidden><button data-icon="rock" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="14" rx="8" ry="5.5" fill="#b8b5c9"/><ellipse cx="10" cy="12" rx="3.5" ry="2.4" fill="#dcdae8"/></svg>Rock</button><button data-icon="tall" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20 8 5 12 2.500 16 5 18 20Z" fill="#b8b5c9"/></svg>Tall rock</button><button data-icon="whirl" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c1 0 1.5 1 .8 1.8-1 1-3 .5-3.300-1.200C9 10 11 8 13.500 8.500 16.500 9 17.500 12.500 16 15c-2 3-7 3-9-.5C5 11 7 6 12 5.500c3.500-.3 6 1.500 7 4" fill="none" stroke="#9fd3ff" stroke-width="2" stroke-linecap="round"/></svg>Whirlpool</button><button data-icon="clear" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4.500 5L19 7" fill="none" stroke="#7dff9a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear</button><button data-icon="danger" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21.500 20H2.500Z" fill="#ff6b6b"/><path d="M12 9v5" stroke="#fff" stroke-width="2.400" stroke-linecap="round"/><circle cx="12" cy="17" r="1.300" fill="#fff"/></svg>Danger</button><button data-icon="erase" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="#eef0ff" stroke-width="2.400" stroke-linecap="round"/></svg>Erase</button><button data-icon="ping" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="#ffd678"/><circle cx="12" cy="12" r="7.500" fill="none" stroke="#ffd678" stroke-width="2"/></svg>Ping</button></div></div>
+  <div class="g-stage"><canvas></canvas><div class="g-toast" role="status"></div><div class="g3-zoom"><button class="g3-zin" type="button" aria-label="Zoom in">+</button><button class="g3-zout" type="button" aria-label="Zoom out">−</button><button class="g3-zfit" type="button" aria-label="Show the whole chart"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div><div class="g-cover" hidden><div class="g-pass"><div class="g-passicon"></div><h2></h2><p></p><button class="primary" type="button"></button></div></div><div class="g3-picker" role="group" hidden></div></div>
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
+  <nav class="g3-nav"><button type="button" data-g3nav="menu"><svg viewBox="0 0 24 24"><path d="M4 11L12 4L20 11M6 9.5V20H18V9.5M10 20V14H14V20"/></svg>Main Menu</button><button type="button" data-g3nav="help"><svg viewBox="0 0 24 24"><path d="M12 6c-2-1.500-5-2-8-2v14c3 0 6 .5 8 2 2-1.500 5-2 8-2V4c-3 0-6 .5-8 2ZM12 6v14"/></svg>Guide</button><button type="button" data-g3nav="levels"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Levels</button></nav>
 </div>
 <div id="boardMap" class="notr" role="img" hidden></div>
 <div id="zoomctl" hidden><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button><button id="zFit" aria-label="Show the whole board"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>

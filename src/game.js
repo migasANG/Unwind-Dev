@@ -525,7 +525,7 @@
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
     ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.'],
     ['light', 'Guiding Light 2.0', 'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.'],
-    ['light3', 'Guiding Light 3.0', 'The online memory-and-talk game, on one device. Pass the phone: the keeper glimpses the sea for five seconds and draws the chart, then the captain plans the route by the chart and the radar. 1: small sea. 2: medium sea. 3: large sea, Hard.']];
+    ['light3', 'Guiding Light 3.0', 'The online memory-and-talk game, on one device. Pass the phone: the keeper glimpses the sea in the beam and draws the chart, then the captain plans the route on the radar. 1: small sea. 2: medium sea. 3: large sea, Hard.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
@@ -1940,12 +1940,10 @@
         (notice ? '<p class="lstatus">' + notice + '</p>' : '') +
         '<div class="chapter">Your online name</div><div class="lname"><input id="oName" maxlength="16" value="' + (mine || lobbyName()).replace(/"/g, '&quot;') + '" placeholder="Pick a name" aria-label="Your online name"><button id="oNameRnd" aria-label="Random name" title="Random name">&#x21bb;</button></div><p class="note">The name your friends will see. No account needed.</p>' +
         (load('unwind.lastRoom', '') ? '<button class="obig orejoin" id="oRejoin" hidden><b>Back to your game</b><span>Room ' + load('unwind.lastRoom', '') + ' is still going. Jump back onto your board.</span></button>' : '') +
-        '<button class="obig" id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button>' +
-        '<button class="obig oguide" id="oGuide"><b>Guiding Light</b><span>A game for two: one keeps the lighthouse, the other sails home through the fog.</span></button>' +
-        '<div class="chapter">Join a room</div>' +
-        '<button class="obig" id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button>' +
-        '<button class="obig" id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button>' +
-        '<div class="chapter">Tutorials</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
+        // The same choices, in the same order, as the Online tab of the levels menu.
+        '<div class="chapter strong">Play with friends</div><div class="modes"><button id="oHost"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="oPublic"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="oCode"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>' +
+        '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="oGuide"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button><button id="oGuide3"><b>Guiding Light 3.0</b><span>Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, two players.</span></button></div>' +
+        '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwins"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniper"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>' +
         '<div class="chapter">Dev tests</div><div class="modes"><button id="mCoop"><b>Co-op test: 4 boards</b><span>Temporary. You control all four boards.</span></button><button id="mCoopBig"><b>Co-op test: big boards</b><span>Same test, each board three times the size.</span></button><button id="mSimRoom"><b>Room preview (simulated)</b><span>The room screen with pretend players, no server needed.</span></button></div>' +
         '<p class="note" style="text-align:center" id="oVer">Game build ' + BUILD + '</p>' +
         '<div class="ocodebox" id="oBox" hidden><div class="obox" role="dialog" aria-label="Enter a room code"><h3>Enter a room code</h3><div class="otp" id="oOtp" role="group" aria-label="Room code">' + [0, 1, 2, 3, 4, 5].map(function (i) { return (i === 3 ? '<span class="otpdash" aria-hidden="true">-</span>' : '') + '<input class="otpc" data-i="' + i + '" maxlength="1" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Character ' + (i + 1) + '">'; }).join('') + '</div><p class="oerr" id="oErr"></p><div class="obtns"><button id="oCancel">Cancel</button><button class="primary" id="oJoin" disabled>Join</button></div></div></div>';
@@ -1967,6 +1965,7 @@
     card.querySelector('#oNameRnd').onclick = function () { nameIn.value = lobbyName(); saveName(); };
     card.querySelector('#oHost').onclick = function () { saveName(); lobby = null; hostOnline(this); };
     card.querySelector('#oGuide').onclick = function () { saveName(); guideMenu(); };
+    card.querySelector('#oGuide3').onclick = function () { saveName(); guide3Menu(); };
     fetch(netBase() + '/').then(function (r) { return r.text(); }).then(function (t) { var v = t.match(/Version (\d+)/), el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server ' + (v ? 'version ' + v[1] : 'version 1–5') ; }).catch(function () { var el = card.querySelector('#oVer'); if (el) el.textContent = 'Game build ' + BUILD + ' · Server not reachable'; });
     var rj = card.querySelector('#oRejoin');
     if (rj) {
@@ -2013,7 +2012,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-d';
+  var BUILD = '2026.11.26-e';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2357,7 +2356,7 @@
       if (host) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + gameSeg();
       html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
       html += '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('gsize', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]);
-      html += '<div class="setting"><span>Difficulty<small>' + (g3 ? (S.ghard ? 'Two moves a turn, more tall rocks and serpents, 2 lives' : 'Three moves a turn, 3 lives') : S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
+      html += '<div class="setting"><span>Difficulty<small>' + (g3 ? (S.ghard ? 'Two moves a turn, more tall rocks, gusts and serpents, 2 sailors' : 'Three moves a turn, 3 sailors') : S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
       html += '<div class="lsum"><span>Lives<b class="notr">' + (g3 && S.ghard ? 2 : 3) + '</b></span><span>Players<b class="notr">2</b></span><span>Win<b>The boat reaches the lighthouse</b></span></div>';
     } else {
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
@@ -5992,12 +5991,13 @@
       '<div class="setting"><span id="lSound">Sound effects</span><button class="switch" id="sSound" role="switch" aria-labelledby="lSound" aria-checked="' + audioPrefs.sound + '"></button></div>' + volumeBar('vSound', 'Sound volume', audioPrefs.soundVol) +
       '<p class="now" id="nowPlaying"></p><details class="mpx"><summary>Music themes</summary><div class="modes">' + themeRow('auto', 'Follow the level', 'Matches the time of day or season') + M.THEMES.slice().sort(function (p, q) { return THEME_ORDER.indexOf(p.id) - THEME_ORDER.indexOf(q.id); }).map(function (t) { return themeRow(t.id, t.name, t.mood); }).join('') + '</div></details>';
     // Temporary, while the intro is being tuned.
-    html += '<button class="tomenu" id="playIntro">Play the intro</button>';
+    // In Guiding Light 3.0 these are the game's own options: no intro, and leaving the game is asked first.
+    if (!g3) html += '<button class="tomenu" id="playIntro">Play the intro</button>';
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
     var s = sheet(html);
-    s.querySelector('#playIntro').onclick = function () { closeSheet(); playIntro(); };
+    if (s.querySelector('#playIntro')) s.querySelector('#playIntro').onclick = function () { closeSheet(); playIntro(); };
     wireLanguage(s);
-    s.querySelector('#toMenu').onclick = startMenu;
+    s.querySelector('#toMenu').onclick = function () { if (g3) g3Leave(startMenu); else startMenu(); };
     var showNow = function () { s.querySelector('#nowPlaying').textContent = audioPrefs.music ? 'Now playing: ' + M.THEMES[wantedTheme()].name : 'Music is off'; };
     showNow();
     s.querySelector('#x').onclick = closeSheet;
@@ -6134,6 +6134,8 @@
     g3: function () { return g3 ? { phase: g3.G.phase, turn: g3.G.turn, boat: g3.G.boat, lives: g3.G.lives, ended: g3.G.ended, got: g3.G.got, n: g3.G.n, c: g3.G.c, marks: Object.keys(g3.G.marks).length, plan: g3.G.plan, role: g3.role, left: g3.until ? Math.round(g3.until - performance.now()) : 0, grid: g3.G.grid } : null; },
     g3Act: function (a) { netSend({ t: 'gact', act: a }); },
     g3Menu: function () { guide3Menu(); },
+    g3Cam: function () { if (!g3) return null; var c = g3Cam(), r = g3El().querySelector('canvas').getBoundingClientRect(); return { cs: c.cs, ox: c.ox + r.left, oy: c.oy + r.top }; },
+    g3Winds: function () { return g3 ? g3.G.winds : null; },
     g3Plan: function (p) { g3.plan = p; g3Hud(); },
     // The wave that brings the boat closest to home by sailing distance (for tests).
     guideBest: function () {
