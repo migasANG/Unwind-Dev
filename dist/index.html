@@ -147,45 +147,70 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 @keyframes bang{0%,63.5%{opacity:0;transform:translate(16px,-84px) scale(.3)}65%{opacity:1;transform:translate(16px,-84px) scale(1.1)}66%,71%{opacity:1;transform:translate(16px,-84px) scale(1)}72.5%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
 @keyframes huh{0%,74%{opacity:0;transform:translate(16px,-84px) scale(.3)}75.5%{opacity:1;transform:translate(16px,-84px) scale(1.05)}76.5%,85%{opacity:1;transform:translate(16px,-84px) scale(1)}87%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
 /* Guiding Light: a dark sea, its own top bar and buttons. Sheets (tutorials, end card) open above it. */
-#guide{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;background:#060a1c;color:#eef0ff;font-family:var(--display)}
-#guide .g-top{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
-#guide .g-close,#guide .g-help{flex:none;width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:1.3rem;line-height:1}
-#guide .g-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
-#guide .g-title b{font-size:1.25rem;letter-spacing:.01em}
-#guide .g-role{font-size:.95rem;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#guide .g-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
-#guide .g-pill{display:flex;align-items:center;gap:6px;min-height:38px;padding:5px 11px;border-radius:19px;background:rgba(238,240,255,.1);font-size:1.05rem;font-weight:600;white-space:nowrap}
-#guide .g-pill b{font-size:1.2rem;font-variant-numeric:tabular-nums;color:#ffe9a8}
-#guide .g-lives{gap:4px}
-#guide .g-lives svg{width:22px;height:20px;fill:#ff7a93;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
-#guide .g-lives svg.gone{fill:none;stroke:rgba(255,122,147,.45);stroke-width:2;filter:none}
-#guide .g-flareicon{width:17px;height:21px}
-#guide .g-stage{position:relative;flex:1;min-height:0}
-#guide canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
-#guide .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px 9px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.9rem;font-weight:600;letter-spacing:.02em}
-#guide .g-windrow{display:flex;align-items:center;gap:10px}
-#guide .g-windicon{width:38px;height:28px;opacity:.85}
-#guide .g-windarrow{width:32px;height:32px;color:#ffe9a8;transition:transform .6s ease}
-#guide .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:8px 14px;border-radius:16px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.9rem}
-#guide .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
-#guide .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
-#guide .g-toast.on{animation:gToast 2.8s ease both}
+#guide,#guide2{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;background:#060a1c;color:#eef0ff;font-family:var(--display)}
+#guide .g-top,#guide2 .g-top{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+#guide .g-close,#guide2 .g-close,#guide .g-help,#guide2 .g-help{flex:none;width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:1.3rem;line-height:1}
+#guide .g-title,#guide2 .g-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+#guide .g-title b,#guide2 .g-title b{font-size:1.25rem;letter-spacing:.01em}
+#guide .g-role,#guide2 .g-role{font-size:.95rem;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#guide .g-stats,#guide2 .g-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+#guide .g-pill,#guide2 .g-pill{display:flex;align-items:center;gap:6px;min-height:38px;padding:5px 11px;border-radius:19px;background:rgba(238,240,255,.1);font-size:1.05rem;font-weight:600;white-space:nowrap}
+#guide .g-pill b,#guide2 .g-pill b{font-size:1.2rem;font-variant-numeric:tabular-nums;color:#ffe9a8}
+#guide .g-lives,#guide2 .g-lives{gap:4px}
+#guide .g-lives svg,#guide2 .g-lives svg{width:22px;height:20px;fill:#ff7a93;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+#guide .g-lives svg.gone,#guide2 .g-lives svg.gone{fill:none;stroke:rgba(255,122,147,.45);stroke-width:2;filter:none}
+#guide .g-flareicon,#guide2 .g-flareicon{width:17px;height:21px}
+#guide .g-stage,#guide2 .g-stage{position:relative;flex:1;min-height:0}
+#guide canvas,#guide2 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#guide .g-wind,#guide2 .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px 9px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.9rem;font-weight:600;letter-spacing:.02em}
+#guide .g-windrow,#guide2 .g-windrow{display:flex;align-items:center;gap:10px}
+#guide .g-windicon,#guide2 .g-windicon{width:38px;height:28px;opacity:.85}
+#guide .g-windarrow,#guide2 .g-windarrow{width:32px;height:32px;color:#ffe9a8;transition:transform .6s ease}
+#guide .g-peek,#guide2 .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:8px 14px;border-radius:16px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.9rem}
+#guide .g-peek[aria-pressed="true"],#guide2 .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
+#guide .g-toast,#guide2 .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+#guide .g-toast.on,#guide2 .g-toast.on{animation:gToast 2.8s ease both}
 @keyframes gToast{0%{opacity:0;transform:translate(-50%,-8px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-4px)}}
-#guide .g-cover{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#16204a,#060a1c 70%);padding:24px}
-#guide .g-pass{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
-#guide .g-pass h2{margin:0;font-size:1.5rem}
-#guide .g-pass p{margin:0;opacity:.85;line-height:1.45}
-#guide .g-pass .primary{width:auto;min-width:200px;padding:0 28px;background:#ffe9a8;color:#2a2550;margin-top:8px}
+#guide .g-cover,#guide2 .g-cover{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#16204a,#060a1c 70%);padding:24px}
+#guide .g-pass,#guide2 .g-pass{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
+#guide .g-pass h2,#guide2 .g-pass h2{margin:0;font-size:1.5rem}
+#guide .g-pass p,#guide2 .g-pass p{margin:0;opacity:.85;line-height:1.45}
+#guide .g-pass .primary,#guide2 .g-pass .primary{width:auto;min-width:200px;padding:0 28px;background:#ffe9a8;color:#2a2550;margin-top:8px}
 body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #boardMap{display:none!important}
-#guide .g-passicon svg{height:110px;width:auto}
-#guide .g-bottom{padding:8px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:8px;min-height:96px}
-#guide .g-msg{margin:0;text-align:center;font-size:1.05rem;opacity:.9;text-wrap:balance}
-#guide .g-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-#guide .g-btns button{height:48px;padding:0 20px;border-radius:24px;background:rgba(238,240,255,.12);color:#eef0ff;font-weight:600;font-size:1.05rem}
-#guide .g-btns button.primary{width:auto;min-width:150px;background:#ffe9a8;color:#2a2550;margin:0}
-#guide .g-btns button:disabled{opacity:.4}
-#guide .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
+#guide .g-passicon svg,#guide2 .g-passicon svg{height:110px;width:auto}
+#guide .g-bottom,#guide2 .g-bottom{padding:8px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:8px;min-height:96px}
+#guide .g-msg,#guide2 .g-msg{margin:0;text-align:center;font-size:1.05rem;opacity:.9;text-wrap:balance}
+#guide .g-btns,#guide2 .g-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#guide .g-btns button,#guide2 .g-btns button{height:48px;padding:0 20px;border-radius:24px;background:rgba(238,240,255,.12);color:#eef0ff;font-weight:600;font-size:1.05rem}
+#guide .g-btns button.primary,#guide2 .g-btns button.primary{width:auto;min-width:150px;background:#ffe9a8;color:#2a2550;margin:0}
+#guide .g-btns button:disabled,#guide2 .g-btns button:disabled{opacity:.4}
+#guide .g-btns button[aria-pressed="false"],#guide2 .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
 #guide.hard .g-msg{min-height:1.3em}
+#guide2 .g2-main{flex:1;min-height:0;display:flex;flex-direction:column}
+@media (min-width:860px) and (min-aspect-ratio:5/4){#guide2 .g2-main{flex-direction:row;align-items:stretch;gap:14px;padding-right:max(16px,env(safe-area-inset-right,0px))}#guide2 .g2-main .g-stage{flex:1.4}#guide2 .g2-radio{flex:1;max-width:420px;max-height:none;margin:0 0 6px;align-self:stretch}}
+#guide2 .g2-tools{display:flex;gap:6px;justify-content:center;padding:0 14px 8px}
+#guide2 .g2-tools button{height:40px;padding:0 16px;border-radius:20px;background:rgba(238,240,255,.08);border:1.5px solid rgba(238,240,255,.25);color:#eef0ff;font-weight:600;font-size:1rem;display:flex;align-items:center;gap:6px}
+#guide2 .g2-tools button[aria-pressed="true"]{background:#ffe9a8;color:#2a2550;border-color:#ffe9a8}
+#guide2 .g2-tools svg{width:20px;height:20px}
+#guide2 .g2-radio{margin:0 max(12px,env(safe-area-inset-right,0px)) 6px max(12px,env(safe-area-inset-left,0px));padding:10px 14px;border-radius:16px;background:rgba(18,28,64,.92);border:1px solid rgba(255,233,168,.25);max-height:30vh;overflow:auto;font-family:var(--body,system-ui);font-size:.98rem;line-height:1.35}
+#guide2 .g2-radio.fresh{animation:g2in .5s ease both}
+@keyframes g2in{from{opacity:.25;transform:translateY(4px)}to{opacity:1;transform:none}}
+#guide2 .g2-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:var(--display)}
+#guide2 .g2-dot{width:9px;height:9px;border-radius:50%;background:#7dff9a;box-shadow:0 0 8px #7dff9a}
+#guide2 .g2-r{margin-left:auto;opacity:.6;font-size:.85rem}
+#guide2 .g2-ev{margin:0 0 6px;color:#ffe9a8;font-weight:600}
+#guide2 .g2-none{margin:0;opacity:.8;font-style:italic}
+#guide2 .g2-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+#guide2 .g2-items li{display:grid;grid-template-columns:24px 1fr;align-items:center;gap:8px}
+#guide2 .g2-ic{width:24px;height:24px;flex:none}
+#guide2 .g2-what{font-weight:600}
+#guide2 .g2-where{opacity:.85}
+#guide2 .g2-where b{color:#ffe9a8;margin-left:2px}
+#guide2 .g2-prev{margin-top:8px;opacity:.75}
+#guide2 .g2-prev summary{cursor:pointer;font-size:.9rem}
+#guide2 .g2-old{border-top:1px solid rgba(238,240,255,.12);margin-top:6px;padding-top:6px;display:flex;flex-direction:column;gap:4px}
+#guide2 .g2-old .g2-r{margin-left:0}
+
 .g-end{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
 .g-end svg{height:96px;width:auto}
 .g-end .lsum{width:100%}
@@ -594,6 +619,14 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     <div class="g-toast" role="status"></div>
     <div class="g-cover" hidden></div>
   </div>
+  <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
+</div>
+<div id="guide2" hidden>
+  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light 2.0</b><span class="g-role"></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
+  <div class="g-stats"><span class="g-pill g2-level"><span>Night</span> <b class="notr">1</b></span><span class="g-pill g-round"><span>Round</span> <b class="notr">1</b></span><span class="g-pill g-lives"></span><span class="g-pill g2-oil"><span>Oil</span> <b class="notr">5</b></span></div>
+  <div class="g2-main"><div class="g-stage"><canvas></canvas></div>
+  <div class="g2-radio" role="status" aria-live="polite"></div></div>
+  <div class="g2-tools" role="group" aria-label="Tool"><button data-g2mode="beam" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 5V19Z" fill="#ffd98a" opacity=".85"/><circle cx="4" cy="12" r="2.5" fill="#fff6c8"/></svg>Beam</button><button data-g2mode="buoy" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 19H17L15 9H9Z" fill="#e8504a"/><path d="M8 14H16" stroke="#fff" stroke-width="2"/><circle cx="12" cy="6.5" r="2" fill="#fff6c8"/></svg>Buoy</button><button data-g2mode="mark" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="#ffe9a8" stroke-width="2" stroke-dasharray="3 2.4"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#ffe9a8">?</text></svg>Mark</button></div>
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
 </div>
 <div id="boardMap" class="notr" role="img" hidden></div>
@@ -2953,6 +2986,237 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   };
 });
 
+/* Guiding Light 2.0: the rules.
+   The keeper (the player) has the whole sea chart but never sees the boat. The captain, lost in the fog, sees only
+   the tiles around the boat and radios what is there. The keeper works out where the boat must be, then guides it
+   home: a beam of light the boat can follow straight to the lighthouse, and buoys it sails to when it sees them.
+   In solo play the captain is played by these rules. Plain functions on a plain state object, so a room server
+   can use the same file later. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.UnwindGuide2 = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  // Tiles. Rocks, wrecks and islands block the boat. Tall rocks and islands also block the light. Kelp is open water
+  // with something to see in it.
+  var WATER = 0, ROCK = 1, TALL = 2, WRECK = 3, ISLAND = 4, KELP = 5, LIGHT = 6;
+  var CHARS = { '.': WATER, 'r': ROCK, 'R': TALL, 'W': WRECK, 'I': ISLAND, 'k': KELP, 'L': LIGHT };
+  var NAMES = ['water', 'rock', 'tall', 'wreck', 'island', 'kelp', 'light'];
+  var VIEW = 2;            // the captain sees this many tiles around the boat
+  var BEAM_STEPS = 16, BEAM_HALF = 15 * Math.PI / 180, BEAM_CORE = 0.75;
+  var BUOY_COLORS = ['red', 'yellow', 'green'];
+  var DIR8 = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+
+  // The levels. S marks the places the boat may start (one is picked at random each game). Serpents swim their
+  // loop of waypoints; a serpent that comes within two tiles of the boat hunts it.
+  var LEVELS = [
+    { name: 'First night', buoys: 3, oil: 5, rounds: 30, lives: 3, map: [
+      'r...kk...',
+      '..S......',
+      '.I..r..rW',
+      '.......r.',
+      'k...L....',
+      '..r......',
+      '..r...IS.',
+      'S........',
+      'W.....kk.'], serpents: [] },
+    { name: 'Twin rocks', buoys: 3, oil: 4, rounds: 30, lives: 3, map: [
+      '.S.........',
+      '.rr......rr',
+      '.....k.....',
+      '...I......W',
+      '.k.....r...',
+      '.....L.....',
+      '...r.....k.',
+      'W......I...',
+      '.....k.....',
+      '.rr......rr',
+      '.........S.'], serpents: [[[2, 6], [2, 8], [6, 8], [8, 6], [8, 3], [5, 2], [2, 3]]] },
+    { name: 'The long dark', buoys: 3, oil: 4, rounds: 36, lives: 3, map: [
+      '.S...........',
+      '.r..kk....r..',
+      '....k...W....',
+      '..R..........',
+      '.k....r...R..',
+      '....I.......S',
+      '..W...L..rr..',
+      '.............',
+      '..r....R..k..',
+      '..r..k.......',
+      '.........I...',
+      '.R......k..r.',
+      'S............'], serpents: [[[3, 9], [6, 10], [10, 9], [11, 6], [9, 3]], [[9, 2], [6, 1], [2, 2], [1, 6], [3, 8]]] }
+  ];
+
+  function inside(G, x, y) { return x >= 0 && y >= 0 && x < G.n && y < G.n; }
+  function tile(G, x, y) { return inside(G, x, y) ? G.grid[y * G.n + x] : -1; }
+  function open(G, x, y) { var t = tile(G, x, y); return t === WATER || t === KELP; }
+  function cheb(ax, ay, bx, by) { return Math.max(Math.abs(ax - bx), Math.abs(ay - by)); }
+  function blocksLight(t) { return t === TALL || t === ISLAND; }
+  // Can light travel in a straight line between two tiles? Only tall rocks and islands stop it.
+  function lineClear(G, ax, ay, bx, by) {
+    var n = Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 3;
+    for (var i = 1; i < n; i++) {
+      var x = Math.round(ax + (bx - ax) * i / n), y = Math.round(ay + (by - ay) * i / n);
+      if ((x !== ax || y !== ay) && (x !== bx || y !== by) && blocksLight(tile(G, x, y))) return false;
+    }
+    return true;
+  }
+  function beamCells(G, dir) {
+    var a = dir * 2 * Math.PI / BEAM_STEPS, ux = Math.sin(a), uy = -Math.cos(a), out = [];
+    for (var y = 0; y < G.n; y++) for (var x = 0; x < G.n; x++) {
+      var dx = x - G.c, dy = y - G.c, along = dx * ux + dy * uy, across = Math.abs(dx * uy - dy * ux);
+      if (along <= 0.2) continue;
+      if ((Math.atan2(across, along) <= BEAM_HALF || across <= BEAM_CORE) && lineClear(G, G.c, G.c, x, y)) out.push(y * G.n + x);
+    }
+    return out;
+  }
+  function rng(seed) { var a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  function create(level, seed) {
+    var L = LEVELS[level], n = L.map.length, G = { level: level, n: n, c: (n - 1) / 2, grid: [], starts: [], round: 1, lives: L.lives, maxRounds: L.rounds,
+      buoyMax: L.buoys, oil: L.oil, buoys: [], beam: -1, lit: [], ended: null, log: [], path: [], serpents: [], marks: {}, seed: seed >>> 0 };
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      var ch = L.map[y].charAt(x);
+      if (ch === 'S') { G.starts.push([x, y]); ch = '.'; }
+      G.grid.push(CHARS[ch] !== undefined ? CHARS[ch] : WATER);
+    }
+    var pick = G.starts[Math.floor(rng(seed)() * G.starts.length)];
+    G.boat = { x: pick[0], y: pick[1] };
+    G.path.push([G.boat.x, G.boat.y]);
+    G.serpents = L.serpents.map(function (route, i) { return { id: i, route: route, at: 0, x: route[0][0], y: route[0][1], hunt: false, down: false }; });
+    G.report = report(G, []);
+    return G;
+  }
+  // Shortest step from a tile towards a goal, over open water (and never onto a serpent). -1 if there is no way.
+  function stepToward(G, fx, fy, tx, ty, avoid) {
+    if (fx === tx && fy === ty) return null;
+    var prev = {}, q = [[tx, ty]], seen = {}; seen[ty * G.n + tx] = 1;
+    while (q.length) {
+      var p = q.shift();
+      for (var d = 0; d < 4; d++) {
+        var x = p[0] + [0, 1, 0, -1][d], y = p[1] + [-1, 0, 1, 0][d], k = y * G.n + x;
+        if (seen[k] || !inside(G, x, y)) continue;
+        if (x === fx && y === fy) return p;
+        if (!open(G, x, y) || (avoid && avoid(x, y))) continue;
+        seen[k] = 1; q.push([x, y]);
+      }
+    }
+    return null;
+  }
+  function serpentAt(G, x, y) { for (var i = 0; i < G.serpents.length; i++) if (G.serpents[i].x === x && G.serpents[i].y === y) return G.serpents[i]; return null; }
+  function isLit(G, x, y) { return G.lit.indexOf(y * G.n + x) >= 0; }
+  function home(G) { return cheb(G.boat.x, G.boat.y, G.c, G.c) <= 1; }
+
+  // What the captain radios: the things within sight, grouped, with a compass direction and how near they are.
+  function report(G, events) {
+    var bx = G.boat.x, by = G.boat.y, items = [], seen = {};
+    for (var y = by - VIEW; y <= by + VIEW; y++) for (var x = bx - VIEW; x <= bx + VIEW; x++) {
+      if (x === bx && y === by) continue;
+      var t = tile(G, x, y);
+      if (t === WATER || t < 0 || seen[y * G.n + x]) continue;
+      // Join touching tiles of the same kind into one thing.
+      var group = [[x, y]], q = [[x, y]]; seen[y * G.n + x] = 1;
+      while (q.length) {
+        var p = q.shift();
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+          var xx = p[0] + dx, yy = p[1] + dy;
+          if (cheb(xx, yy, bx, by) > VIEW || seen[yy * G.n + xx] || tile(G, xx, yy) !== t) continue;
+          seen[yy * G.n + xx] = 1; group.push([xx, yy]); q.push([xx, yy]);
+        }
+      }
+      var near = group.slice().sort(function (a, b) { return cheb(a[0], a[1], bx, by) - cheb(b[0], b[1], bx, by) || (Math.abs(a[0] - bx) + Math.abs(a[1] - by)) - (Math.abs(b[0] - bx) + Math.abs(b[1] - by)); })[0];
+      items.push({ kind: NAMES[t], count: group.length, dir: dir8(near[0] - bx, near[1] - by), dist: cheb(near[0], near[1], bx, by) });
+    }
+    G.buoys.forEach(function (b) { if (cheb(b.x, b.y, bx, by) <= VIEW && (b.x !== bx || b.y !== by)) items.push({ kind: 'buoy', color: b.color, count: 1, dir: dir8(b.x - bx, b.y - by), dist: cheb(b.x, b.y, bx, by) }); });
+    G.serpents.forEach(function (s) { if (!s.down && cheb(s.x, s.y, bx, by) <= VIEW) items.push({ kind: 'serpent', count: 1, dir: dir8(s.x - bx, s.y - by), dist: cheb(s.x, s.y, bx, by) }); });
+    items.sort(function (a, b) { return a.dist - b.dist; });
+    return { items: items, events: events || [], round: G.round };
+  }
+  function dir8(dx, dy) { var a = Math.atan2(dx, -dy); return ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8; }
+
+  // The keeper's turn: shine the beam one way (it burns one measure of oil, and there are only a few), drop a buoy (the oldest is lifted once all are out), or wait.
+  // Then the boat moves, the serpents swim, and the captain radios again.
+  function apply(G, act) {
+    if (G.ended) return { ok: false, why: 'ended' };
+    var events = [];
+    G.beam = -1; G.lit = [];
+    if (act.a === 'beam') {
+      if (G.oil <= 0) return { ok: false, why: 'oil' };
+      G.oil--;
+      var d = ((act.dir | 0) % BEAM_STEPS + BEAM_STEPS) % BEAM_STEPS;
+      G.beam = d; G.lit = beamCells(G, d);
+    } else if (act.a === 'buoy') {
+      if (!open(G, act.x, act.y) || buoyAt(G, act.x, act.y)) return { ok: false, why: 'spot' };
+      var color = BUOY_COLORS.filter(function (c) { return !G.buoys.some(function (b) { return b.color === c; }); })[0];
+      if (G.buoys.length >= G.buoyMax) { color = G.buoys[0].color; G.buoys.shift(); }
+      G.buoys.push({ x: act.x, y: act.y, color: color, reached: false });
+    } else if (act.a !== 'wait') return { ok: false, why: 'act' };
+    // Serpents caught in the light dive and stay down this round.
+    G.serpents.forEach(function (s) { s.down = isLit(G, s.x, s.y); });
+    var moved = sailBoat(G, events);
+    if (!G.ended) moveSerpents(G, events);
+    if (!G.ended && home(G)) { G.ended = 'won'; events.push({ e: 'home' }); }
+    G.round++;
+    if (!G.ended && G.round > G.maxRounds) { G.ended = 'lost'; events.push({ e: 'oil' }); }
+    G.report = report(G, events);
+    G.log.push({ act: act, events: events, moved: moved });
+    return { ok: true, events: events };
+  }
+  function buoyAt(G, x, y) { for (var i = 0; i < G.buoys.length; i++) if (G.buoys[i].x === x && G.buoys[i].y === y) return G.buoys[i]; return null; }
+  // The captain follows the light home when the boat is in the beam (two tiles), or else sails to a buoy it can see
+  // (one tile). Otherwise it keeps still and waits for a sign.
+  function sailBoat(G, events) {
+    var steps = 0;
+    if (isLit(G, G.boat.x, G.boat.y)) {
+      events.push({ e: 'light' });
+      for (var i = 0; i < 2 && !home(G); i++) {
+        var best = null, bd = Math.hypot(G.boat.x - G.c, G.boat.y - G.c) - 0.01;
+        for (var d = 0; d < 4; d++) {
+          var x = G.boat.x + [0, 1, 0, -1][d], y = G.boat.y + [-1, 0, 1, 0][d], dd = Math.hypot(x - G.c, y - G.c);
+          if (open(G, x, y) && isLit(G, x, y) && dd < bd && !serpentAt(G, x, y)) { best = [x, y]; bd = dd; }
+        }
+        if (!best) { if (!home(G)) events.push({ e: 'blocked' }); break; }
+        G.boat.x = best[0]; G.boat.y = best[1]; G.path.push(best); steps++;
+      }
+      return steps;
+    }
+    var target = null;
+    G.buoys.forEach(function (b) { if (!b.reached && cheb(b.x, b.y, G.boat.x, G.boat.y) <= VIEW && (!target || b === G.buoys[G.buoys.length - 1])) target = b; });
+    if (target) {
+      var s = stepToward(G, G.boat.x, G.boat.y, target.x, target.y, function (x, y) { return !!serpentAt(G, x, y); });
+      if (s) { G.boat.x = s[0]; G.boat.y = s[1]; G.path.push(s); steps = 1; events.push({ e: 'tobuoy', color: target.color }); }
+      else events.push({ e: 'noway', color: target.color });
+      if (G.boat.x === target.x && G.boat.y === target.y) { target.reached = true; events.push({ e: 'atbuoy', color: target.color }); }
+    }
+    return steps;
+  }
+  function moveSerpents(G, events) {
+    G.serpents.forEach(function (s) {
+      if (s.down) return;
+      var near = cheb(s.x, s.y, G.boat.x, G.boat.y) <= 2, step;
+      if (near) { s.hunt = true; step = stepToward(G, s.x, s.y, G.boat.x, G.boat.y, function (x, y) { var o = serpentAt(G, x, y); return o && o !== s; }); }
+      else {
+        s.hunt = false;
+        var wp = s.route[s.at];
+        if (s.x === wp[0] && s.y === wp[1]) { s.at = (s.at + 1) % s.route.length; wp = s.route[s.at]; }
+        step = stepToward(G, s.x, s.y, wp[0], wp[1], function (x, y) { var o = serpentAt(G, x, y); return (o && o !== s) || (x === G.boat.x && y === G.boat.y); });
+      }
+      if (!step) return;
+      s.x = step[0]; s.y = step[1];
+      if (s.x === G.boat.x && s.y === G.boat.y) {
+        G.lives--; events.push({ e: 'bite' });
+        // The serpent dives and comes back up where its loop starts.
+        s.x = s.route[0][0]; s.y = s.route[0][1]; s.at = 0; s.hunt = false;
+        if (G.lives <= 0) G.ended = 'lost';
+      }
+    });
+  }
+
+  return { LEVELS: LEVELS, create: create, apply: apply, beamCells: beamCells, report: report, isLit: isLit, buoyAt: buoyAt, tile: tile, open: open, inside: inside, cheb: cheb,
+    WATER: WATER, ROCK: ROCK, TALL: TALL, WRECK: WRECK, ISLAND: ISLAND, KELP: KELP, LIGHT: LIGHT, NAMES: NAMES, DIR8: DIR8, VIEW: VIEW, BEAM_STEPS: BEAM_STEPS };
+});
+
 // Portuguese (Portugal) for everything on screen. The game is written in English, and any text that
 // reaches the page is swapped here, so a new sentence only needs a new line in this list.
 window.UnwindI18n = (function () {
@@ -2981,6 +3245,89 @@ window.UnwindI18n = (function () {
     'You keep the lighthouse': 'Tu és o faroleiro',
     'You sail the boat': 'Tu guias o barco',
     'Round': 'Ronda',
+    'Tool': 'Ferramenta',
+    'Start': 'Começar',
+    'A boat in your beam follows it straight home, two tiles a round, unless rocks are in the way. The lamp has little oil, so shine only when you know. Tall rocks and islands block the light.': 'Um barco no teu feixe segue-o direto para casa, duas casas por ronda, a não ser que haja rochas no caminho. A lâmpada tem pouco óleo, por isso só ilumina quando tiveres a certeza. Rochas altas e ilhas bloqueiam a luz.',
+    'A boat is lost in the fog. You have the whole sea chart, but you cannot see the boat. The captain radios what is around it: rocks, kelp, a shipwreck, with how near and which way.': 'Um barco está perdido no nevoeiro. Tens a carta do mar inteira, mas não vês o barco. O capitão diz pelo rádio o que tem à volta: rochas, algas, um naufrágio, a que distância e em que direção.',
+    'A buoy needs open water.': 'Uma boia precisa de água livre.',
+    'A rock': 'Uma rocha',
+    'A sea serpent': 'Uma serpente do mar',
+    'A serpent bit the boat!': 'Uma serpente mordeu o barco!',
+    'A shipwreck': 'Um naufrágio',
+    'A tall rock': 'Uma rocha alta',
+    'An island': 'Uma ilha',
+    'Buoys': 'Boias',
+    'Drop a buoy here? The captain sails to a buoy within two tiles.': 'Largar uma boia aqui? O capitão navega até uma boia a duas casas ou menos.',
+    'Drop a buoy where you think the boat is. If it lands within two tiles, the captain sees it, says so, and sails to it. That tells you exactly where the boat is. You have three; a fourth moves your oldest.': 'Larga uma boia onde achas que o barco está. Se ficar a duas casas ou menos, o capitão vê-a, diz-to e navega até ela. Assim sabes exatamente onde está o barco. Tens três; uma quarta muda de sítio a mais antiga.',
+    'Home safe': 'Em casa, a salvo',
+    'Home! Thank you, keeper.': 'Em casa! Obrigado, faroleiro.',
+    'I see the green buoy, but I cannot reach it.': 'Vejo a boia verde, mas não consigo lá chegar.',
+    'I see the green buoy. Heading for it.': 'Vejo a boia verde. Vou até ela.',
+    'I see the red buoy, but I cannot reach it.': 'Vejo a boia vermelha, mas não consigo lá chegar.',
+    'I see the red buoy. Heading for it.': 'Vejo a boia vermelha. Vou até ela.',
+    'I see the yellow buoy, but I cannot reach it.': 'Vejo a boia amarela, mas não consigo lá chegar.',
+    'I see the yellow buoy. Heading for it.': 'Vejo a boia amarela. Vou até ela.',
+    'I see your light! Following it home.': 'Vejo a tua luz! Vou segui-la até casa.',
+    'In later nights sea serpents swim their rounds and hunt a boat that comes near. You only see them where your light falls. Get the boat home before the night is over.': 'Nas noites seguintes, serpentes do mar fazem as suas rondas e caçam um barco que se aproxime. Só as vês onde a tua luz cai. Leva o barco para casa antes de a noite acabar.',
+    'Kelp': 'Algas',
+    'Look for the place on the chart that matches the report. Mark the places it could be with the pencil. As the reports change, rule places out.': 'Procura na carta o sítio que corresponde ao relato. Marca com o lápis os sítios onde pode estar. À medida que os relatos mudam, exclui sítios.',
+    'Lost in the fog': 'Perdido no nevoeiro',
+    'Rocks': 'Rochas',
+    'Serpents': 'Serpentes',
+    'Shine the beam this way? The boat follows it home if it is in the light.': 'Iluminar nesta direção? O barco segue a luz até casa se estiver nela.',
+    'Something blocks the way along the light.': 'Há algo a bloquear o caminho ao longo da luz.',
+    'Tap the sea to aim the beam.': 'Toca no mar para apontar o feixe.',
+    'Tap the sea to move your oldest buoy.': 'Toca no mar para mudar a boia mais antiga.',
+    'Tap the sea where you want a buoy.': 'Toca no mar onde queres uma boia.',
+    'Tap tiles to mark where the boat might be. Marks are only notes for you.': 'Toca nas casas para marcar onde o barco pode estar. As marcas são só notas para ti.',
+    'The beam': 'O feixe',
+    'The buoy': 'A boia',
+    'The green buoy': 'A boia verde',
+    'The lamp has no oil left. Use buoys.': 'A lâmpada já não tem óleo. Usa boias.',
+    'The lighthouse': 'O farol',
+    'The night is over. We are lost until tomorrow.': 'A noite acabou. Ficamos perdidos até amanhã.',
+    'The night ran out before the boat got home.': 'A noite acabou antes de o barco chegar a casa.',
+    'The red buoy': 'A boia vermelha',
+    'The serpents got the boat.': 'As serpentes apanharam o barco.',
+    'The yellow buoy': 'A boia amarela',
+    'We are at the green buoy.': 'Estamos na boia verde.',
+    'We are at the red buoy.': 'Estamos na boia vermelha.',
+    'We are at the yellow buoy.': 'Estamos na boia amarela.',
+    'You are the keeper': 'Tu és o faroleiro',
+    'right next to me': 'mesmo ao meu lado',
+    'two tiles away': 'a duas casas',
+    'to the north': 'a norte',
+    'to the north-east': 'a nordeste',
+    'to the east': 'a este',
+    'to the south-east': 'a sudeste',
+    'to the south': 'a sul',
+    'to the south-west': 'a sudoeste',
+    'to the west': 'a oeste',
+    'to the north-west': 'a noroeste',
+    'Captain': 'Capitão',
+    'Captain here. We are lost in the fog. This is what I can see:': 'Aqui o capitão. Estamos perdidos no nevoeiro. Isto é o que consigo ver:',
+    'Only fog and open water around me.': 'Só nevoeiro e água livre à minha volta.',
+    'Earlier reports': 'Relatos anteriores',
+    'Beam': 'Feixe',
+    'Buoy': 'Boia',
+    'Mark': 'Marcar',
+    'Drop buoy': 'Largar boia',
+    'Wait a round': 'Esperar uma ronda',
+    'Night': 'Noite',
+    'Oil': 'Óleo',
+    'Next night': 'Próxima noite',
+    'The boat starts somewhere else.': 'O barco começa noutro sítio.',
+    'Look at the chart': 'Ver a carta',
+    'See where the boat was.': 'Vê onde estava o barco.',
+    'Back to Boarding Up.': 'Voltar a Boarding Up.',
+    'Done': 'Feito',
+    'The fog has lifted: the dotted line shows where the boat really sailed.': 'O nevoeiro levantou: a linha pontilhada mostra por onde o barco navegou de facto.',
+    'First night': 'Primeira noite',
+    'Twin rocks': 'Rochas gémeas',
+    'The long dark': 'A longa escuridão',
+    'Guiding Light 2.0': 'Luz Guia 2.0',
+    'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.': 'Tu és o faroleiro. Um barco está perdido no nevoeiro: o capitão diz pelo rádio o que tem à volta, e tu tens a carta do mar. Descobre onde está o barco e guia-o até casa com o feixe e as boias. Por agora, a solo.',
+    'Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.': 'Dois jogadores: um faroleiro e um barco perdido no nevoeiro. Online ou num só dispositivo.',
     'Show all': 'Mostrar tudo',
     'Home safe!': 'Em casa, a salvo!',
     'Lost at sea…': 'Perdido no mar…',
@@ -3266,6 +3613,7 @@ window.UnwindI18n = (function () {
   };
   var NAMED = { Level: 'Nível', Hard: 'Difícil', Timed: 'Cronometrado', Winter: 'Inverno', Spring: 'Primavera', Summer: 'Verão', Autumn: 'Outono', 'Open Water': 'Águas Abertas', 'Open Waters': 'Águas Abertas' };
   var RULES = [
+    [/^Round (\d+)$/, 'Ronda $1'], [/^The boat reached the lighthouse in (\d+) rounds\.$/, 'O barco chegou ao farol em $1 rondas.'], [/^Guiding Light 2\.0 (\d)$/, 'Luz Guia 2.0 $1'],
     [/^Hint (\d+)$/, 'Dica $1'], [/^(\d+) lives$/, '$1 vidas'], [/^(Small|Medium|Large) · Hard$/, function (m, a) { return ({ Small: 'Pequeno', Medium: 'Médio', Large: 'Grande' })[a] + ' · Difícil'; }], [/^Play again \((\d+)\/(\d+)\)$/, 'Jogar outra vez ($1/$2)'], [/^(.+) left the game, so this sea is closed\. You can go back to the room or play again later\.$/, '$1 saiu do jogo, por isso este mar fechou. Podes voltar à sala ou jogar outra vez mais tarde.'], [/^Line 2 of (\d+): tap this message to go back to line 1\.$/, 'Verso 2 de $1: toca nesta mensagem para voltares ao verso 1.'], [/^Board (\d+) of (\d+)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) of (\d)$/, 'Tabuleiro $1 de $2'], [/^Board (\d+) cleared! Help clear the others\.$/, 'Tabuleiro $1 limpo! Ajuda a limpar os outros.'], [/^Board (\d+) is cleared\.$/, 'O tabuleiro $1 está limpo.'], [/^Something is happening on board (\d+)\.$/, 'Está a acontecer algo no tabuleiro $1.'], [/^Its twin on board (\d+) is blocked\.$/, 'A gémea no tabuleiro $1 está bloqueada.'], [/^Its twin on board (\d+) is not ready yet\.$/, 'A gémea no tabuleiro $1 ainda não está pronta.'], [/^Go to board (\d+)$/, 'Ir para o tabuleiro $1'], [/^Holding: this is its twin on (.+)'s board\.$/, 'A segurar: esta é a gémea no tabuleiro de $1.'], [/^(\d+)\/(\d+) flowers remaining$/, '$1/$2 flores restantes'],
 [/^Players (\d) \/ (\d)$/, 'Jogadores $1 / $2'], [/^Waiting for (\d) players? to join$/, function (m, n) { return n === '1' ? 'À espera que entre 1 jogador' : 'À espera que entrem ' + n + ' jogadores'; }], [/^Waiting for (\d) players? to be ready$/, function (m, n) { return n === '1' ? 'À espera que 1 jogador fique pronto' : 'À espera que ' + n + ' jogadores fiquem prontos'; }], [/^Remove (.+)$/, 'Remover $1'],
 [/^Board (\d)$/, 'Tabuleiro $1'], [/^Only (.+) is still paused\. As the host, you can carry on without them\.$/, 'Só $1 ainda está em pausa. Como anfitrião, podes continuar sem essa pessoa.'], [/^Waiting for (.+) and (.+)…$/, 'À espera de $1 e $2…'],
@@ -3870,14 +4218,21 @@ window.UnwindI18n = (function () {
     { set: 'wood', title: 'Fowl Play 3', special: 'sl3', caption: 'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.' },
     { set: 'wood', title: 'Fowl Play 4', special: 'sl4', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
     { set: 'wood', title: 'Fowl Play 5', special: 'sl5', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
-    { set: 'wood', title: 'Fowl Play 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' }
+    { set: 'wood', title: 'Fowl Play 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' },
+    // Guiding Light 2.0: a solo keeper's puzzle on its own screen (guide2.js). Kept at the end, so saved progress
+    // of the levels above keeps its numbers.
+    { set: 'light', title: 'Guiding Light 2.0 1', guide2: 0 },
+    { set: 'light', title: 'Guiding Light 2.0 2', guide2: 1 },
+    { set: 'light', title: 'Guiding Light 2.0 3', guide2: 2 }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
-    ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.']];
+    ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.'],
+    ['light', 'Guiding Light 2.0', 'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
+    if (b.guide2 !== undefined) { openGuide2(b.guide2, i); return; }
     if (b.special) {
       withLoading(function () {
         openCoopRoom(function () {
@@ -5360,7 +5715,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-p';
+  var BUILD = '2026.11.26-a';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -8200,6 +8555,7 @@ window.UnwindI18n = (function () {
     if (tab !== 'extra' && tab !== 'online' && tab !== 'endless' && tab !== 'boarding') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'online') {
       html += '<div class="chapter strong">Play with friends</div><div class="modes"><button id="mHostO"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="mPubO"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="mCodeO"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>';
+      html += '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="mGuideO"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button></div>';
       html += '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
     }
     if (tab === 'extra') {
@@ -8245,6 +8601,7 @@ window.UnwindI18n = (function () {
       s.querySelector('#mHostO').onclick = function () { lobby = null; closeSheet(); hostOnline(); };
       s.querySelector('#mPubO').onclick = function () { publicRooms = null; onlineSheet('public'); };
       s.querySelector('#mCodeO').onclick = function () { onlineSheet('home', 0, '', true); };
+      s.querySelector('#mGuideO').onclick = function () { guideMenu(); };
       s.querySelector('#mTutTwinsO').onclick = function () { openCoopTutorial('twins'); };
       s.querySelector('#mTutSniperO').onclick = function () { openCoopTutorial('sniper'); };
       return;
@@ -10456,6 +10813,301 @@ window.UnwindI18n = (function () {
     el.querySelector('.g-peek').onclick = function () { if (guide) { guide.peek = !guide.peek; guideHud(); } };
   })();
 
+    /* ---------- Guiding Light 2.0 (solo, in Boarding Up): you are the keeper ----------
+     The rules live in guide2.js. You have the whole chart but never see the boat; the captain radios what is
+     around it. Work out where the boat is, then bring it home with the beam and buoys. */
+  var G2 = window.UnwindGuide2, g2 = null, g2ctx = null, g2w = 0, g2h = 0, g2dpr = 1;
+  function g2El() { return $('guide2'); }
+  function openGuide2(level, bu) {
+    if ($('sheetHost').firstChild) closeSheet();
+    var seed = Math.floor(Math.random() * 1e9);
+    g2 = { G: G2.create(level, seed), level: level, bu: bu, seed: seed, mode: 'beam', aim: -1, spot: null, beamAt: 0, busyUntil: 0, history: [], ended: false, endAt: 0 };
+    g2.history.push(g2.G.report);
+    // Rock and tall rock tiles drawn by the Guiding Light painter: it reads the tile kinds of its own rules.
+    g2.paint = { n: g2.G.n, grid: g2.G.grid.map(function (t) { return t === G2.ROCK ? Gd.ROCK : t === G2.TALL ? Gd.BIG : Gd.WATER; }) };
+    var el = g2El();
+    el.hidden = false;
+    document.body.classList.add('guideon');
+    guideMusic(true);
+    g2Layout(); g2Hud(); g2Radio();
+    track('guide2_start', { level: level + 1 });
+    if (!(progress.tutorials && progress.tutorials.guide2)) g2Help(true);
+    if (!g2.loop) g2Loop();
+  }
+  function closeGuide2(toLevels) {
+    if (!g2) return;
+    g2 = null; g2El().hidden = true;
+    document.body.classList.remove('guideon');
+    guideMusic(false);
+    if (toLevels) levelsSheet('boarding');
+  }
+  function g2Layout() {
+    if (!g2) return;
+    var cv = g2El().querySelector('canvas'), r = cv.getBoundingClientRect();
+    g2dpr = Math.min(2, window.devicePixelRatio || 1); g2w = r.width; g2h = r.height;
+    cv.width = Math.round(g2w * g2dpr); cv.height = Math.round(g2h * g2dpr);
+    g2ctx = cv.getContext('2d');
+  }
+  window.addEventListener('resize', function () { if (g2) g2Layout(); });
+  // The report panel grows and shrinks with what the captain says, which resizes the chart's space too.
+  if (window.ResizeObserver) new ResizeObserver(function () { if (g2) g2Layout(); }).observe(g2El().querySelector('canvas'));
+  function g2Cam() { var n = g2.G.n, cs = Math.min(g2w / (n + 0.4), g2h / (n + 0.4)); return { cs: cs, ox: (g2w - n * cs) / 2, oy: (g2h - n * cs) / 2 }; }
+
+  /* ---------- Turns ---------- */
+  function g2Act(act) {
+    if (!g2 || g2.G.ended || performance.now() < g2.busyUntil) return;
+    var res = G2.apply(g2.G, act);
+    if (!res.ok) { if (res.why === 'oil') g2Note('The lamp has no oil left. Use buoys.'); return; }
+    var now = performance.now();
+    g2.busyUntil = now + 450; g2.aim = -1; g2.spot = null;
+    if (act.a === 'beam') { g2.beamAt = now; pluck(659.25, 0, 0.05, 1.4); pluck(987.77, 0.06, 0.04, 1.6); }
+    else if (act.a === 'buoy') { pluck(523.25, 0, 0.05, 0.6); pluck(392, 0.1, 0.04, 0.7); }
+    // The radio crackles before the captain answers.
+    g2.radioAt = now;
+    g2.history.push(g2.G.report);
+    if (res.events.some(function (e) { return e.e === 'bite'; })) { pluck(130.8, 0.2, 0.08, 0.6); pluck(110, 0.32, 0.08, 0.7); }
+    else if (res.events.some(function (e) { return e.e === 'light' || e.e === 'tobuoy'; })) { pluck(784, 0.25, 0.04, 0.4); }
+    g2Hud(); g2Radio();
+    if (g2.G.ended) { g2.endAt = now; setTimeout(g2End, 1300); }
+  }
+
+  /* ---------- What is shown around the chart ---------- */
+  function g2Hud() {
+    var G = g2.G, el = g2El();
+    el.querySelector('.g-role').textContent = G2.LEVELS[g2.level].name;
+    el.querySelector('.g2-level b').textContent = String(g2.level + 1);
+    el.querySelector('.g-round b').textContent = Math.min(G.round, G.maxRounds) + ' / ' + G.maxRounds;
+    el.querySelector('.g-lives').innerHTML = Array.apply(null, Array(Math.max(G.lives, 3))).map(function (_, i) { return '<svg viewBox="-1 -1 26 24"' + (i < G.lives ? '' : ' class="gone"') + ' aria-hidden="true"><path d="M12 21 C 5 15 1 11.5 1 7 A5.5 5.5 0 0 1 12 4.5 A5.5 5.5 0 0 1 23 7 C23 11.5 19 15 12 21Z"/></svg>'; }).join('');
+    el.querySelector('.g2-oil b').textContent = String(G.oil);
+    el.querySelectorAll('[data-g2mode]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-g2mode') === g2.mode)); });
+    var msg = '', btns = '';
+    if (G.ended) msg = '';
+    else if (g2.mode === 'beam') {
+      msg = G.oil ? (g2.aim >= 0 ? 'Shine the beam this way? The boat follows it home if it is in the light.' : 'Tap the sea to aim the beam.') : 'The lamp has no oil left. Use buoys.';
+      btns = '<button class="primary" id="g2Go"' + (g2.aim < 0 || !G.oil ? ' disabled' : '') + '>Shine</button>';
+    } else if (g2.mode === 'buoy') {
+      msg = g2.spot ? 'Drop a buoy here? The captain sails to a buoy within two tiles.' : (G.buoys.length >= G.buoyMax ? 'Tap the sea to move your oldest buoy.' : 'Tap the sea where you want a buoy.');
+      btns = '<button class="primary" id="g2Go"' + (!g2.spot ? ' disabled' : '') + '>Drop buoy</button>';
+    } else msg = 'Tap tiles to mark where the boat might be. Marks are only notes for you.';
+    btns += '<button id="g2Wait">Wait a round</button>';
+    el.querySelector('.g-msg').textContent = msg;
+    var bt = el.querySelector('.g-btns'); bt.innerHTML = G.ended ? '' : btns;
+    if (bt.querySelector('#g2Go')) bt.querySelector('#g2Go').onclick = function () { if (g2.mode === 'beam' && g2.aim >= 0) g2Act({ a: 'beam', dir: g2.aim }); else if (g2.mode === 'buoy' && g2.spot) g2Act({ a: 'buoy', x: g2.spot[0], y: g2.spot[1] }); };
+    if (bt.querySelector('#g2Wait')) bt.querySelector('#g2Wait').onclick = function () { g2Act({ a: 'wait' }); };
+  }
+  function g2Note(text) { var m = g2El().querySelector('.g-msg'); m.textContent = text; }
+  var G2_KIND = { rock: ['A rock', 'Rocks'], tall: ['A tall rock', 'Tall rocks'], wreck: ['A shipwreck', 'A shipwreck'], island: ['An island', 'An island'], kelp: ['Kelp', 'Kelp'], light: ['The lighthouse', 'The lighthouse'], serpent: ['A sea serpent', 'A sea serpent'] };
+  var G2_DIR = ['to the north', 'to the north-east', 'to the east', 'to the south-east', 'to the south', 'to the south-west', 'to the west', 'to the north-west'];
+  var G2_ARROW = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+  var G2_BUOY = { red: 'The red buoy', yellow: 'The yellow buoy', green: 'The green buoy' };
+  var G2_EVENT = { light: 'I see your light! Following it home.', blocked: 'Something blocks the way along the light.', home: 'Home! Thank you, keeper.', oil: 'The night is over. We are lost until tomorrow.', bite: 'A serpent bit the boat!' };
+  function g2EventText(e) {
+    if (G2_EVENT[e.e]) return G2_EVENT[e.e];
+    var b = G2_BUOY[e.color] || 'The buoy';
+    if (e.e === 'tobuoy') return { red: 'I see the red buoy. Heading for it.', yellow: 'I see the yellow buoy. Heading for it.', green: 'I see the green buoy. Heading for it.' }[e.color];
+    if (e.e === 'atbuoy') return { red: 'We are at the red buoy.', yellow: 'We are at the yellow buoy.', green: 'We are at the green buoy.' }[e.color];
+    if (e.e === 'noway') return { red: 'I see the red buoy, but I cannot reach it.', yellow: 'I see the yellow buoy, but I cannot reach it.', green: 'I see the green buoy, but I cannot reach it.' }[e.color];
+    return b;
+  }
+  function g2Icon(it) {
+    var col = { red: '#ff6b6b', yellow: '#ffd23f', green: '#5ad17a' };
+    var svg = {
+      rock: '<circle cx="12" cy="14" r="7" fill="#8d8ba3"/><circle cx="9" cy="11" r="3" fill="#b9b7cc"/>',
+      tall: '<path d="M6 21 8 6 12 3 16 6 18 21Z" fill="#8d8ba3"/><path d="M8 6 12 3 16 6 12 8Z" fill="#c9c7da"/><path d="M10 4h4" stroke="#6a9a6c" stroke-width="2"/>',
+      wreck: '<path d="M3 16 21 12 19 19 6 20Z" fill="#8a5a36"/><path d="M11 14 9 4 15 8 11 9" fill="none" stroke="#d8c6a8" stroke-width="1.6"/>',
+      island: '<ellipse cx="12" cy="18" rx="9" ry="4" fill="#e3c98e"/><path d="M12 18V8" stroke="#8a5a36" stroke-width="2"/><path d="M12 8Q6 5 4 9M12 8Q18 5 20 9M12 8Q9 3 6 4M12 8Q15 3 18 4" stroke="#5aa860" stroke-width="2" fill="none" stroke-linecap="round"/>',
+      kelp: '<path d="M8 21Q5 15 8 11T8 3M13 21Q16 15 13 11T14 4M18 21Q15 16 18 12" stroke="#4fb06d" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+      light: '<path d="M9 21 10 8H14L15 21Z" fill="#eef0ff"/><path d="M10 13H14M9.6 17H14.4" stroke="#e24b4b" stroke-width="2"/><circle cx="12" cy="6" r="3" fill="#ffe9a8"/>',
+      serpent: '<path d="M3 16Q6 10 9 16T15 16Q17 12 20 13" stroke="#5f9c8e" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="20" cy="12.5" r="2.2" fill="#5f9c8e"/>',
+      buoy: '<path d="M7 19H17L15 9H9Z" fill="' + (col[it.color] || '#fff') + '"/><path d="M8 14H16" stroke="#fff" stroke-width="2"/><circle cx="12" cy="7" r="2" fill="#fff6c8"/>'
+    }[it.kind] || '';
+    return '<svg class="g2-ic" viewBox="0 0 24 24" aria-hidden="true">' + svg + '</svg>';
+  }
+  function g2Line(rep) {
+    var out = '';
+    rep.events.forEach(function (e) { out += '<p class="g2-ev">' + g2EventText(e) + '</p>'; });
+    if (!rep.items.length) out += '<p class="g2-none">Only fog and open water around me.</p>';
+    else out += '<ul class="g2-items">' + rep.items.map(function (it) {
+      var name = it.kind === 'buoy' ? G2_BUOY[it.color] : G2_KIND[it.kind][it.count > 1 ? 1 : 0];
+      return '<li>' + g2Icon(it) + '<div><span class="g2-what">' + name + '</span> <span class="g2-where"><span>' + (it.dist <= 1 ? 'right next to me' : 'two tiles away') + '</span>, <span>' + G2_DIR[it.dir] + '</span> <b class="notr">' + G2_ARROW[it.dir] + '</b></span></div></li>';
+    }).join('') + '</ul>';
+    return out;
+  }
+  function g2Radio() {
+    var box = g2El().querySelector('.g2-radio'), h = g2.history, cur = h[h.length - 1];
+    var html = '<div class="g2-head"><span class="g2-dot"></span><b>Captain</b><span class="g2-r">Round ' + Math.min(cur.round, g2.G.maxRounds) + '</span></div>' + (h.length === 1 ? '<p class="g2-ev">Captain here. We are lost in the fog. This is what I can see:</p>' : '') + g2Line(cur);
+    if (h.length > 1) html += '<details class="g2-prev"><summary>Earlier reports</summary>' + h.slice(0, -1).reverse().map(function (r) { return '<div class="g2-old"><span class="g2-r">Round ' + r.round + '</span>' + g2Line(r) + '</div>'; }).join('') + '</details>';
+    box.innerHTML = html;
+    box.classList.remove('fresh'); void box.offsetWidth; box.classList.add('fresh');
+  }
+
+  /* ---------- Drawing ---------- */
+  function g2Loop() {
+    g2.loop = true;
+    var tick = function (now) {
+      if (!g2) return;
+      g2Draw(now);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  function g2Draw(now) {
+    var c = g2ctx, G = g2.G, cam = g2Cam(), cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; };
+    c.setTransform(g2dpr, 0, 0, g2dpr, 0, 0);
+    c.fillStyle = '#060a1c'; c.fillRect(0, 0, g2w, g2h);
+    // The chart: the keeper knows every tile, in the soft blue of a moonlit sea.
+    for (var y = 0; y < G.n; y++) for (var x = 0; x < G.n; x++) {
+      var t = G.grid[y * G.n + x], px = X(x), py = Y(y), lit = G2.isLit(G, x, y);
+      c.fillStyle = lit ? '#2b3c74' : ((x + y) % 2 ? '#17234c' : '#192650'); c.fillRect(px, py, cs + 0.5, cs + 0.5);
+      if (t === G2.ROCK || t === G2.TALL) guideTerrain(c, g2.paint, x, y, px, py, cs, now, 1);
+      else if (t === G2.WRECK) g2Wreck(c, px + cs / 2, py + cs / 2, cs);
+      else if (t === G2.ISLAND) g2Island(c, px + cs / 2, py + cs / 2, cs, now);
+      else if (t === G2.KELP) g2Kelp(c, px + cs / 2, py + cs / 2, cs, now, x * 7 + y);
+    }
+    c.strokeStyle = 'rgba(160,180,255,.08)'; c.lineWidth = 1;
+    for (var gl = 1; gl < G.n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(G.n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(G.n), Y(gl)); c.stroke(); }
+    c.strokeStyle = 'rgba(255,214,140,.3)'; c.lineWidth = 2; c.strokeRect(X(0), Y(0), G.n * cs, G.n * cs);
+    // The beam of this round, and the one being aimed.
+    var lx = X(G.c) + cs / 2, ly = Y(G.c) + cs / 2, clip = [X(0), Y(0), G.n * cs, G.n * cs];
+    if (G.beam >= 0) guideBeam(c, lx, ly, G.beam, cs, G.n, Math.min(1, (now - g2.beamAt) / 350), false, clip);
+    if (g2.mode === 'beam' && g2.aim >= 0 && !G.ended) guideBeam(c, lx, ly, g2.aim, cs, G.n, 1, true, clip);
+    // Serpents are only seen where the light falls: caught in it, they dive, and only bubbles show.
+    G.serpents.forEach(function (s) { if (s.down && G2.isLit(G, s.x, s.y)) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); });
+    // Your notes.
+    Object.keys(G.marks).forEach(function (k) {
+      var mx = X(k % G.n) + cs / 2, my = Y(Math.floor(k / G.n)) + cs / 2;
+      c.strokeStyle = 'rgba(255,233,168,.85)'; c.lineWidth = Math.max(1.5, cs * 0.06); c.setLineDash([cs * 0.08, cs * 0.06]);
+      c.beginPath(); c.arc(mx, my, cs * 0.3, 0, 7); c.stroke(); c.setLineDash([]);
+      c.fillStyle = 'rgba(255,233,168,.9)'; c.font = '700 ' + Math.round(cs * 0.34) + 'px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', mx, my + cs * 0.02);
+    });
+    // Buoys, bobbing; and the spot picked for a new one.
+    G.buoys.forEach(function (b, i) { g2Buoy(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.color, 1, i); });
+    if (g2.mode === 'buoy' && g2.spot && !G.ended) {
+      var next = G.buoys.length >= G.buoyMax ? G.buoys[0].color : ['red', 'yellow', 'green'].filter(function (cc) { return !G.buoys.some(function (b) { return b.color === cc; }); })[0];
+      g2Buoy(c, X(g2.spot[0]) + cs / 2, Y(g2.spot[1]) + cs / 2, cs, now, next, 0.55, 9);
+      c.strokeStyle = 'rgba(255,233,168,.35)'; c.setLineDash([cs * 0.12, cs * 0.1]); c.lineWidth = 1.5;
+      c.strokeRect(X(g2.spot[0] - 2), Y(g2.spot[1] - 2), cs * 5, cs * 5); c.setLineDash([]);
+    }
+    // The lighthouse.
+    var img = lighthouseImage(), lk = cs * 1.15 / 85;
+    if (img.complete && img.naturalWidth) c.drawImage(img, lx - 20 * lk, Y(G.c) + cs * 0.85 - 110 * lk, 40 * lk, 126 * lk);
+    var glow = c.createRadialGradient(lx, ly - cs * 0.62, 0, lx, ly - cs * 0.62, cs * 0.55);
+    glow.addColorStop(0, G.oil ? 'rgba(255,233,168,.75)' : 'rgba(255,233,168,.15)'); glow.addColorStop(1, 'rgba(255,233,168,0)');
+    c.fillStyle = glow; c.beginPath(); c.arc(lx, ly - cs * 0.62, cs * 0.55, 0, 7); c.fill();
+    // At the end the fog lifts: the boat and the way it sailed.
+    if (G.ended) {
+      var k = Math.min(1, (now - g2.endAt) / 900);
+      c.save(); c.globalAlpha = k; c.strokeStyle = 'rgba(255,233,168,.7)'; c.lineWidth = Math.max(2, cs * 0.08); c.setLineDash([cs * 0.14, cs * 0.12]); c.lineJoin = 'round';
+      c.beginPath(); G.path.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]) + cs / 2, Y(p[1]) + cs / 2); }); c.stroke(); c.restore();
+      guideBoat(c, X(G.boat.x) + cs / 2, Y(G.boat.y) + cs / 2, cs, now, true, k, 0);
+    }
+  }
+  function g2Wreck(c, cx, cy, cs) {
+    c.save(); c.translate(cx, cy); c.rotate(-0.25); var s = cs / 24;
+    c.fillStyle = 'rgba(3,6,20,.35)'; c.beginPath(); c.ellipse(0, 6 * s, 11 * s, 3 * s, 0, 0, 7); c.fill();
+    c.fillStyle = '#6e4a2e'; c.beginPath(); c.moveTo(-10 * s, 0); c.lineTo(10 * s, -2 * s); c.lineTo(7 * s, 6 * s); c.lineTo(-7 * s, 6 * s); c.closePath(); c.fill();
+    c.strokeStyle = '#4a2f1c'; c.lineWidth = Math.max(1, s); c.beginPath(); c.moveTo(-8 * s, 3 * s); c.lineTo(8 * s, 1.5 * s); c.stroke();
+    c.strokeStyle = '#c9b48f'; c.lineWidth = Math.max(1.2, 1.4 * s); c.beginPath(); c.moveTo(1 * s, -1 * s); c.lineTo(-2 * s, -11 * s); c.stroke();
+    c.fillStyle = 'rgba(225,215,190,.75)'; c.beginPath(); c.moveTo(-2 * s, -11 * s); c.lineTo(5 * s, -6 * s); c.lineTo(-0.5 * s, -5 * s); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(225,235,255,.55)'; c.lineWidth = Math.max(1, s); c.beginPath(); c.ellipse(0, 6 * s, 12 * s, 3.2 * s, 0, 0.2, 2.9); c.stroke();
+    c.restore();
+  }
+  function g2Island(c, cx, cy, cs, now) {
+    var s = cs / 24, sway = reduced ? 0 : Math.sin(now / 900) * 0.06;
+    c.fillStyle = 'rgba(225,235,255,.4)'; c.beginPath(); c.ellipse(cx, cy + 6 * s, 12 * s, 4.5 * s, 0, 0, 7); c.fill();
+    c.fillStyle = '#e3c98e'; c.beginPath(); c.ellipse(cx, cy + 5 * s, 10.5 * s, 3.8 * s, 0, 0, 7); c.fill();
+    c.fillStyle = '#6fae5f'; c.beginPath(); c.ellipse(cx - 3 * s, cy + 3.5 * s, 4 * s, 1.6 * s, 0, 0, 7); c.fill();
+    c.save(); c.translate(cx + 1 * s, cy + 4 * s); c.rotate(sway);
+    c.strokeStyle = '#8a5a36'; c.lineWidth = Math.max(1.5, 2 * s); c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-1 * s, -7 * s, 1 * s, -14 * s); c.stroke();
+    c.strokeStyle = '#5aa860'; c.lineWidth = Math.max(1.5, 2.2 * s);
+    [[-8, -11], [8, -11], [-6, -18], [6, -18], [0, -20]].forEach(function (p) { c.beginPath(); c.moveTo(1 * s, -14 * s); c.quadraticCurveTo((1 + p[0] * 0.4) * s, (-14 + (p[1] + 14) * 0.2 - 3) * s, (1 + p[0]) * s, (p[1] + 4) * s); c.stroke(); });
+    c.restore();
+  }
+  function g2Kelp(c, cx, cy, cs, now, seed) {
+    var s = cs / 24, t = reduced ? 0 : now / 1100 + seed;
+    c.strokeStyle = 'rgba(79,176,109,.8)'; c.lineWidth = Math.max(1.2, 1.8 * s); c.lineCap = 'round';
+    for (var i = 0; i < 4; i++) {
+      var bx = cx + (i - 1.5) * 4.5 * s, sw = Math.sin(t + i) * 2.5 * s;
+      c.beginPath(); c.moveTo(bx, cy + 9 * s); c.quadraticCurveTo(bx + sw - 3 * s, cy + 2 * s, bx + sw, cy - 2 * s); c.quadraticCurveTo(bx + sw + 3 * s, cy - 6 * s, bx + sw * 1.4, cy - 9 * s); c.stroke();
+    }
+    c.fillStyle = 'rgba(120,200,140,.5)'; c.beginPath(); c.arc(cx + 2 * s, cy - 3 * s, 1.4 * s, 0, 7); c.fill();
+  }
+  function g2Buoy(c, cx, cy, cs, now, color, alpha, seed) {
+    var s = cs / 24, bob = reduced ? 0 : Math.sin(now / 520 + seed) * 1.2 * s, col = { red: '#e8504a', yellow: '#f5c63c', green: '#4fb36a' }[color];
+    c.save(); c.globalAlpha = alpha;
+    c.strokeStyle = 'rgba(225,235,255,.5)'; c.lineWidth = Math.max(1, s); c.beginPath(); c.ellipse(cx, cy + 7 * s, 8 * s, 2.4 * s, 0, 0, 7); c.stroke();
+    c.translate(cx, cy + bob);
+    c.fillStyle = col; c.beginPath(); c.moveTo(-6 * s, 7 * s); c.lineTo(6 * s, 7 * s); c.lineTo(3.5 * s, -5 * s); c.lineTo(-3.5 * s, -5 * s); c.closePath(); c.fill();
+    c.fillStyle = '#fff'; c.fillRect(-4.8 * s, 0, 9.6 * s, 2.6 * s);
+    c.fillStyle = '#3a3f52'; c.fillRect(-0.8 * s, -9 * s, 1.6 * s, 4 * s);
+    var on = reduced || Math.sin(now / 300 + seed) > -0.2;
+    var g = c.createRadialGradient(0, -10 * s, 0, 0, -10 * s, 7 * s); g.addColorStop(0, on ? 'rgba(255,246,200,.95)' : 'rgba(255,246,200,.35)'); g.addColorStop(1, 'rgba(255,246,200,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, -10 * s, 7 * s, 0, 7); c.fill();
+    c.restore();
+  }
+
+  /* ---------- Input ---------- */
+  function g2Pointer(ev) {
+    if (!g2 || g2.G.ended || !g2El().querySelector('.g-stage').contains(ev.target)) return;
+    var G = g2.G, r = g2El().querySelector('canvas').getBoundingClientRect(), cam = g2Cam(), px = ev.clientX - r.left, py = ev.clientY - r.top;
+    var tx = Math.floor((px - cam.ox) / cam.cs), ty = Math.floor((py - cam.oy) / cam.cs);
+    if (g2.mode === 'beam') {
+      var lx = cam.ox + (G.c + 0.5) * cam.cs, ly = cam.oy + (G.c + 0.5) * cam.cs, a = Math.atan2(px - lx, -(py - ly));
+      if (Math.hypot(px - lx, py - ly) < cam.cs * 0.6) return;
+      g2.aim = ((Math.round(a / (2 * Math.PI / G2.BEAM_STEPS)) % G2.BEAM_STEPS) + G2.BEAM_STEPS) % G2.BEAM_STEPS;
+    } else if (!G2.inside(G, tx, ty)) return;
+    else if (g2.mode === 'buoy') {
+      if (!G2.open(G, tx, ty) || G2.buoyAt(G, tx, ty)) { g2Note('A buoy needs open water.'); return; }
+      g2.spot = [tx, ty];
+    } else {
+      var k = ty * G.n + tx;
+      if (G.marks[k]) delete G.marks[k]; else G.marks[k] = 1;
+    }
+    g2Hud();
+  }
+  document.addEventListener('pointerdown', function (ev) { if (g2 && !g2El().hidden && ev.target.tagName === 'CANVAS') g2Pointer(ev); });
+
+  /* ---------- Help and the end ---------- */
+  function g2Help(first) {
+    var pages = [
+      ['You are the keeper', 'A boat is lost in the fog. You have the whole sea chart, but you cannot see the boat. The captain radios what is around it: rocks, kelp, a shipwreck, with how near and which way.'],
+      ['Find the boat', 'Look for the place on the chart that matches the report. Mark the places it could be with the pencil. As the reports change, rule places out.'],
+      ['Buoys', 'Drop a buoy where you think the boat is. If it lands within two tiles, the captain sees it, says so, and sails to it. That tells you exactly where the boat is. You have three; a fourth moves your oldest.'],
+      ['The beam', 'A boat in your beam follows it straight home, two tiles a round, unless rocks are in the way. The lamp has little oil, so shine only when you know. Tall rocks and islands block the light.'],
+      ['Serpents', 'In later nights sea serpents swim their rounds and hunt a boat that comes near. You only see them where your light falls. Get the boat home before the night is over.']
+    ];
+    var i = 0, show = function () {
+      var p = pages[i];
+      var s = sheet('<div class="row"><h2>' + p[0] + '</h2><button class="close" id="x" aria-label="Close">×</button></div><p>' + p[1] + '</p><p class="note">' + (i + 1) + ' / ' + pages.length + '</p><div class="row" style="justify-content:flex-end;gap:8px">' + (i ? '<button class="secondary" id="g2Prev" style="width:auto;padding:0 18px">Back</button>' : '') + '<button class="primary" id="g2Next" style="width:auto;padding:0 22px">' + (i < pages.length - 1 ? 'Next' : 'Start') + '</button></div>', 'tutorial');
+      var done = function () { closeSheet(); if (first) { progress.tutorials = progress.tutorials || {}; progress.tutorials.guide2 = 1; save('unwind.progress2', progress); } };
+      s.querySelector('#x').onclick = done;
+      s.querySelector('#g2Next').onclick = function () { if (i < pages.length - 1) { i++; show(); } else done(); };
+      if (s.querySelector('#g2Prev')) s.querySelector('#g2Prev').onclick = function () { i--; show(); };
+    };
+    show();
+  }
+  function g2End() {
+    if (!g2) return;
+    var G = g2.G, won = G.ended === 'won', id = 'bu-' + (g2.bu + 1), last = g2.level >= G2.LEVELS.length - 1;
+    if (won) { progress.done[id] = true; if (G.lives === G2.LEVELS[g2.level].lives) progress.perfect[id] = true; save('unwind.progress2', progress); }
+    track('guide2_end', { level: g2.level + 1, won: won, rounds: G.round - 1, lives: G.lives });
+    var html = '<div class="row"><h2>' + (won ? 'Home safe' : 'Lost in the fog') + '</h2></div><p>' + (won ? 'The boat reached the lighthouse in ' + (G.round - 1) + ' rounds.' : G.lives <= 0 ? 'The serpents got the boat.' : 'The night ran out before the boat got home.') + '</p><p>The fog has lifted: the dotted line shows where the boat really sailed.</p>' +
+      '<div class="modes">' + (won && !last ? '<button id="g2Next"><b>Next night</b><span>' + G2.LEVELS[g2.level + 1].name + '</span></button>' : '') +
+      '<button id="g2Again"><b>' + (won ? 'Play again' : 'Try again') + '</b><span>The boat starts somewhere else.</span></button><button id="g2Look"><b>Look at the chart</b><span>See where the boat was.</span></button><button id="g2Levels"><b>Levels</b><span>Back to Boarding Up.</span></button></div>';
+    var s = sheet(html);
+    var bu = g2.bu, level = g2.level;
+    if (s.querySelector('#g2Next')) s.querySelector('#g2Next').onclick = function () { closeGuide2(); openGuide2(level + 1, bu + 1); };
+    s.querySelector('#g2Again').onclick = function () { closeGuide2(); openGuide2(level, bu); };
+    s.querySelector('#g2Look').onclick = function () { closeSheet(); g2El().querySelector('.g-btns').innerHTML = '<button class="primary" id="g2Done">Done</button>'; g2El().querySelector('#g2Done').onclick = g2End; };
+    s.querySelector('#g2Levels').onclick = function () { closeSheet(); closeGuide2(true); };
+  }
+  (function () {
+    var el = g2El();
+    el.querySelector('.g-close').onclick = function () { closeGuide2(true); };
+    el.querySelector('.g-help').onclick = function () { g2Help(false); };
+    el.querySelectorAll('[data-g2mode]').forEach(function (b) { b.onclick = function () { if (!g2) return; g2.mode = b.getAttribute('data-g2mode'); g2Hud(); }; });
+  })();
+
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
@@ -10537,6 +11189,9 @@ window.UnwindI18n = (function () {
     win: function () { return null; },
     boarding: function (i) { loadingSync = true; try { openBoarding(i); } finally { loadingSync = false; } },
     poem: function (line) { loadingSync = true; try { openPoem(line, 0); } finally { loadingSync = false; } },
+    g2State: function () { return g2 ? JSON.parse(JSON.stringify(g2.G)) : null; },
+    g2: function () { return g2 ? { boat: g2.G.boat, round: g2.G.round, lives: g2.G.lives, oil: g2.G.oil, ended: g2.G.ended, buoys: g2.G.buoys, report: g2.G.report, n: g2.G.n } : null; },
+    g2Act: function (a) { g2Act(a); },
     boardingList: function () { return BOARDING.map(function (b) { return b.special || ''; }); },
     sp: function () { if (current && current.mode === 'poem') return { kind: 'poem', idx: 0, line: current.line, busy: busy(), ended: ended, lives: state.lives, undo: poemUndo.length, props: [(state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y; })], removed: [state.removed.filter(Boolean).length + '/' + state.removed.length], sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent };
       return coop && { kind: coop.room.kind, key: coop.room.key, kick: coop.room.kicks ? coop.room.kicks.indexOf(coop.room.kick) : -1, idx: coop.idx, n: coop.n, poemDone: coop.poemDone, busy: busy(), ended: ended, lives: state.lives, loaded: state.loaded, aim: !!aim, props: coop.boards.map(function (B) { return (B.state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y + (p.loaded ? 'L' : ''); }); }), removed: coop.boards.map(function (B) { return B.state.removed.filter(Boolean).length + '/' + B.state.removed.length; }), sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent }; },

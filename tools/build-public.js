@@ -5,7 +5,7 @@ const NOTICE='© 2026 Miguel Lima. All rights reserved. No licence is granted to
 (async()=>{
  const strip=s=>s.replace(/\/\*TEST-HOOK-START\*\/[\s\S]*?\/\*TEST-HOOK-END\*\//,'');
  const opts={compress:{passes:2},mangle:{toplevel:true},format:{comments:false}};
- const js=(await minify(rd('src/engine.js')+'\n'+rd('src/music.js')+'\n'+'window.UNWIND_LEVELS='+rd('src/levels.json')+';\n'+'window.UNWIND_CHALLENGES='+rd('src/challenges.json')+';\n'+rd('src/guide.js')+'\n'+rd('src/i18n.js')+'\n'+strip(rd('src/game.js')).replace('/*__GUIDE_UI__*/',()=>rd('src/guide-ui.js')).replace('/*__PHOTO_SCENES__*/',()=>rd('src/photo-scenes.js')),opts)).code;
+ const js=(await minify(rd('src/engine.js')+'\n'+rd('src/music.js')+'\n'+'window.UNWIND_LEVELS='+rd('src/levels.json')+';\n'+'window.UNWIND_CHALLENGES='+rd('src/challenges.json')+';\n'+rd('src/guide.js')+'\n'+rd('src/guide2.js')+'\n'+rd('src/i18n.js')+'\n'+strip(rd('src/game.js')).replace('/*__GUIDE_UI__*/',()=>rd('src/guide-ui.js')).replace('/*__GUIDE2_UI__*/',()=>rd('src/guide2-ui.js')).replace('/*__PHOTO_SCENES__*/',()=>rd('src/photo-scenes.js')),opts)).code;
  if(/unwindTest|\.solve\(\)\.sequence/.test(js)&&js.includes('unwindTest'))throw new Error('test hook still present');
  let t=rd('src/index.template.html');
  t=t.replace(/<script>\/\*__ENGINE__\*\/<\/script>\s*<script>window\.UNWIND_LEVELS=\/\*__LEVELS__\*\/;(?:window\.UNWIND_CHALLENGES=\/\*__CHALLENGES__\*\/;)?<\/script>\s*<script>\/\*__MUSIC__\*\/<\/script>\s*<script>\/\*__GAME__\*\/<\/script>/,'<script>__JS__</script>');

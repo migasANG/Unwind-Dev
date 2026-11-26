@@ -506,14 +506,21 @@
     { set: 'wood', title: 'Fowl Play 3', special: 'sl3', caption: 'A nest! A bird that slides into it rests there. Stop the bird in the nest, then steer it onto the slingshot.' },
     { set: 'wood', title: 'Fowl Play 4', special: 'sl4', caption: 'One wall blocks the slingshot itself. A bird pushed by an arrow cannot break wood: only a bird thrown from the slingshot can.' },
     { set: 'wood', title: 'Fowl Play 5', special: 'sl5', caption: 'A ghost guards the way. Throw while it is see-through, and the bird flies straight past it.' },
-    { set: 'wood', title: 'Fowl Play 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' }
+    { set: 'wood', title: 'Fowl Play 6', special: 'sl6', caption: 'Three boards and three birds. Some birds are only in the way, and one nest keeps a bird where you need it.' },
+    // Guiding Light 2.0: a solo keeper's puzzle on its own screen (guide2.js). Kept at the end, so saved progress
+    // of the levels above keeps its numbers.
+    { set: 'light', title: 'Guiding Light 2.0 1', guide2: 0 },
+    { set: 'light', title: 'Guiding Light 2.0 2', guide2: 1 },
+    { set: 'light', title: 'Guiding Light 2.0 3', guide2: 2 }
   ];
   var BOARDING_SETS = [['', 'Boarding Up', 'Solo levels on several boards at once. You play every board, and twin-shared and sniper arrows link them.'],
     ['match', 'Matchday', 'A football and a row of boards. An arrow that hits the ball kicks it. Score in the goal on the right; the left one is your own. Basic and red card arrows only, and red cards that run out stay for good.'],
-    ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.']];
+    ['wood', 'Fowl Play', 'Push birds onto the slingshot with arrows, then throw them. A thrown bird breaks the first wooden wall or arrow it hits. Nests stop birds, but never let an arrow hit an empty one. Clear every arrow to win.'],
+    ['light', 'Guiding Light 2.0', 'You are the lighthouse keeper. A boat is lost in the fog: the captain radios what is around it, and you have the sea chart. Work out where the boat is, then guide it home with your beam and buoys. Solo, for now.']];
   function boardingSet(b) { return b.set || ''; }
   function openBoarding(i) {
     var b = BOARDING[i];
+    if (b.guide2 !== undefined) { openGuide2(b.guide2, i); return; }
     if (b.special) {
       withLoading(function () {
         openCoopRoom(function () {
@@ -1996,7 +2003,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.25-p';
+  var BUILD = '2026.11.26-a';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -4681,6 +4688,7 @@
     if (tab !== 'extra' && tab !== 'online' && tab !== 'endless' && tab !== 'boarding') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'online') {
       html += '<div class="chapter strong">Play with friends</div><div class="modes"><button id="mHostO"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="mPubO"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="mCodeO"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>';
+      html += '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="mGuideO"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button></div>';
       html += '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
     }
     if (tab === 'extra') {
@@ -4726,6 +4734,7 @@
       s.querySelector('#mHostO').onclick = function () { lobby = null; closeSheet(); hostOnline(); };
       s.querySelector('#mPubO').onclick = function () { publicRooms = null; onlineSheet('public'); };
       s.querySelector('#mCodeO').onclick = function () { onlineSheet('home', 0, '', true); };
+      s.querySelector('#mGuideO').onclick = function () { guideMenu(); };
       s.querySelector('#mTutTwinsO').onclick = function () { openCoopTutorial('twins'); };
       s.querySelector('#mTutSniperO').onclick = function () { openCoopTutorial('sniper'); };
       return;
@@ -6090,6 +6099,7 @@
   window.addEventListener('resize', function () { layout(); });
   window.addEventListener('hashchange', function () { if (location.hash === '#debug') debugSheet(); });
   /*__GUIDE_UI__*/
+  /*__GUIDE2_UI__*/
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
@@ -6171,6 +6181,9 @@
     win: function () { return null; },
     boarding: function (i) { loadingSync = true; try { openBoarding(i); } finally { loadingSync = false; } },
     poem: function (line) { loadingSync = true; try { openPoem(line, 0); } finally { loadingSync = false; } },
+    g2State: function () { return g2 ? JSON.parse(JSON.stringify(g2.G)) : null; },
+    g2: function () { return g2 ? { boat: g2.G.boat, round: g2.G.round, lives: g2.G.lives, oil: g2.G.oil, ended: g2.G.ended, buoys: g2.G.buoys, report: g2.G.report, n: g2.G.n } : null; },
+    g2Act: function (a) { g2Act(a); },
     boardingList: function () { return BOARDING.map(function (b) { return b.special || ''; }); },
     sp: function () { if (current && current.mode === 'poem') return { kind: 'poem', idx: 0, line: current.line, busy: busy(), ended: ended, lives: state.lives, undo: poemUndo.length, props: [(state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y; })], removed: [state.removed.filter(Boolean).length + '/' + state.removed.length], sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent };
       return coop && { kind: coop.room.kind, key: coop.room.key, kick: coop.room.kicks ? coop.room.kicks.indexOf(coop.room.kick) : -1, idx: coop.idx, n: coop.n, poemDone: coop.poemDone, busy: busy(), ended: ended, lives: state.lives, loaded: state.loaded, aim: !!aim, props: coop.boards.map(function (B) { return (B.state.props || []).map(function (p) { return p.kind + p.id + '@' + p.x + ',' + p.y + (p.loaded ? 'L' : ''); }); }), removed: coop.boards.map(function (B) { return B.state.removed.filter(Boolean).length + '/' + B.state.removed.length; }), sheet: !!$('sheetHost').firstChild, caption: $('caption').textContent }; },
