@@ -2012,7 +2012,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-i';
+  var BUILD = '2026.11.26-j';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -5670,7 +5670,7 @@
   function tapToBegin(go) {
     var el = document.createElement('div');
     el.id = 'tapBegin'; el.setAttribute('role', 'button'); el.tabIndex = 0;
-    el.innerHTML = '<div class="tb-in"><p class="tb-title">Unwind</p><p class="tb-tap">Tap to begin</p></div>';
+    el.innerHTML = '<div class="tb-in"><p class="tb-title">Unwind</p><p class="tb-tap">Tap to begin</p><p class="tb-sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4.5" height="7" rx="2"/><rect x="16.5" y="13" width="4.5" height="7" rx="2"/></svg><span>Best with headphones and the sound on</span></p></div>';
     document.body.appendChild(el);
     window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
     var start = function () { el.removeEventListener('pointerdown', start); el.removeEventListener('keydown', start); audio(); go(); setTimeout(function () { el.remove(); }, 400); el.classList.add('out'); };

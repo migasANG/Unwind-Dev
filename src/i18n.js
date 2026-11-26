@@ -246,6 +246,7 @@ window.UnwindI18n = (function () {
     'Solo: you keep the lighthouse alone. Levels in Boarding Up.': 'Sozinho: és o faroleiro. Níveis em Tabuleiros em Grupo.',
     'Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, or on one device in Boarding Up.': 'Memória e conversa: o faroleiro vislumbra o mar e desenha a carta, o capitão navega por radar. Online, ou num só dispositivo em Tabuleiros em Grupo.',
     'Cleared today': 'Concluído hoje',
+    'Best with headphones and the sound on': 'Melhor com auscultadores e o som ligado',
     'Show all': 'Mostrar tudo',
     'Home safe!': 'Em casa, a salvo!',
     'Lost at sea…': 'Perdido no mar…',
