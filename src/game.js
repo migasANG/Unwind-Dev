@@ -2007,7 +2007,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-b';
+  var BUILD = '2026.11.26-c';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2085,6 +2085,13 @@
     if ($('sheetHost').firstChild) closeSheet();
     var S = m.settings, me = netPid(), names = [], you = 0;
     m.seats.forEach(function (p) { names[p.seat] = p.name; if (p.pid === me) you = p.seat; });
+    if (S.mode === 'guide' && S.gv === 3) {
+      if (lobby) lobby.timers.forEach(clearTimeout);
+      lobby = null; save('unwind.lastRoom', net.code);
+      if (g3 && g3.seed === m.seed) return;
+      onGuide3Start(m, you); net.ready = true;
+      return;
+    }
     if (S.mode === 'guide') {
       if (lobby) lobby.timers.forEach(clearTimeout);
       lobby = null; save('unwind.lastRoom', net.code);
@@ -2137,6 +2144,7 @@
   }
   var netApplying = false;
   function netGame(m) {
+    if (g3) { onGuide3Event(m); return; }
     if (guide && guide.online) { onGuideEvent(m); return; }
     if (!net.ready || !coop || !coop.online) { (net.pending = net.pending || []).push(m); return; }
     if (m.t === 'log') {
@@ -2319,9 +2327,10 @@
     var perLife = S.hard ? 1 : 3, lives = perLife * S.players, all = L.players.length === S.players && L.players.every(function (p) { return p.ready; });
     var waitingFor = S.players - L.players.length, notReady = L.players.filter(function (p) { return !p.ready; }).length;
     var seg = function (key, opts) { return '<div class="sizes lseg" role="group">' + opts.map(function (o) { return '<button data-set="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(S[key]) === String(o[0])) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
+    var gameSeg = function () { return '<div class="sizes lseg o3" role="group">' + [['coop', 'Co-op boards'], ['guide', 'Guiding Light'], ['guide3', 'Guiding Light 3.0']].map(function (o) { return '<button data-set="mode" data-v="' + o[0] + '" aria-pressed="' + (gkind === o[0]) + '"' + (host ? '' : ' disabled') + '>' + o[1] + '</button>'; }).join('') + '</div>'; };
     var sw = function (key, label, small) { return '<div class="setting"><span>' + label + '<small>' + small + '</small></span><button class="switch" role="switch" data-sw="' + key + '" aria-checked="' + !!S[key] + '"' + (host ? '' : ' disabled') + '></button></div>'; };
-    var gm = S.mode === 'guide';
-    var html = '<div class="row"><h2>' + (gm ? 'Guiding Light room' : 'Co-op room') + '</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
+    var gm = S.mode === 'guide', g3 = gm && S.gv === 3, gkind = S.mode !== 'guide' ? 'coop' : g3 ? 'guide3' : 'guide';
+    var html = '<div class="row"><h2>' + (g3 ? 'Guiding Light 3.0 room' : gm ? 'Guiding Light room' : 'Co-op room') + '</h2><button class="close" id="x" aria-label="Leave room">' + '&times;' + '</button></div>';
     if (L.status) html += '<p class="lstatus">' + L.status + '</p>';
     if (!L.joined && !L.online) html += '<div class="lview" role="group" aria-label="Preview as"><span>Preview as</span><div class="sizes lseg"><button data-view="host" aria-pressed="' + host + '">Host</button><button data-view="guest" aria-pressed="' + !host + '">Player</button></div></div>';
     html += S.public ? '<div class="lcode lpublic"><small>Public room</small><b>' + (L.online ? (L.players.filter(function (q) { return q.host; })[0] || me).name : L.joined ? L.players[1].name : me.name) + '\'s room</b><p>' + (host ? 'Anyone can find and join it in Public rooms. No code needed.' : 'You joined from Public rooms.') + '</p></div>'
@@ -2339,15 +2348,15 @@
       // Guiding Light: two roles instead of boards. Tap one, then the other, to swap who plays which.
       html += '<div class="chapter">Roles' + (host ? ' · tap both to swap' : '') + '</div><div class="lboards n2 lroles">' + [['Lighthouse keeper', 'keeper'], ['Boat captain', 'boat']].map(function (rl, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><span class="lroleicon">' + guideIconSvg(rl[1]) + '</span><b>' + rl[0] + '</b><small>' + (p ? p.name : 'Free') + '</small></button>'; }).join('') + '</div>';
       html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
-      if (host) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
+      if (host) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + gameSeg();
       html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
       html += '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('gsize', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]);
-      html += '<div class="setting"><span>Difficulty<small>' + (S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
-      html += '<div class="lsum"><span>Lives<b>3</b></span><span>Players<b>2</b></span><span>Win<b>The boat reaches the lighthouse</b></span></div>';
+      html += '<div class="setting"><span>Difficulty<small>' + (g3 ? (S.ghard ? 'Two moves a turn, more tall rocks and serpents, 2 lives' : 'Three moves a turn, 3 lives') : S.ghard ? 'Tall rocks, wind and sail, a faulty lamp and faster serpents' : 'Rocks, whirlpools, barrels and serpents') + '</small></span></div>' + seg('ghard', [[false, 'Normal'], [true, 'Hard']]);
+      html += '<div class="lsum"><span>Lives<b class="notr">' + (g3 && S.ghard ? 2 : 3) + '</b></span><span>Players<b class="notr">2</b></span><span>Win<b>The boat reaches the lighthouse</b></span></div>';
     } else {
     html += '<div class="chapter">Boards</div><div class="lboards n' + S.players + '">' + Array.apply(null, Array(S.players)).map(function (_, i) { var p = L.seats[i]; return '<button data-seat="' + i + '" class="' + (L.pick === i ? 'pick' : '') + '"' + (host ? '' : ' disabled') + '><b>' + (i + 1) + '</b><span>' + (p ? p.name : '—') + '</span></button>'; }).join('') + '</div><p class="note">' + (S.players === 2 ? 'Side by side.' : 'Two rows of two.') + (host ? ' Tap two boards, or drag one onto another, to swap their players.' : ' The host chooses who plays each board.') + '</p>';
     html += '<div class="chapter">Room settings' + (host ? '' : ' · set by the host') + '</div>';
-    if (host && L.online) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + seg('mode', [['coop', 'Co-op boards'], ['guide', 'Guiding Light']]);
+    if (host && L.online) html += '<div class="setting"><span>Game<small>Co-op boards or Guiding Light</small></span></div>' + gameSeg();
     html += '<div class="setting"><span>Room type<small>' + (S.public ? 'Listed in Public rooms for anyone to join' : 'Only people with the code can join') + '</small></span></div>' + seg('public', [[false, 'Private'], [true, 'Public']]);
     html += '<div class="setting"><span>Players<small>Rooms are for 2 or 4 players</small></span></div>' + seg('players', [[2, '2 players'], [4, '4 players']]);
     html += '<div class="setting"><span>Difficulty<small>' + (S.hard ? '1 life for each player and combo arrows that mix up to 3 effects' : '3 lives for each player and extra time') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]);
@@ -2376,7 +2385,7 @@
     card.querySelector('#lNameRnd').onclick = function () { me.name = lobbyName(); save('unwind.onlineName', me.name); L.askName = false; if (L.online) netSend({ t: 'name', name: me.name }); lobbySheet(true); };
     card.querySelectorAll('[data-set]').forEach(function (b) { b.onclick = function () {
       var k = b.getAttribute('data-set'), v = b.getAttribute('data-v');
-      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' || k === 'gsize' ? +v : k === 'mode' ? v : v === 'true'; netSend({ t: 'settings', settings: ch }); return; }
+      if (L.online) { var ch = {}; ch[k] = k === 'players' || k === 'size' || k === 'gsize' ? +v : k === 'mode' ? v : v === 'true'; if (k === 'mode') { ch.mode = v === 'coop' ? 'coop' : 'guide'; ch.gv = v === 'guide3' ? 3 : 1; } netSend({ t: 'settings', settings: ch }); return; }
       S[k] = k === 'players' || k === 'size' ? +v : v === 'true';
       if (k === 'public') { me.ready = me.ready; lobbySheet(true); return; }
       if (k === 'players') { while (L.players.length > S.players) L.players.pop(); lobbyFill(); }
@@ -4694,7 +4703,7 @@
     if (tab !== 'extra' && tab !== 'online' && tab !== 'endless' && tab !== 'boarding') (tab === 'seasons' ? SEASON_ORDER : [tab]).forEach(function (k) { html += bestList(k); });
     if (tab === 'online') {
       html += '<div class="chapter strong">Play with friends</div><div class="modes"><button id="mHostO"><b>Host a room</b><span>Pick the settings and invite friends with a code, or open it to everyone.</span></button><button id="mPubO"><b>Public rooms</b><span>Browse open rooms and jump in.</span></button><button id="mCodeO"><b>Enter a room code</b><span>A friend sent you a code for a private room.</span></button></div>';
-      html += '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="mGuideO"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button></div>';
+      html += '<div class="chapter strong">Guiding Light</div><div class="modes"><button id="mGuideO"><b>Guiding Light</b><span>Two players: a lighthouse keeper and a boat lost in the fog. Online or on one device.</span></button><button id="mGuide3O"><b>Guiding Light 3.0</b><span>Memory and talk: the keeper glimpses the sea and draws the chart, the captain sails by radar. Online, two players.</span></button></div>';
       html += '<div class="chapter strong">Learn the multiple board arrows</div><div class="modes"><button id="mTutTwinsO"><b>Twin-shared arrows</b><span>Two boards. You control both.</span></button><button id="mTutSniperO"><b>Sniper arrows</b><span>Two boards. You control both.</span></button></div>';
     }
     if (tab === 'extra') {
@@ -4741,6 +4750,7 @@
       s.querySelector('#mPubO').onclick = function () { publicRooms = null; onlineSheet('public'); };
       s.querySelector('#mCodeO').onclick = function () { onlineSheet('home', 0, '', true); };
       s.querySelector('#mGuideO').onclick = function () { guideMenu(); };
+      s.querySelector('#mGuide3O').onclick = function () { guide3Menu(); };
       s.querySelector('#mTutTwinsO').onclick = function () { openCoopTutorial('twins'); };
       s.querySelector('#mTutSniperO').onclick = function () { openCoopTutorial('sniper'); };
       return;
@@ -6106,6 +6116,7 @@
   window.addEventListener('hashchange', function () { if (location.hash === '#debug') debugSheet(); });
   /*__GUIDE_UI__*/
   /*__GUIDE2_UI__*/
+  /*__GUIDE3_UI__*/
   /*TEST-HOOK-START*/
   // Small test hook: reports where to tap on screen, and jumps between boards.
   window.unwindTest = {
@@ -6114,6 +6125,10 @@
     guideOpen: function (o) { openGuide(o); },
     onlineJoin: function (code) { joinOnline(code, function () {}); },
     guideAct: function (a) { guideAct(a); },
+    g3: function () { return g3 ? { phase: g3.G.phase, turn: g3.G.turn, boat: g3.G.boat, lives: g3.G.lives, ended: g3.G.ended, got: g3.G.got, n: g3.G.n, c: g3.G.c, marks: Object.keys(g3.G.marks).length, plan: g3.G.plan, role: g3.role, left: g3.until ? Math.round(g3.until - performance.now()) : 0, grid: g3.G.grid } : null; },
+    g3Act: function (a) { netSend({ t: 'gact', act: a }); },
+    g3Menu: function () { guide3Menu(); },
+    g3Plan: function (p) { g3.plan = p; g3Hud(); },
     // The wave that brings the boat closest to home by sailing distance (for tests).
     guideBest: function () {
       var G = guide.G, n = G.n, dist = [], q = [], i;

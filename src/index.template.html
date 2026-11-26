@@ -145,45 +145,54 @@ body.season #caption.on{left:50%;right:auto;transform:translateX(-50%);width:max
 @keyframes bang{0%,63.5%{opacity:0;transform:translate(16px,-84px) scale(.3)}65%{opacity:1;transform:translate(16px,-84px) scale(1.1)}66%,71%{opacity:1;transform:translate(16px,-84px) scale(1)}72.5%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
 @keyframes huh{0%,74%{opacity:0;transform:translate(16px,-84px) scale(.3)}75.5%{opacity:1;transform:translate(16px,-84px) scale(1.05)}76.5%,85%{opacity:1;transform:translate(16px,-84px) scale(1)}87%,100%{opacity:0;transform:translate(16px,-84px) scale(.9)}}
 /* Guiding Light: a dark sea, its own top bar and buttons. Sheets (tutorials, end card) open above it. */
-#guide,#guide2{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;background:#060a1c;color:#eef0ff;font-family:var(--display)}
-#guide .g-top,#guide2 .g-top{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
-#guide .g-close,#guide2 .g-close,#guide .g-help,#guide2 .g-help{flex:none;width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:1.3rem;line-height:1}
-#guide .g-title,#guide2 .g-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
-#guide .g-title b,#guide2 .g-title b{font-size:1.25rem;letter-spacing:.01em}
-#guide .g-role,#guide2 .g-role{font-size:.95rem;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#guide .g-stats,#guide2 .g-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
-#guide .g-pill,#guide2 .g-pill{display:flex;align-items:center;gap:6px;min-height:38px;padding:5px 11px;border-radius:19px;background:rgba(238,240,255,.1);font-size:1.05rem;font-weight:600;white-space:nowrap}
-#guide .g-pill b,#guide2 .g-pill b{font-size:1.2rem;font-variant-numeric:tabular-nums;color:#ffe9a8}
-#guide .g-lives,#guide2 .g-lives{gap:4px}
-#guide .g-lives svg,#guide2 .g-lives svg{width:22px;height:20px;fill:#ff7a93;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
-#guide .g-lives svg.gone,#guide2 .g-lives svg.gone{fill:none;stroke:rgba(255,122,147,.45);stroke-width:2;filter:none}
-#guide .g-flareicon,#guide2 .g-flareicon{width:17px;height:21px}
-#guide .g-stage,#guide2 .g-stage{position:relative;flex:1;min-height:0}
-#guide canvas,#guide2 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
-#guide .g-wind,#guide2 .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px 9px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.9rem;font-weight:600;letter-spacing:.02em}
-#guide .g-windrow,#guide2 .g-windrow{display:flex;align-items:center;gap:10px}
-#guide .g-windicon,#guide2 .g-windicon{width:38px;height:28px;opacity:.85}
-#guide .g-windarrow,#guide2 .g-windarrow{width:32px;height:32px;color:#ffe9a8;transition:transform .6s ease}
-#guide .g-peek,#guide2 .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:8px 14px;border-radius:16px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.9rem}
-#guide .g-peek[aria-pressed="true"],#guide2 .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
-#guide .g-toast,#guide2 .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
-#guide .g-toast.on,#guide2 .g-toast.on{animation:gToast 2.8s ease both}
+#guide,#guide2,#guide3{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;background:#060a1c;color:#eef0ff;font-family:var(--display)}
+#guide .g-top,#guide2 .g-top,#guide3 .g-top{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+#guide .g-close,#guide2 .g-close,#guide3 .g-close,#guide .g-help,#guide2 .g-help,#guide3 .g-help{flex:none;width:38px;height:38px;border-radius:19px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:1.3rem;line-height:1}
+#guide .g-title,#guide2 .g-title,#guide3 .g-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+#guide .g-title b,#guide2 .g-title b,#guide3 .g-title b{font-size:1.25rem;letter-spacing:.01em}
+#guide .g-role,#guide2 .g-role,#guide3 .g-role{font-size:.95rem;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#guide .g-stats,#guide2 .g-stats,#guide3 .g-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:0 max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px))}
+#guide .g-pill,#guide2 .g-pill,#guide3 .g-pill{display:flex;align-items:center;gap:6px;min-height:38px;padding:5px 11px;border-radius:19px;background:rgba(238,240,255,.1);font-size:1.05rem;font-weight:600;white-space:nowrap}
+#guide .g-pill b,#guide2 .g-pill b,#guide3 .g-pill b{font-size:1.2rem;font-variant-numeric:tabular-nums;color:#ffe9a8}
+#guide .g-lives,#guide2 .g-lives,#guide3 .g-lives{gap:4px}
+#guide .g-lives svg,#guide2 .g-lives svg,#guide3 .g-lives svg{width:22px;height:20px;fill:#ff7a93;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+#guide .g-lives svg.gone,#guide2 .g-lives svg.gone,#guide3 .g-lives svg.gone{fill:none;stroke:rgba(255,122,147,.45);stroke-width:2;filter:none}
+#guide .g-flareicon,#guide2 .g-flareicon,#guide3 .g-flareicon{width:17px;height:21px}
+#guide .g-stage,#guide2 .g-stage,#guide3 .g-stage{position:relative;flex:1;min-height:0}
+#guide canvas,#guide2 canvas,#guide3 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#guide .g-wind,#guide2 .g-wind,#guide3 .g-wind{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px 9px;border-radius:16px;background:rgba(238,240,255,.12);font-size:.9rem;font-weight:600;letter-spacing:.02em}
+#guide .g-windrow,#guide2 .g-windrow,#guide3 .g-windrow{display:flex;align-items:center;gap:10px}
+#guide .g-windicon,#guide2 .g-windicon,#guide3 .g-windicon{width:38px;height:28px;opacity:.85}
+#guide .g-windarrow,#guide2 .g-windarrow,#guide3 .g-windarrow{width:32px;height:32px;color:#ffe9a8;transition:transform .6s ease}
+#guide .g-peek,#guide2 .g-peek,#guide3 .g-peek{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));padding:8px 14px;border-radius:16px;background:rgba(238,240,255,.1);color:#eef0ff;font-size:.9rem}
+#guide .g-peek[aria-pressed="true"],#guide2 .g-peek[aria-pressed="true"],#guide3 .g-peek[aria-pressed="true"]{background:#ffe9a8;color:#2a2550}
+#guide .g-toast,#guide2 .g-toast,#guide3 .g-toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-8px);max-width:min(86%,420px);padding:9px 16px;border-radius:18px;background:rgba(255,233,168,.95);color:#2a2550;font-weight:600;font-size:.9rem;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+#guide .g-toast.on,#guide2 .g-toast.on,#guide3 .g-toast.on{animation:gToast 2.8s ease both}
 @keyframes gToast{0%{opacity:0;transform:translate(-50%,-8px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-4px)}}
-#guide .g-cover,#guide2 .g-cover{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#16204a,#060a1c 70%);padding:24px}
-#guide .g-pass,#guide2 .g-pass{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
-#guide .g-pass h2,#guide2 .g-pass h2{margin:0;font-size:1.5rem}
-#guide .g-pass p,#guide2 .g-pass p{margin:0;opacity:.85;line-height:1.45}
-#guide .g-pass .primary,#guide2 .g-pass .primary{width:auto;min-width:200px;padding:0 28px;background:#ffe9a8;color:#2a2550;margin-top:8px}
+#guide .g-cover,#guide2 .g-cover,#guide3 .g-cover{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#16204a,#060a1c 70%);padding:24px}
+#guide .g-pass,#guide2 .g-pass,#guide3 .g-pass{text-align:center;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
+#guide .g-pass h2,#guide2 .g-pass h2,#guide3 .g-pass h2{margin:0;font-size:1.5rem}
+#guide .g-pass p,#guide2 .g-pass p,#guide3 .g-pass p{margin:0;opacity:.85;line-height:1.45}
+#guide .g-pass .primary,#guide2 .g-pass .primary,#guide3 .g-pass .primary{width:auto;min-width:200px;padding:0 28px;background:#ffe9a8;color:#2a2550;margin-top:8px}
 body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #boardMap{display:none!important}
-#guide .g-passicon svg,#guide2 .g-passicon svg{height:110px;width:auto}
-#guide .g-bottom,#guide2 .g-bottom{padding:8px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:8px;min-height:96px}
-#guide .g-msg,#guide2 .g-msg{margin:0;text-align:center;font-size:1.05rem;opacity:.9;text-wrap:balance}
-#guide .g-btns,#guide2 .g-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-#guide .g-btns button,#guide2 .g-btns button{height:48px;padding:0 20px;border-radius:24px;background:rgba(238,240,255,.12);color:#eef0ff;font-weight:600;font-size:1.05rem}
-#guide .g-btns button.primary,#guide2 .g-btns button.primary{width:auto;min-width:150px;background:#ffe9a8;color:#2a2550;margin:0}
-#guide .g-btns button:disabled,#guide2 .g-btns button:disabled{opacity:.4}
-#guide .g-btns button[aria-pressed="false"],#guide2 .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
+#guide .g-passicon svg,#guide2 .g-passicon svg,#guide3 .g-passicon svg{height:110px;width:auto}
+#guide .g-bottom,#guide2 .g-bottom,#guide3 .g-bottom{padding:8px max(16px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:8px;min-height:96px}
+#guide .g-msg,#guide2 .g-msg,#guide3 .g-msg{margin:0;text-align:center;font-size:1.05rem;opacity:.9;text-wrap:balance}
+#guide .g-btns,#guide2 .g-btns,#guide3 .g-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#guide .g-btns button,#guide2 .g-btns button,#guide3 .g-btns button{height:48px;padding:0 20px;border-radius:24px;background:rgba(238,240,255,.12);color:#eef0ff;font-weight:600;font-size:1.05rem}
+#guide .g-btns button.primary,#guide2 .g-btns button.primary,#guide3 .g-btns button.primary{width:auto;min-width:150px;background:#ffe9a8;color:#2a2550;margin:0}
+#guide .g-btns button:disabled,#guide2 .g-btns button:disabled,#guide3 .g-btns button:disabled{opacity:.4}
+#guide .g-btns button[aria-pressed="false"],#guide2 .g-btns button[aria-pressed="false"],#guide3 .g-btns button[aria-pressed="false"]{background:rgba(238,240,255,.05);border:1.5px solid rgba(238,240,255,.3)}
 #guide.hard .g-msg{min-height:1.3em}
+#guide3 .g-toast.bad{background:rgba(255,128,128,.95);color:#2a1020}
+#guide3 .g3-ph{gap:8px}#guide3 .g3-ph span{color:#7dff9a;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
+#guide3 .g3-clock{height:4px;margin:0 max(14px,env(safe-area-inset-right,0px)) 6px max(14px,env(safe-area-inset-left,0px));border-radius:2px;background:rgba(238,240,255,.1);overflow:hidden}
+#guide3 .g3-clock i{display:block;height:100%;background:#ffe9a8;transform-origin:left;transform:scaleX(0)}
+#guide3 .g3-picker{position:absolute;z-index:2;display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:16px;background:rgba(18,28,64,.97);border:1px solid rgba(255,233,168,.35);box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:calc(100% - 16px)}
+#guide3 .g3-picker button{width:48px;height:52px;border-radius:12px;background:rgba(238,240,255,.08);color:#eef0ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:600}
+#guide3 .g3-picker svg{width:24px;height:24px}
+#guide3 .g3-pad{display:grid;grid-template-columns:repeat(4,48px);gap:6px}
+#guide3 .g3-pad button{width:48px;padding:0;font-size:1.4rem}
 #guide2 .g2-main{flex:1;min-height:0;display:flex;flex-direction:column}
 @media (min-width:860px) and (min-aspect-ratio:5/4){#guide2 .g2-main{flex-direction:row;align-items:stretch;gap:14px;padding-right:max(16px,env(safe-area-inset-right,0px))}#guide2 .g2-main .g-stage{flex:1.4}#guide2 .g2-radio{flex:1;max-width:420px;max-height:none;margin:0 0 6px;align-self:stretch}}
 #guide2 .g2-tools{display:flex;gap:6px;justify-content:center;padding:0 14px 8px}
@@ -212,6 +221,7 @@ body.guideon #capTip,body.guideon #caption,body.guideon #coopNav,body.guideon #b
 .g-end{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
 .g-end svg{height:96px;width:auto}
 .g-end .lsum{width:100%}
+.g-end button{width:100%;max-width:320px}
 .g-tutcv{display:block;width:100%;height:auto;aspect-ratio:560/300;border-radius:14px;margin:4px 0 6px;background:#0a1029}
 .g-tutnav{display:flex;align-items:center;gap:10px;margin-top:6px}
 .g-tutnav span{flex:1;opacity:.6;font-size:.85rem;white-space:nowrap}
@@ -625,6 +635,13 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
   <div class="g2-main"><div class="g-stage"><canvas></canvas></div>
   <div class="g2-radio" role="status" aria-live="polite"></div></div>
   <div class="g2-tools" role="group" aria-label="Tool"><button data-g2mode="beam" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 5V19Z" fill="#ffd98a" opacity=".85"/><circle cx="4" cy="12" r="2.5" fill="#fff6c8"/></svg>Beam</button><button data-g2mode="buoy" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 19H17L15 9H9Z" fill="#e8504a"/><path d="M8 14H16" stroke="#fff" stroke-width="2"/><circle cx="12" cy="6.5" r="2" fill="#fff6c8"/></svg>Buoy</button><button data-g2mode="mark" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="#ffe9a8" stroke-width="2" stroke-dasharray="3 2.4"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#ffe9a8">?</text></svg>Mark</button></div>
+  <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
+</div>
+<div id="guide3" hidden>
+  <div class="g-top"><button class="g-close" type="button" aria-label="Leave the game">&times;</button><div class="g-title"><b>Guiding Light 3.0</b><span class="g-role"></span></div><button class="g-help" type="button" aria-label="How to play">?</button></div>
+  <div class="g-stats"><span class="g-pill g3-turn"><span>Turn</span> <b class="notr">1</b></span><span class="g-pill g-lives"></span><span class="g-pill g3-gold"><span>Treasure</span> <b class="notr">0 / 3</b></span><span class="g-pill g3-ph"><b>Ready</b><span class="notr"></span></span></div>
+  <div class="g3-clock"><i></i></div>
+  <div class="g-stage"><canvas></canvas><div class="g-toast" role="status"></div><div class="g3-picker" role="group" aria-label="Draw on the chart" hidden><button data-icon="rock" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="14" rx="8" ry="5.5" fill="#b8b5c9"/><ellipse cx="10" cy="12" rx="3.5" ry="2.4" fill="#dcdae8"/></svg>Rock</button><button data-icon="tall" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20 8 5 12 2.500 16 5 18 20Z" fill="#b8b5c9"/></svg>Tall rock</button><button data-icon="whirl" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c1 0 1.5 1 .8 1.8-1 1-3 .5-3.300-1.200C9 10 11 8 13.500 8.500 16.500 9 17.500 12.500 16 15c-2 3-7 3-9-.5C5 11 7 6 12 5.500c3.500-.3 6 1.500 7 4" fill="none" stroke="#9fd3ff" stroke-width="2" stroke-linecap="round"/></svg>Whirlpool</button><button data-icon="clear" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4.500 5L19 7" fill="none" stroke="#7dff9a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear</button><button data-icon="danger" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21.500 20H2.500Z" fill="#ff6b6b"/><path d="M12 9v5" stroke="#fff" stroke-width="2.400" stroke-linecap="round"/><circle cx="12" cy="17" r="1.300" fill="#fff"/></svg>Danger</button><button data-icon="erase" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="#eef0ff" stroke-width="2.400" stroke-linecap="round"/></svg>Erase</button><button data-icon="ping" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="#ffd678"/><circle cx="12" cy="12" r="7.500" fill="none" stroke="#ffd678" stroke-width="2"/></svg>Ping</button></div></div>
   <div class="g-bottom"><p class="g-msg" role="status"></p><div class="g-btns"></div></div>
 </div>
 <div id="boardMap" class="notr" role="img" hidden></div>
