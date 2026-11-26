@@ -595,7 +595,7 @@
   }
 
   /* ---------- The keeper's picker: tap a square, then what is there ---------- */
-  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['clear', 'Clear'], ['danger', 'Danger'], ['trap', 'Trap'], ['erase', 'Erase'], ['ping', 'Ping']];
+  var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap'], ['erase', 'Erase'], ['ping', 'Ping']];
   var G3_WINDS = [['wind-n', 'North'], ['wind-e', 'East'], ['wind-s', 'South'], ['wind-w', 'West'], ['back', 'Back']];
   function g3PickerFill() {
     var pk = g3El().querySelector('.g3-picker'), list = g3.pickWind ? G3_WINDS : G3_PICKS;
@@ -613,10 +613,10 @@
         c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(14, 14, 13, 0, 7); c.fill();
         if (icon === 'trap') g3Trap(c, 14, 14, 28, 0); else g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
       }
-      if (icon === 'trap' && g3.G.trapTurn === g3.G.turn) {
-        if (g3TrapHere()) b.querySelector('span').textContent = 'Take back';
-        else { b.disabled = true; b.querySelector('span').textContent = 'Trap used'; }
-      }
+      if (icon === 'trap' && g3TrapHere()) b.querySelector('span').textContent = 'Take back';
+      else if (icon === 'trap' && g3.G.trapTurn === g3.G.turn) { b.disabled = true; b.querySelector('span').textContent = 'Trap used'; }
+      // A trap from an earlier turn stays where it is: it cannot be erased, and a second one cannot go on top of it.
+      if ((icon === 'erase' || icon === 'trap') && g3OldTrapHere()) b.disabled = true;
       b.onclick = function () {
         if (!g3 || !g3.picker) return;
         var p = g3.picker;
@@ -632,6 +632,7 @@
     window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush();
   }
   // This turn's trap, on the picked square (it can still be taken back).
+  function g3OldTrapHere() { var p = g3.picker, G = g3.G; return !!p && G.traps.some(function (t) { return t.x === p[0] && t.y === p[1] && t.turn !== G.turn; }); }
   function g3TrapHere() { var p = g3.picker, G = g3.G; return !!p && G.traps.some(function (t) { return t.x === p[0] && t.y === p[1] && t.turn === G.turn; }); }
   function g3PlacePicker() {
     var pk = g3El().querySelector('.g3-picker'), cam = g3Cam();
