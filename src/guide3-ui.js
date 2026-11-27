@@ -421,13 +421,12 @@
     var L = ox / base, T = oy / base, R = g3w / base - L - n, B = g3h / base - T - n, key = [n, L.toFixed(2), T.toFixed(2), R.toFixed(2), B.toFixed(2)].join();
     if (g3.sheet && g3.sheet.key === key) return g3.sheet;
     // The sheet reaches the screen's edges, and always past the squares, their letters and the border (it may run off screen there).
-    // On a wide screen the paper keeps narrow margins beside the squares (the table shows beyond), so the squares get the room.
-    var wide = L + R > 6, Lm = wide ? Math.min(L - 0.14, 4.4) : L - 0.14, Rm = wide ? Math.min(R - 0.14, 4.4) : R - 0.14;
+    // On a wide screen the paper keeps modest margins beside the squares and ends in a rolled-up scroll on each side,
+    // the paper running on into the roll; the table shows beyond.
+    var wide = L + R > 6, RW = 1.3, rollL = wide && L - 0.14 - RW * 0.6 >= 2.6, rollR = wide && R - 0.14 - RW * 0.6 >= 2.6;
+    var Lm = wide ? Math.min(L - 0.14 - (rollL ? RW * 0.6 : 0), 5) : L - 0.14, Rm = wide ? Math.min(R - 0.14 - (rollR ? RW * 0.6 : 0), 5) : R - 0.14;
     var x0 = Math.min(-Lm, -0.8), y0 = Math.min(-T + 0.14, -0.8), x1 = Math.max(n + Rm, n + 0.36), y1 = Math.max(n + B - 0.14, n + 0.36), rnd = guideRand((g3.seed % 99991) + 7), pts = [];
     var ph = [rnd() * 6, rnd() * 6, rnd() * 6];
-    // Folded-out side pages, where a wide screen has room for them: the chart's sides become straight folds.
-    var fL = wide ? Math.min(L - Lm - 0.35, Lm * 0.95) : 0, fR = wide ? Math.min(R - Rm - 0.35, Rm * 0.95) : 0;
-    if (fL < 1.2) fL = 0; if (fR < 1.2) fR = 0;
     var side = function (ax, ay, bx, by, nx, ny, flat) {
       var len = Math.hypot(bx - ax, by - ay), k = Math.max(10, Math.round(len * 7)), tear = 0, depth = 0;
       for (var i = 0; i < k; i++) {
@@ -439,21 +438,13 @@
         pts.push([x + nx * d, y + ny * d]);
       }
     };
-    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0, fR > 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0, fL > 0);
-    var flap = function (xa, dir, w) {
-      // A page folded back: its outer edge torn and a little shorter, as if it tilts away.
-      if (!w) return null;
-      var out = [], xo = xa + dir * w, k = Math.round((y1 - y0) * 6);
-      out.push([xa, y0 + 0.08]);
-      for (var i = 0; i <= k; i++) { var t = i / k, y = (y0 + 0.4) + (y1 - y0 - 0.8) * t; out.push([xo - dir * (0.06 + rnd() * 0.12 + (rnd() < 0.05 ? 0.25 : 0)), y]); }
-      out.push([xa, y1 - 0.08]);
-      return out;
-    };
-    var flaps = [flap(x0, -1, fL), flap(x1, 1, fR)];
+    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0, rollR); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0, rollL);
+    var rolls = [rollL ? { x: x0, w: RW } : null, rollR ? { x: x1, w: RW } : null];
     // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
     var d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
     if (wide) {
-      var lw = Lm - 0.95, lx = -Lm / 2 - 0.3, rw = Rm - 0.5, rx = n + Rm / 2 + 0.05;
+      // (a roll covers the outer 0.65 squares of each margin)
+      var lw = Lm - 0.95 - (rollL ? 0.65 : 0), lx = -Lm / 2 - 0.3 + (rollL ? 0.32 : 0), rw = Rm - 0.5 - (rollR ? 0.65 : 0), rx = n + Rm / 2 + 0.05 - (rollR ? 0.32 : 0);
       d.ribbon = { x: lx, y: 0.55, w: lw + 0.3, tall: true };
       d.small = { x: lx, y: 1.75, r: Math.min(0.62, lw * 0.16) };
       d.ship = { x: lx + 0.2, y: n * 0.45, w: Math.min(lw, 3.5) };
@@ -474,7 +465,7 @@
       if (B >= 4.2) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
     }
     var hl = [[x1 - 0.7, y0 + 0.5, 0.12], [x0 + 0.6, y1 - 0.45, 0.09]];
-    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl, flaps: flaps };
+    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl, rolls: rolls };
     return g3.sheet;
   }
   function g3DrawPaper(c, cam, now) {
@@ -482,20 +473,6 @@
     var sh = g3Sheet(), d = sh.deco, tr = window.UnwindI18n ? window.UnwindI18n.t : function (t) { return t; };
     c.fillStyle = P.table; c.fillRect(0, 0, g3w, g3h);
     var sheet = function () { c.beginPath(); sh.pts.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
-    // The folded side pages first, under the chart: darker toward the fold, with faint rhumb lines and a worn rim.
-    sh.flaps.forEach(function (f, fi) {
-      if (!f) return;
-      var path = function () { c.beginPath(); f.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
-      c.save(); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.1; path(); c.fillStyle = '#c99a58'; c.fill(); c.restore();
-      var xa = X(f[0][0]), xo = X(f[3][0]), g = c.createLinearGradient(xa, 0, xo, 0);
-      g.addColorStop(0, '#b7884a'); g.addColorStop(0.25, '#cfa060'); g.addColorStop(1, '#dcb070');
-      c.save(); path(); c.clip(); c.fillStyle = g; c.fillRect(Math.min(xa, xo) - 4, 0, Math.abs(xo - xa) + 8, g3h);
-      c.strokeStyle = 'rgba(61,35,20,.13)'; c.lineWidth = 0.8; c.beginPath();
-      for (var rl = -6; rl <= 6; rl++) { c.moveTo(xa, Y(sh.y0) + rl * cs * 1.6); c.lineTo(xo, Y(sh.y0) + rl * cs * 1.6 + (fi ? 1 : -1) * cs * 2.2 + cs * 3); }
-      c.stroke();
-      c.strokeStyle = 'rgba(74,40,8,.26)'; c.lineWidth = cs * 0.5; path(); c.stroke(); c.restore();
-      c.strokeStyle = '#1d0f06'; c.lineWidth = 2; path(); c.stroke();
-    });
     c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.12; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
     var W = (sh.x1 - sh.x0) * cs, H = (sh.y1 - sh.y0) * cs, SX = X(sh.x0), SY = Y(sh.y0);
     c.save(); sheet(); c.clip();
@@ -521,12 +498,31 @@
     c.fillStyle = 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
     // Holes, a darker worn rim and age at the edges.
     sh.holes.forEach(function (h) { c.fillStyle = 'rgba(90,52,16,.45)'; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs * 1.7, 0, 7); c.fill(); c.fillStyle = P.table; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs, 0, 7); c.fill(); });
-    sh.flaps.forEach(function (f, fi) { if (!f) return; var xe = X(fi ? sh.x1 : sh.x0), fg = c.createLinearGradient(xe, 0, xe + (fi ? -1 : 1) * cs * 0.6, 0); fg.addColorStop(0, 'rgba(74,44,12,.32)'); fg.addColorStop(1, 'rgba(74,44,12,0)'); c.fillStyle = fg; c.fillRect(Math.min(xe, xe + (fi ? -1 : 1) * cs * 0.6), 0, cs * 0.6, g3h); });
+    // The paper curls up into each roll: a soft shadow on it, just inside the roll.
+    sh.rolls.forEach(function (r, fi) { if (!r) return; var xe = X(r.x) + (fi ? -1 : 1) * r.w * cs * 0.5, dir = fi ? -1 : 1, fg = c.createLinearGradient(xe, 0, xe + dir * cs * 0.8, 0); fg.addColorStop(0, 'rgba(60,34,8,.45)'); fg.addColorStop(1, 'rgba(60,34,8,0)'); c.fillStyle = fg; c.fillRect(Math.min(xe, xe + dir * cs * 0.8), 0, cs * 0.8, g3h); });
     c.strokeStyle = 'rgba(74,40,8,.28)'; c.lineWidth = cs * 0.7; sheet(); c.stroke();
     c.strokeStyle = 'rgba(58,30,6,.35)'; c.lineWidth = cs * 0.22; sheet(); c.stroke();
     c.restore();
     c.strokeStyle = '#1d0f06'; c.lineWidth = 2.2; sheet(); c.stroke();
     c.save(); c.translate(-1, -1); c.strokeStyle = 'rgba(122,74,26,.7)'; c.lineWidth = 1; sheet(); c.stroke(); c.restore();
+    // The rolled-up ends of the scroll, over the paper's side edges, a little taller than the sheet.
+    sh.rolls.forEach(function (r) {
+      if (!r) return;
+      var xr = X(r.x), w = r.w * cs, xl = xr - w / 2, top = Y(sh.y0) - cs * 0.3, bot = Y(sh.y1) + cs * 0.3, ry = w * 0.2;
+      var g = c.createLinearGradient(xl, 0, xl + w, 0);
+      g.addColorStop(0, '#4a2c0e'); g.addColorStop(0.12, '#8a5a26'); g.addColorStop(0.38, '#e2b877'); g.addColorStop(0.55, '#d2a464'); g.addColorStop(0.82, '#9a6a30'); g.addColorStop(1, '#4a2c0e');
+      var body = function () { c.beginPath(); c.moveTo(xl, top); c.lineTo(xl, bot); c.ellipse(xr, bot, w / 2, ry, 0, Math.PI, 0, true); c.lineTo(xl + w, top); c.closePath(); };
+      c.save(); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = cs * 0.3; c.shadowOffsetY = cs * 0.12; body(); c.fillStyle = g; c.fill(); c.restore();
+      c.save(); body(); c.clip(); c.strokeStyle = 'rgba(74,44,12,.18)'; c.lineWidth = 1;
+      for (var vl = 1; vl < 6; vl++) { var vx = xl + w * vl / 6 + Math.sin(vl * 2.3) * w * 0.03; c.beginPath(); c.moveTo(vx, top); c.lineTo(vx, bot + ry); c.stroke(); }
+      c.restore();
+      c.strokeStyle = '#2a1608'; c.lineWidth = 1.4; body(); c.stroke();
+      // The top end shows the paper's turns.
+      c.beginPath(); c.ellipse(xr, top, w / 2, ry, 0, 0, Math.PI * 2); c.fillStyle = '#c99a58'; c.fill(); c.strokeStyle = '#2a1608'; c.lineWidth = 1.4; c.stroke();
+      c.strokeStyle = 'rgba(74,44,12,.75)'; c.lineWidth = 1;
+      [0.78, 0.58, 0.4, 0.24].forEach(function (k, ki) { c.beginPath(); c.ellipse(xr + (ki % 2 ? -1 : 1) * w * 0.02, top, w / 2 * k, ry * k, 0, 0, Math.PI * 2); c.stroke(); });
+      c.fillStyle = '#3d240c'; c.beginPath(); c.ellipse(xr, top, w * 0.06, ry * 0.12 + 0.6, 0, 0, Math.PI * 2); c.fill();
+    });
     // The compass roses.
     if (rose.faint) g3Put(c, g3Pic('', 'rose'), X(rose.x), Y(rose.y) - cs * 0.06, cs * rose.r * 2, 0, 0.3);
     else g3Put(c, g3Pic(rose.noFleur ? 'map' : '', rose.noFleur ? 'roseSmall' : 'rose'), X(rose.x), Y(rose.y) - (rose.noFleur ? 0 : cs * rose.r * 0.06), cs * rose.r * (rose.noFleur ? 2.25 : 2.5));
