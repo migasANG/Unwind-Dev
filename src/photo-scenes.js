@@ -21,7 +21,8 @@
   var photoState = {};   // season + orientation -> 'loading' | 'ok' | 'failed'
   function photoPortrait() { return window.innerWidth / Math.max(1, window.innerHeight) < 0.8; }
   function photoUrl(season, port) { return 'bg/' + season + '-' + (port ? 'portrait' : 'landscape') + '.webp'; }
-  function photoSeason(season) { return !!PHOTO_GEO[season] && !window.unwindDrawnSeasons; }
+  // A picture that could not load (no bg folder next to the page, or offline) falls back to the drawn scene.
+  function photoSeason(season) { return !!PHOTO_GEO[season] && !window.unwindDrawnSeasons && photoState[season + photoPortrait()] !== 'failed'; }
   function photoReady(season) { var k = season + photoPortrait(); return photoState[k] === 'ok' || photoState[k] === 'failed'; }
   // Loads (and decodes) a season's picture, so it can fade in already drawn. Calls back either way.
   function photoLoad(season, done) {

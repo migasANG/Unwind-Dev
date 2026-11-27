@@ -665,7 +665,8 @@
     }
     // A golden arrow only appears when the player truly has no move left. While any arrow can still leave
     // (or crack ice), play goes on; once the last move is made, this runs again and hands out the golden arrow.
-    if (legalMoves(level, state).length || iceOpensPlay(level, state)) return false;
+    var movesLeft = legalMoves(level, state).length || iceOpensPlay(level, state);
+    if (movesLeft && !state.rescueEarly) return false;
     // Arrows that are blocked the least come first. If nothing proves clearable, the best one is freed and the check runs again.
     // A compass keeps its own rule, so it is only ever freed if nothing else can be.
     var order = live.map(function (a) { var s = 0; group(level, a, state).forEach(function (m) { s += obstaclesOf(level, state, m).solid; }); return { a: a, s: s + (a.kind === 'compass' ? 1000 : 0) }; }).sort(function (p, q) { return p.s - q.s; });
@@ -674,6 +675,8 @@
       var f = order[i].a;
       if (tryRescue(level, state, function () { free(f); })) { state.rescued.freed.push(f.id); return true; }
     }
+    // With moves still left, wait for a rescue that is proven to work.
+    if (movesLeft) return false;
     // Nothing single proved enough, so make progress and let the check run again.
     state.burning = Object.assign({}, state.burning); state.frozen = Object.assign({}, state.frozen); state.picked = Object.assign({}, state.picked); state.freed = Object.assign({}, state.freed);
     var step = soft.filter(function (c) { return c.cost > 0; })[0];

@@ -499,11 +499,11 @@
     coop.boards.forEach(function (B, i) {
       if (i === 0) return;
       E.resetBoard(B.level);
-      B.state = E.newState(B.level); B.state.safe = !room.tutorial && !room.kind;
+      B.state = E.newState(B.level); B.state.safe = !room.tutorial && !room.kind; B.state.rescueEarly = !!room.endless;
     });
     if (!rotating()) resetCycle();
     begin({ id: 'coop-0', mode: 'coop', coop: true, level: room.boards[0], title: coopWhere(0), chapter: backgroundPalette(), sunY: 34, background: true });
-    state.safe = !room.tutorial && !room.kind;
+    state.safe = !room.tutorial && !room.kind; state.rescueEarly = !!room.endless;
     coop.boards[0].state = state;
     coopSyncLives();
     setCaption(room.caption ? room.caption : room.tutorial ? room.boards[0].caption : coop.n === 2 ? 'Co-op test: clear both boards. Use the arrow at the edge to switch boards.' : 'Co-op test: clear all four boards. Use the arrows at the edges to switch boards.');
@@ -1211,6 +1211,8 @@
     var c = current, P = POEMS[c.poem], pr = poemProgress(P.id), i = c.line;
     ended = true; refresh();
     pr.written[i] = true; pr.hits = (pr.hits || 0) + collisions;
+    // Each line keeps its own moon (written) and star (written without a single bump), like a level.
+    progress.done[P.id + '-' + (i + 1)] = true; if (collisions === 0) progress.perfect[P.id + '-' + (i + 1)] = true;
     // Back on an earlier line, finishing it returns to the furthest line; otherwise the next unwritten one.
     var next = -1;
     if (i < pr.at && !pr.written[pr.at]) next = pr.at;
@@ -1794,12 +1796,14 @@
       canvas.style.transition = 'none'; canvas.style.transform = 'translate(' + (dx * 35) + '%,' + (dy * 35) + '%)'; canvas.style.opacity = '0';
       requestAnimationFrame(function () { requestAnimationFrame(function () { canvas.style.transition = 'transform .32s ease, opacity .32s ease'; canvas.style.transform = ''; canvas.style.opacity = ''; }); });
     }
-    coop.boards[from].fx = stashFx(); coop.boards[from].state = state;
+    coop.boards[from].fx = stashFx(); coop.boards[from].state = state; coop.boards[from].bee = bee;
     coop.idx = i;
     var B = coop.boards[i];
     current.level = B.level; current.id = 'coop-' + i; state = B.state;
     // Each board has its own flowers, so its own bee.
     bee = null; if (B.level.flowers && B.level.flowers.length) sendBee(state.launches, performance.now() + 500);
+    // A bee the player already watched fly in is still sitting on its flower: no second entrance.
+    if (bee && B.bee && B.bee.index === bee.index) bee = B.bee;
     if (B.fx) restoreFx(B.fx);
     else {
       flights = []; bounces = {}; nudges = {}; blockerGlow = {}; wakes = []; ripples = []; embers = []; praises = []; unoFlip = {}; angles = {};
@@ -2047,7 +2051,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-i';
+  var BUILD = '2026.11.27-j';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2506,6 +2510,8 @@
     E.resetBoard(c.level);
     state = E.newState(c.level);
     state.safe = true;
+    // Open Waters: once a board can no longer be cleared, the golden arrow comes at once instead of after every other move.
+    state.rescueEarly = c.mode === 'endless';
     if (c.setup) c.setup(state);
     bee = null; beesLeaving = []; ambience = []; windAt = 0; embers = []; cards = [];
     c.level.arrows.forEach(function (a) { delete a.burn; delete a.burnUntil; delete a.rot; });
@@ -3455,7 +3461,7 @@
   }
   function applySeason(season) {
     activeScene = season;
-    if (season && photoSeason(season)) { photoLoad(season); if (!applySeason.pre) { applySeason.pre = 1; setTimeout(photoPreloadAll, 2500); } }
+    if (season && photoSeason(season)) { photoLoad(season, function () { if (activeScene === season && !photoSeason(season)) { var b2 = $('seasonBg'); b2.removeAttribute('data-season'); applySeason(season); } }); if (!applySeason.pre) { applySeason.pre = 1; setTimeout(photoPreloadAll, 2500); } }
     document.body.classList.toggle('season', !!season);
     $('sun').hidden = !!season;
     var bg = $('seasonBg');
@@ -3622,8 +3628,10 @@
   /*__PHOTO_SCENES__*/
   function seasonScene(season) {
     if (season === 'coast') return coastScene();
-    if (/-alt$/.test(season) && !photoSeason(season)) season = season.replace(/-alt$/, '');
-    if (photoSeason(season)) return photoScene(season);
+    // An alternative picture that cannot load falls back to its season's drawn scene.
+    var altFailed = /-alt$/.test(season) && !photoSeason(season);
+    if (altFailed) season = season.replace(/-alt$/, '');
+    if (!altFailed && photoSeason(season)) return photoScene(season);
     if (season === 'winter') {
       var pine = function (x, y, k) { return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect x="-5" y="-4" width="10" height="20" fill="#4a3528"/><path d="M0-96 20-66H9L30-36H13L38-2H-38L-13-36H-30L-9-66H-20Z" fill="#1f5a50"/><path d="M0-96 20-66H9L30-36H13L38-2H0Z" fill="#17473f"/><path d="M0-96 13-76 3-79-3-73-13-76ZM-22-50-9-54-3-47 7-53 22-50 13-36-3-41-13-36ZM-31-14-14-20-3-12 11-20 31-14 38-2H-38Z" fill="#fff"/></g>'; };
       var man = function (x, y, k, b2) { return '<g class="sway' + (b2 ? ' b' : '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><ellipse cy="10" rx="32" ry="7" fill="#b9d3e6" opacity=".8"/><circle cy="-16" r="26" fill="url(#wSnow)"/><circle cy="-52" r="19" fill="url(#wSnow)"/><circle cy="-80" r="14" fill="url(#wSnow)"/><circle cx="-5" cy="-83" r="2" fill="#1c2238"/><circle cx="5" cy="-83" r="2" fill="#1c2238"/><path d="M0-79 15-75 0-73Z" fill="#f08020"/><path d="M-6-74Q0-70 6-74" fill="none" stroke="#1c2238" stroke-width="1.500" stroke-dasharray="1.500 2"/><path d="M-14-68Q0-61 14-68V-62Q0-55-14-62Z" fill="#c8323c"/><path d="M6-62h8v20h-8Z" fill="#c8323c"/><path d="M6-48h8M6-44h8" stroke="#fff" stroke-width="1.500"/><rect x="-13" y="-108" width="26" height="17" rx="1" fill="#22243a"/><rect x="-13" y="-96" width="26" height="4" fill="#c8323c"/><rect x="-19" y="-92" width="38" height="4" rx="2" fill="#22243a"/><circle cy="-53" r="2.200" fill="#1c2238"/><circle cy="-43" r="2.200" fill="#1c2238"/><circle cy="-22" r="2.400" fill="#1c2238"/><path d="M-18-54-44-68M-34-63-42-58M-34-63-40-72M18-54 44-70M34-64 42-60M34-64 40-74" fill="none" stroke="#5a3e2a" stroke-width="2.800" stroke-linecap="round"/></g></g>'; };
@@ -4823,8 +4831,16 @@
     if (tab === 'poems') {
       html += '<p class="note">Write a poem one line at a time. Compass arrows push the letters sideways, and letters with nothing under them fall. If a line can no longer be finished, it is lost, and you try that line again. The hint button can take you back to an earlier line.</p><div class="lv wide">' + POEMS.map(function (P, i) {
         var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
-        return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + '">' + P.title + (started ? ' · Line ' + (pr.at + 1) : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
+        return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + '"><span>' + P.title + '</span>' + (started ? '<span>· Line ' + (pr.at + 1) + '</span>' : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
       }).join('') + '</div>';
+      POEMS.forEach(function (P, pi) {
+        var pr = poemProgress(P.id), n = E.specialRoom(P.key, window.UnwindI18n.lang()).boards.length, out = '';
+        for (var li = 0; li < n; li++) {
+          var id = P.id + '-' + (li + 1), open = li <= (pr.at || 0) || progress.done[id];
+          out += '<button data-pl="' + pi + ':' + li + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '"' + (open ? '' : ' disabled') + ' aria-label="Line ' + (li + 1) + (progress.perfect[id] ? ', perfect' : progress.done[id] ? ', cleared' : '') + '">' + (li + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
+        }
+        html += '<div class="chapter">' + (POEMS.length > 1 ? P.title + ' · ' : '') + 'Lines</div><div class="lv">' + out + '</div>';
+      });
       if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
     }
     if (tab === 'endless') {
@@ -4870,6 +4886,7 @@
     if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { markTut('boards'); showTutorial(['boards'], 0, false, 'play'); };
     s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
     s.querySelectorAll('[data-poem]').forEach(function (b) { b.onclick = function () { openPoem(undefined, +b.getAttribute('data-poem')); }; });
+    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { var v = b.getAttribute('data-pl').split(':'); openPoem(+v[1], +v[0]); }; });
     if (s.querySelector('#mPoemRead')) s.querySelector('#mPoemRead').onclick = function () { var room = E.specialRoom('poem', window.UnwindI18n.lang()); poemFinale(null, room.boards.map(function (L) { return L.line; })); };
     if (tab !== 'endless') return;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
@@ -4942,8 +4959,8 @@
     var paint = function () {
       var chip = function (t) { return '<button data-type="' + t[0] + '" aria-pressed="' + !off[t[0]] + '"' + (locked ? ' disabled' : '') + '>' + typeIcon(t[0]) + '<span>' + t[1] + '</span></button>'; };
       box.innerHTML = '<div class="obox" role="dialog" aria-label="Arrow types"><h3>Arrow types</h3><p class="note">' + (locked ? 'Chosen by the host.' : 'Choose which arrows can appear on the boards. Plain arrows are always there.') + '</p>' +
-        '<div class="chapter">Arrows</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
-        (mp ? '<div class="chapter">Multiple boards</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
+        '<div class="chapter">The Quiver</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
+        (mp ? '<div class="chapter">Board Hoppers</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
         (seas ? '<div class="chapter">Seasons of the year</div><p class="note">' + (mp ? 'Each board gets its own season effects.' : 'Season effects on the boards. Pick any number.') + '</p><div class="tgrid">' + SEASON_TYPES.map(function (t) { return '<button data-season="' + t[0] + '" aria-pressed="' + (seas.indexOf(t[0]) >= 0) + '">' + typeIcon(t[0]) + '<span>' + t[1] + '<small>' + t[2] + '</small></span></button>'; }).join('') + '</div>' : '') +
         (locked ? '' : '<div class="obtns"><button id="tAll">All</button><button id="tNone">None</button></div>') + '<button class="primary" id="tDone">Done</button></div>';
       // Chips change in place, so the box does not pop in again on every tap.
