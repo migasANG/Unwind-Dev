@@ -11,10 +11,10 @@
     autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] },
     // The alternative scenes. Their master pictures have other sizes (master), and their portraits are cut from a
     // part of the picture (port's third number is where that cut starts). Positions are in master coordinates.
-    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55385, 1995, 0], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
-    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55385, 1992, 0], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
-    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
-    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
+    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55387, 1995, 0], panW: 3403, clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
+    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55387, 1992, 0], panW: 3403, clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
+    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41716, 1765, 0], panW: 2857, clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
+    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41716, 1640, 0], panW: 2857, clouds: { big: [1248, 86, 334, 128] } }
   };
   // An alternative scene has its season's weather, wildlife and music.
   function photoBase(season) { return String(season).replace(/-alt$/, ''); }
@@ -47,7 +47,8 @@
   }
   function photoPreloadAll() { SEASON_ORDER.forEach(function (s) { photoLoad(s); }); }
   function photoScene(season) {
-    var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? 1440 : 2560, H = port ? 3120 : 1440;
+    // On phones a wide picture is kept whole, wider than the screen, and the view pans slowly across it.
+    var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? (G.panW || 1440) : 2560, H = port ? 3120 : 1440, pw = W / 1440;
     var k = port ? G.port[0] : G.land[0];
     var T = function (x, y) { return port ? [(x - (G.port[2] || 0)) * k, y * k + G.port[1]] : [x * k - G.land[1], y * k - G.land[2]]; };
     // The weather and wildlife were placed on the first scenes' masters (3320 x 1860); the same spots, scaled.
@@ -63,7 +64,8 @@
     if (port) {
       // On tall screens a few more clouds spread over the extra sky, sized like the first scenes' clouds.
       var cb = G.clouds.big, cs = G.clouds.small || G.clouds.big, sm = G.clouds.small ? 'small' : 'big', zk = G.master ? 0.94737 * 446 / cb[2] : k;
-      clouds.push(['big', 760, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+      clouds.push(['big', 760 * pw, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120 * pw, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980 * pw, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+      if (pw > 1.5) clouds.push(['big', 1300 * pw, 760, cb[2] * zk * 0.8, cb[3] * zk * 0.8]);
     } else if (G.land[2] < -150) {
       // A wide picture shown whole has extra sky above it: a couple more clouds drift there.
       var lb = G.clouds.big, ls = G.clouds.small || G.clouds.big, lsm = G.clouds.small ? 'small' : 'big', lk = 0.77 * 446 / lb[2], sky = -G.land[2];
@@ -86,7 +88,7 @@
     }
     // Each season's own weather and wildlife.
     out += photoExtras(base, W, H, U, r, f, Tw, k, port);
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="' + (port ? 'xMidYMax' : 'xMinYMax') + ' slice" aria-hidden="true"><defs>' +
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="' + (port && !G.panW ? 'xMidYMax' : 'xMinYMax') + ' slice"' + (port && G.panW ? ' data-pan="1"' : '') + ' aria-hidden="true"><defs>' +
       '<radialGradient id="pGlow"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset=".55" stop-color="#ffc35c" stop-opacity=".18"/><stop offset="1" stop-color="#ffc35c" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pSmoke"><stop offset="0" stop-color="#f7f7f9" stop-opacity=".95"/><stop offset=".55" stop-color="#e9eaef" stop-opacity=".7"/><stop offset="1" stop-color="#dfe1e8" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pFire"><stop offset="0" stop-color="#fffbd0"/><stop offset=".35" stop-color="#f3ff8a" stop-opacity=".8"/><stop offset="1" stop-color="#d8ff5a" stop-opacity="0"/></radialGradient>' +

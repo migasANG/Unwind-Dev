@@ -19,6 +19,9 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg{position:fixed;inset:0;overflow:hidden}
 .scenebg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .scenebg.baking *{animation:none!important}
+.scenebg .ppan{position:absolute;inset:0;animation:ppan 40s ease-in-out infinite alternate;will-change:transform}
+@keyframes ppan{from{transform:translateX(0)}to{transform:translateX(var(--pan))}}
+@media (prefers-reduced-motion:reduce){.scenebg .ppan{animation:none}}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
 .scenebg{transition:opacity var(--bgfade,1.4s) ease-in-out;will-change:opacity}
@@ -361,6 +364,9 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv.wide{grid-template-columns:1fr}
 .lv.wide button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:.9375rem}
 .lv.wide button{display:flex;align-items:center;justify-content:center;gap:6px}
+.lv.wide .mk{width:22px;height:22px;top:-7px}
+.lv.wide .mk.m{left:-4px}
+.lv.wide .mk.s{right:-4px}
 .poemcard{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.96);z-index:7;width:min(420px,calc(100vw - 32px));padding:20px 22px;border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 8px 30px rgba(0,0,0,.28);text-align:center;opacity:0;transition:opacity .5s ease,transform .5s ease;pointer-events:none}
 .poemcard.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .poemcard.out{opacity:0}

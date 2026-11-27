@@ -21,6 +21,9 @@ body{background:var(--sky-a);color:var(--ink);font-family:var(--body);-webkit-ta
 .scenebg{position:fixed;inset:0;overflow:hidden}
 .scenebg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .scenebg.baking *{animation:none!important}
+.scenebg .ppan{position:absolute;inset:0;animation:ppan 40s ease-in-out infinite alternate;will-change:transform}
+@keyframes ppan{from{transform:translateX(0)}to{transform:translateX(var(--pan))}}
+@media (prefers-reduced-motion:reduce){.scenebg .ppan{animation:none}}
 .scenebg svg.mover{will-change:transform,opacity}
 .scenebg.pending{opacity:.001;pointer-events:none}
 .scenebg{transition:opacity var(--bgfade,1.4s) ease-in-out;will-change:opacity}
@@ -363,6 +366,9 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv.wide{grid-template-columns:1fr}
 .lv.wide button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:.9375rem}
 .lv.wide button{display:flex;align-items:center;justify-content:center;gap:6px}
+.lv.wide .mk{width:22px;height:22px;top:-7px}
+.lv.wide .mk.m{left:-4px}
+.lv.wide .mk.s{right:-4px}
 .poemcard{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.96);z-index:7;width:min(420px,calc(100vw - 32px));padding:20px 22px;border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 8px 30px rgba(0,0,0,.28);text-align:center;opacity:0;transition:opacity .5s ease,transform .5s ease;pointer-events:none}
 .poemcard.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .poemcard.out{opacity:0}
@@ -2119,10 +2125,12 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     var scale = opts.scale || 1, root = Math.sqrt(scale), fx = opts.effects || [];
     var more = function (count) { return Math.min(count * scale, 14); };
     // Every board carries new arrows. One type at first and more as you drift further, all four on big maps.
-    var kinds = ['ghosts', 'unos', 'phases', 'reds'], step = n % 4, howMany = scale > 1 ? 4 : Math.min(4, 1 + Math.floor(n / 4) + (hard ? 1 : 0)), special = {};
+    // A salt (new for every game) shuffles which arrow types a board brings, so the same stretch of water never repeats.
+    var salt = opts.salt || 0, kinds = ['ghosts', 'unos', 'phases', 'reds'], step = (n + salt) % 4, howMany = scale > 1 ? 4 : Math.min(4, 1 + Math.floor(n / 4) + (hard ? 1 : 0)), special = {};
     for (var q = 0; q < howMany; q++) special[kinds[(step + q) % 4]] = 1;
     var extraOf = hard && n % 2 ? 1 : 0;
-    return {
+    var bonus = salt ? ['twins', 'compass', 'sleepers', 'patient'][Math.floor(salt / 4) % 4] : '';
+    var spec = {
       big: scale > 1, scale: scale,
       w: Math.round(Math.min(9, 6 + size + extra) * root), h: Math.round(Math.min(12, 7 + size + (size > 2 ? 1 : 0) + extra) * root), minLen: 2,
       maxLen: 5 + size + extra + Math.round(root * 1.5), depth: 5 + size + extra * 2,
@@ -2134,6 +2142,8 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       reds: special.reds ? Math.min(more(1), 1 + Math.floor(scale / 5)) : 0, redSlack: scale > 1 ? 0.12 : 0,
       flowers: fx.indexOf('spring') >= 0 ? 0.24 : 0, gaps: Math.max(fx.indexOf('summer') >= 0 ? 0.14 : 0, fx.indexOf('autumn') >= 0 ? 0.24 : 0)
     };
+    if (bonus) spec[bonus] = Math.max(spec[bonus], more(1));
+    return spec;
   }
   // Builds a board, simplifying the mix of special arrows if a seed cannot fit them all.
   function endlessBoard(n, opts, seed) {
@@ -3950,7 +3960,7 @@ window.UnwindI18n = (function () {
     'Spring - Alternative': 'Primavera - Alternativa',
     'Summer - Alternative': 'Verão - Alternativo',
     'Autumn - Alternative': 'Outono - Alternativo',
-    'Focus the background': 'Focar o fundo', 'Every board was stuck, so a golden arrow came to help.': 'Todos os tabuleiros estavam presos, por isso veio uma seta dourada ajudar.', 'Every board was stuck: a golden arrow is waiting on another board.': 'Todos os tabuleiros estavam presos: há uma seta dourada à espera noutro tabuleiro.', 'The Quiver': 'A Aljava', 'Board Hoppers': 'Saltimbancos de Tabuleiro', 'Lines': 'Versos', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
+    'Focus background': 'Focar o fundo', 'Every board was stuck, so a golden arrow came to help.': 'Todos os tabuleiros estavam presos, por isso veio uma seta dourada ajudar.', 'Every board was stuck: a golden arrow is waiting on another board.': 'Todos os tabuleiros estavam presos: há uma seta dourada à espera noutro tabuleiro.', 'The Quiver': 'A Aljava', 'Board Hoppers': 'Saltimbancos de Tabuleiro', 'Lines': 'Versos', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
     'Hides everything but the background, so you can enjoy it. Tap anywhere to come back.': 'Esconde tudo menos o fundo, para o poderes apreciar. Toca em qualquer lado para voltar.',
     'Tap anywhere to come back': 'Toca em qualquer lado para voltar',
     'The background changes with the music in Open Waters, Boarding Up, the challenges and the poem.': 'O fundo muda com a música nas Águas Abertas, nos Tabuleiros em Grupo, nos desafios e no poema.',
@@ -4492,9 +4502,9 @@ window.UnwindI18n = (function () {
   var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
   // Games where the backgrounds and songs rotate (and Next Theme can skip ahead): Open Waters, multi-board play,
   // Boarding Up and the challenges.
-  function rotating() { return !!current && (current.mode === 'endless' || current.mode === 'poem' || current.mode === 'challenge' || !!current.coop); }
+  function rotating() { return !!current && (current.mode === 'endless' || current.mode === 'poem' || current.mode === 'challenge' || current.mode === 'daily' || !!current.coop); }
   // Poems and challenges have no Rewind: Restart is the way back.
-  function noRewind() { return !!current && (current.mode === 'poem' || current.mode === 'challenge'); }
+  function noRewind() { return !!current && (current.mode === 'poem' || current.mode === 'challenge' || current.mode === 'daily'); }
   function cycleOn() { return rotating() && backgroundChoice() === 'default'; }
   function shownBackground() { var b = backgroundChoice(); return b === 'default' ? CYCLE[bgCycle.i] : b; }
   function cycleSeconds() { return M.patternSeconds(colors.music); }
@@ -4740,7 +4750,7 @@ window.UnwindI18n = (function () {
       };
     });
   }
-  // Focus the background: everything but the background fades away until the player taps.
+  // Focus background: everything but the background fades away until the player taps.
   function focusBackground() {
     closeSheet();
     var hint = document.createElement('div');
@@ -4764,7 +4774,7 @@ window.UnwindI18n = (function () {
     // Focusing works everywhere; choosing a background only where the backgrounds rotate.
     var pick = rotating();
     var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<button class="bgfocusbtn" id="bgFocus" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="3.2"/></svg>Focus the background</button>' +
+      '<button class="bgfocusbtn" id="bgFocus" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="3.2"/></svg>Focus background</button>' +
       '<p class="note">Hides everything but the background, so you can enjoy it. Tap anywhere to come back.</p>' +
       (pick ? '<p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel') : ''));
     s.querySelector('#x').onclick = closeSheet;
@@ -4784,6 +4794,8 @@ window.UnwindI18n = (function () {
     var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + ((o.boards || 1) > 1 ? 'b' + o.boards : '') + (scale > 1 ? scale + 'x' : '') + (o.effects.length ? '-' + o.effects.join('') : '');
     progress.endlessBy = progress.endlessBy || {};
     var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009 + o.effects.join('').length * 977;
+    // Every game gets its own board: a fresh salt changes the layout and which arrow types appear.
+    o.salt = 1 + Math.floor(Math.random() * 1e6); seed += o.salt * 7;
     return { o: o, scale: scale, key: key, n: n, seed: seed };
   }
   function startEndless(plan, lvl) {
@@ -6458,7 +6470,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-k';
+  var BUILD = '2026.11.27-l';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6903,8 +6915,10 @@ window.UnwindI18n = (function () {
   function openDaily() {
     var k = todayKey();
     var lvl = E.generate({ w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, compass: 1, trap: [0.05, 0.45] }, k, 40);
-    E.prepare(lvl);
-    begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    E.prepare(lvl); lvl.hints = 0;
+    // The daily puzzle has the rotating backgrounds and songs, like Open Waters.
+    if (!rotating()) resetCycle();
+    begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: backgroundPalette(), sunY: 34, background: true });
   }
   function begin(c) {
     if (coop && coop.online && !c.coop) { netSend({ t: 'leave' }); netClose(); }
@@ -6939,7 +6953,7 @@ window.UnwindI18n = (function () {
     $('timer').classList.remove('low');
     applyChapter(c.chapter, c.sunY);
     applySeason(c.background ? (SEASONS[shownBackground()] ? shownBackground() : null) : c.level.season);
-    $('where').textContent = c.mode === 'endless' || c.coop || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
+    $('where').textContent = c.mode === 'endless' || c.mode === 'daily' || c.coop || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
     var rec = progress.records && progress.records[bestKey(c)];
     if (rec) $('where').textContent += ' · Best ' + recordText(rec);
@@ -7925,7 +7939,13 @@ window.UnwindI18n = (function () {
       made.appendChild(root);
     });
     bg.innerHTML = '';
-    bg.appendChild(made);
+    // A picture wider than the screen (phones): the whole scene drifts slowly from one side to the other and back.
+    var over = src.hasAttribute('data-pan') ? Math.round(src.viewBox.baseVal.width * scale - box.width) : 0;
+    if (over > 4) {
+      var pan = document.createElement('div');
+      pan.className = 'ppan'; pan.style.cssText = '--pan:' + (-over) + 'px;animation-duration:' + Math.max(30, Math.round(over / 12)) + 's';
+      pan.appendChild(made); bg.appendChild(pan);
+    } else bg.appendChild(made);
     bg.classList.remove('baking');
   }
   var bakeTimer = 0;
@@ -8046,10 +8066,10 @@ window.UnwindI18n = (function () {
     autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] },
     // The alternative scenes. Their master pictures have other sizes (master), and their portraits are cut from a
     // part of the picture (port's third number is where that cut starts). Positions are in master coordinates.
-    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55385, 1995, 0], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
-    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55385, 1992, 0], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
-    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
-    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
+    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55387, 1995, 0], panW: 3403, clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
+    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55387, 1992, 0], panW: 3403, clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
+    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41716, 1765, 0], panW: 2857, clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
+    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41716, 1640, 0], panW: 2857, clouds: { big: [1248, 86, 334, 128] } }
   };
   // An alternative scene has its season's weather, wildlife and music.
   function photoBase(season) { return String(season).replace(/-alt$/, ''); }
@@ -8082,7 +8102,8 @@ window.UnwindI18n = (function () {
   }
   function photoPreloadAll() { SEASON_ORDER.forEach(function (s) { photoLoad(s); }); }
   function photoScene(season) {
-    var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? 1440 : 2560, H = port ? 3120 : 1440;
+    // On phones a wide picture is kept whole, wider than the screen, and the view pans slowly across it.
+    var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? (G.panW || 1440) : 2560, H = port ? 3120 : 1440, pw = W / 1440;
     var k = port ? G.port[0] : G.land[0];
     var T = function (x, y) { return port ? [(x - (G.port[2] || 0)) * k, y * k + G.port[1]] : [x * k - G.land[1], y * k - G.land[2]]; };
     // The weather and wildlife were placed on the first scenes' masters (3320 x 1860); the same spots, scaled.
@@ -8098,7 +8119,8 @@ window.UnwindI18n = (function () {
     if (port) {
       // On tall screens a few more clouds spread over the extra sky, sized like the first scenes' clouds.
       var cb = G.clouds.big, cs = G.clouds.small || G.clouds.big, sm = G.clouds.small ? 'small' : 'big', zk = G.master ? 0.94737 * 446 / cb[2] : k;
-      clouds.push(['big', 760, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+      clouds.push(['big', 760 * pw, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120 * pw, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980 * pw, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+      if (pw > 1.5) clouds.push(['big', 1300 * pw, 760, cb[2] * zk * 0.8, cb[3] * zk * 0.8]);
     } else if (G.land[2] < -150) {
       // A wide picture shown whole has extra sky above it: a couple more clouds drift there.
       var lb = G.clouds.big, ls = G.clouds.small || G.clouds.big, lsm = G.clouds.small ? 'small' : 'big', lk = 0.77 * 446 / lb[2], sky = -G.land[2];
@@ -8121,7 +8143,7 @@ window.UnwindI18n = (function () {
     }
     // Each season's own weather and wildlife.
     out += photoExtras(base, W, H, U, r, f, Tw, k, port);
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="' + (port ? 'xMidYMax' : 'xMinYMax') + ' slice" aria-hidden="true"><defs>' +
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="' + (port && !G.panW ? 'xMidYMax' : 'xMinYMax') + ' slice"' + (port && G.panW ? ' data-pan="1"' : '') + ' aria-hidden="true"><defs>' +
       '<radialGradient id="pGlow"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset=".55" stop-color="#ffc35c" stop-opacity=".18"/><stop offset="1" stop-color="#ffc35c" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pSmoke"><stop offset="0" stop-color="#f7f7f9" stop-opacity=".95"/><stop offset=".55" stop-color="#e9eaef" stop-opacity=".7"/><stop offset="1" stop-color="#dfe1e8" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pFire"><stop offset="0" stop-color="#fffbd0"/><stop offset=".35" stop-color="#f3ff8a" stop-opacity=".8"/><stop offset="1" stop-color="#d8ff5a" stop-opacity="0"/></radialGradient>' +

@@ -1371,10 +1371,12 @@
     var scale = opts.scale || 1, root = Math.sqrt(scale), fx = opts.effects || [];
     var more = function (count) { return Math.min(count * scale, 14); };
     // Every board carries new arrows. One type at first and more as you drift further, all four on big maps.
-    var kinds = ['ghosts', 'unos', 'phases', 'reds'], step = n % 4, howMany = scale > 1 ? 4 : Math.min(4, 1 + Math.floor(n / 4) + (hard ? 1 : 0)), special = {};
+    // A salt (new for every game) shuffles which arrow types a board brings, so the same stretch of water never repeats.
+    var salt = opts.salt || 0, kinds = ['ghosts', 'unos', 'phases', 'reds'], step = (n + salt) % 4, howMany = scale > 1 ? 4 : Math.min(4, 1 + Math.floor(n / 4) + (hard ? 1 : 0)), special = {};
     for (var q = 0; q < howMany; q++) special[kinds[(step + q) % 4]] = 1;
     var extraOf = hard && n % 2 ? 1 : 0;
-    return {
+    var bonus = salt ? ['twins', 'compass', 'sleepers', 'patient'][Math.floor(salt / 4) % 4] : '';
+    var spec = {
       big: scale > 1, scale: scale,
       w: Math.round(Math.min(9, 6 + size + extra) * root), h: Math.round(Math.min(12, 7 + size + (size > 2 ? 1 : 0) + extra) * root), minLen: 2,
       maxLen: 5 + size + extra + Math.round(root * 1.5), depth: 5 + size + extra * 2,
@@ -1386,6 +1388,8 @@
       reds: special.reds ? Math.min(more(1), 1 + Math.floor(scale / 5)) : 0, redSlack: scale > 1 ? 0.12 : 0,
       flowers: fx.indexOf('spring') >= 0 ? 0.24 : 0, gaps: Math.max(fx.indexOf('summer') >= 0 ? 0.14 : 0, fx.indexOf('autumn') >= 0 ? 0.24 : 0)
     };
+    if (bonus) spec[bonus] = Math.max(spec[bonus], more(1));
+    return spec;
   }
   // Builds a board, simplifying the mix of special arrows if a seed cannot fit them all.
   function endlessBoard(n, opts, seed) {

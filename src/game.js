@@ -105,9 +105,9 @@
   var bgCycle = { i: 0, gapUntil: 0, endAt: 0 };
   // Games where the backgrounds and songs rotate (and Next Theme can skip ahead): Open Waters, multi-board play,
   // Boarding Up and the challenges.
-  function rotating() { return !!current && (current.mode === 'endless' || current.mode === 'poem' || current.mode === 'challenge' || !!current.coop); }
+  function rotating() { return !!current && (current.mode === 'endless' || current.mode === 'poem' || current.mode === 'challenge' || current.mode === 'daily' || !!current.coop); }
   // Poems and challenges have no Rewind: Restart is the way back.
-  function noRewind() { return !!current && (current.mode === 'poem' || current.mode === 'challenge'); }
+  function noRewind() { return !!current && (current.mode === 'poem' || current.mode === 'challenge' || current.mode === 'daily'); }
   function cycleOn() { return rotating() && backgroundChoice() === 'default'; }
   function shownBackground() { var b = backgroundChoice(); return b === 'default' ? CYCLE[bgCycle.i] : b; }
   function cycleSeconds() { return M.patternSeconds(colors.music); }
@@ -353,7 +353,7 @@
       };
     });
   }
-  // Focus the background: everything but the background fades away until the player taps.
+  // Focus background: everything but the background fades away until the player taps.
   function focusBackground() {
     closeSheet();
     var hint = document.createElement('div');
@@ -377,7 +377,7 @@
     // Focusing works everywhere; choosing a background only where the backgrounds rotate.
     var pick = rotating();
     var s = sheet('<div class="row"><h2>Background</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<button class="bgfocusbtn" id="bgFocus" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="3.2"/></svg>Focus the background</button>' +
+      '<button class="bgfocusbtn" id="bgFocus" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="3.2"/></svg>Focus background</button>' +
       '<p class="note">Hides everything but the background, so you can enjoy it. Tap anywhere to come back.</p>' +
       (pick ? '<p class="note" data-bgnote="Change it any time. Your board stays as it is.">' + bgNote('Change it any time. Your board stays as it is.') + '</p>' + backgroundButtons('inlevel') : ''));
     s.querySelector('#x').onclick = closeSheet;
@@ -397,6 +397,8 @@
     var key = ((o.hard ? 'h' : '') + (o.timed ? 't' : '') || 'free') + ((o.boards || 1) > 1 ? 'b' + o.boards : '') + (scale > 1 ? scale + 'x' : '') + (o.effects.length ? '-' + o.effects.join('') : '');
     progress.endlessBy = progress.endlessBy || {};
     var n = progress.endlessBy[key] || 0, seed = 500000 + n * 101 + (o.hard ? 70001 : 0) + (o.timed ? 3001 : 0) + scale * 1009 + o.effects.join('').length * 977;
+    // Every game gets its own board: a fresh salt changes the layout and which arrow types appear.
+    o.salt = 1 + Math.floor(Math.random() * 1e6); seed += o.salt * 7;
     return { o: o, scale: scale, key: key, n: n, seed: seed };
   }
   function startEndless(plan, lvl) {
@@ -2071,7 +2073,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-k';
+  var BUILD = '2026.11.27-l';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2516,8 +2518,10 @@
   function openDaily() {
     var k = todayKey();
     var lvl = E.generate({ w: 7, h: 9, minLen: 2, maxLen: 6, depth: 7, twins: 1, compass: 1, trap: [0.05, 0.45] }, k, 40);
-    E.prepare(lvl);
-    begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: CHAPTERS[timeChapter()], sunY: 34 });
+    E.prepare(lvl); lvl.hints = 0;
+    // The daily puzzle has the rotating backgrounds and songs, like Open Waters.
+    if (!rotating()) resetCycle();
+    begin({ id: 'daily-' + k, mode: 'daily', level: lvl, title: "Today's puzzle", chapter: backgroundPalette(), sunY: 34, background: true });
   }
   function begin(c) {
     if (coop && coop.online && !c.coop) { netSend({ t: 'leave' }); netClose(); }
@@ -2552,7 +2556,7 @@
     $('timer').classList.remove('low');
     applyChapter(c.chapter, c.sunY);
     applySeason(c.background ? (SEASONS[shownBackground()] ? shownBackground() : null) : c.level.season);
-    $('where').textContent = c.mode === 'endless' || c.coop || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
+    $('where').textContent = c.mode === 'endless' || c.mode === 'daily' || c.coop || c.level.season ? c.title : c.title + ' · ' + c.chapter.name;
     if (c.level.flowers && c.level.flowers.length) sendBee(0, performance.now() + 900);
     var rec = progress.records && progress.records[bestKey(c)];
     if (rec) $('where').textContent += ' · Best ' + recordText(rec);
@@ -3538,7 +3542,13 @@
       made.appendChild(root);
     });
     bg.innerHTML = '';
-    bg.appendChild(made);
+    // A picture wider than the screen (phones): the whole scene drifts slowly from one side to the other and back.
+    var over = src.hasAttribute('data-pan') ? Math.round(src.viewBox.baseVal.width * scale - box.width) : 0;
+    if (over > 4) {
+      var pan = document.createElement('div');
+      pan.className = 'ppan'; pan.style.cssText = '--pan:' + (-over) + 'px;animation-duration:' + Math.max(30, Math.round(over / 12)) + 's';
+      pan.appendChild(made); bg.appendChild(pan);
+    } else bg.appendChild(made);
     bg.classList.remove('baking');
   }
   var bakeTimer = 0;
