@@ -110,7 +110,8 @@ body.bgfocus>*:not(#sky):not(#sky2):not(#sun):not(.scenebg):not(#bgFocusHint){op
 .pb.new{background:color-mix(in srgb,#ffc21f 30%,transparent)}
 .records{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8125rem;font-variant-numeric:tabular-nums}
 .records b{font-weight:600}
-.sizes.maps{grid-template-columns:repeat(5,1fr)}
+.sizes.maps{grid-template-columns:repeat(6,minmax(0,1fr))}
+.sizes.maps button{height:36px;font-size:.875rem}
 .sizes.bgs{grid-template-columns:repeat(3,1fr)}
 .sizes.bgs button:first-child{grid-column:1/-1}
 .sizes.bgs.inlevel button,.sizes.seasons.fx button{height:36px}
@@ -361,6 +362,9 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv button{position:relative;aspect-ratio:1;border-radius:50%;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;border:1.5px solid currentColor}
 .lv.wide{grid-template-columns:1fr}
 .lv.wide button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:.9375rem}
+.lv.wide button{display:flex;align-items:center;justify-content:center;gap:8px}
+.lv.wide .mk{position:static;width:20px;height:20px;flex:none}
+.lv.wide .mk.m{order:-1}
 .poemcard{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.96);z-index:7;width:min(420px,calc(100vw - 32px));padding:20px 22px;border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 8px 30px rgba(0,0,0,.28);text-align:center;opacity:0;transition:opacity .5s ease,transform .5s ease;pointer-events:none}
 .poemcard.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .poemcard.out{opacity:0}
@@ -582,6 +586,13 @@ body.sheetopen #capTip{display:none}
 .tgrid button[disabled]{cursor:default}
 .tgrid svg{width:39px;height:26px;flex:none}
 .tgrid button span{min-width:0;line-height:1.15}
+.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tgrid button{min-width:0;padding:0 22px 0 7px;gap:5px}
+.tgrid button[aria-pressed="true"]::after{right:7px}
+.tgrid button span{padding-right:0;overflow-wrap:anywhere;hyphens:auto}
+.tgrid svg{width:34px;height:23px}
+.tgrid button span small{display:block;font-weight:500;font-size:.72rem;opacity:.75}
+.typesbtn small+small{margin-top:0}
 .tomenu{height:46px;border-radius:23px;border:1.5px solid currentColor;font-weight:700;flex:none}
 .typesbox .primary{height:46px;border-radius:23px}
 .card.start{max-width:380px;gap:14px;text-align:center;padding-block:30px}
@@ -3876,7 +3887,7 @@ window.UnwindI18n = (function () {
     'Spring - Alternative': 'Primavera - Alternativa',
     'Summer - Alternative': 'Verão - Alternativo',
     'Autumn - Alternative': 'Outono - Alternativo',
-    'Focus the background': 'Focar o fundo',
+    'Focus the background': 'Focar o fundo', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
     'Hides everything but the background, so you can enjoy it. Tap anywhere to come back.': 'Esconde tudo menos o fundo, para o poderes apreciar. Toca em qualquer lado para voltar.',
     'Tap anywhere to come back': 'Toca em qualquer lado para voltar',
     'The background changes with the music in Open Waters, Boarding Up, the challenges and the poem.': 'O fundo muda com a música nas Águas Abertas, nos Tabuleiros em Grupo, nos desafios e no poema.',
@@ -4358,6 +4369,8 @@ window.UnwindI18n = (function () {
   var progress = load('unwind.progress2', { last: { set: 'calm', index: 0 }, done: {}, perfect: {}, best: {}, endlessBy: {}, endlessOpts: { hard: false, timed: false }, daily: null });
   // An older or partly written save may lack some parts: fill them in so nothing reads from a missing one.
   (function () { var d = { last: { set: 'calm', index: 0 }, done: {}, perfect: {}, best: {}, endlessBy: {}, endlessOpts: { hard: false, timed: false } }; if (!progress || typeof progress !== 'object') progress = {}; Object.keys(d).forEach(function (k) { if (!progress[k] || typeof progress[k] !== 'object') progress[k] = d[k]; }); })();
+  // The background moved out of the Open Waters menu into the in-game button: everyone starts again on Default once.
+  if (!progress.bgMoved) { progress.bgMoved = true; if (progress.endlessOpts) delete progress.endlessOpts.background; }
   var audioPrefs = load('unwind.audio', { music: true, sound: true, theme: 'auto' });
   // Every session starts on Follow the level, while music and sound on/off are remembered.
   audioPrefs.theme = 'auto';
@@ -6358,7 +6371,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-h';
+  var BUILD = '2026.11.27-i';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -9087,7 +9100,7 @@ window.UnwindI18n = (function () {
     var pbRow = '<div class="pb' + (st.newBest ? ' new' : '') + '"><span>' + (st.newBest ? 'New personal best!' : 'Personal best') + '</span><b>' + (best ? recordText(best) : '–') + '</b><small>' + pbNote + '</small></div>';
     var lit = Object.keys(progress.done).length, gold = Object.keys(progress.perfect).length, total = allLevelCount();
     var bu = c.coop && coop && coop.room.boarding !== undefined ? coop.room.boarding : -1, owc = c.coop && coop && coop.room.endless;
-    var nextLabel = c.mode === 'poem' ? 'Back to challenges' : c.mode === 'challenge' ? (c.index < CHALLENGES.length - 1 ? 'Next challenge' : 'Back to challenges') : bu >= 0 ? (bu < BOARDING.length - 1 ? 'Next level' : 'Back to levels') : owc ? 'Keep drifting' : hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
+    var nextLabel = c.mode === 'poem' ? 'Back to poems' : c.mode === 'challenge' ? (c.index < CHALLENGES.length - 1 ? 'Next challenge' : 'Back to challenges') : bu >= 0 ? (bu < BOARDING.length - 1 ? 'Next level' : 'Back to levels') : owc ? 'Keep drifting' : hasNext ? 'Next level' : nextSet ? 'On to ' + SET_INFO[nextSet].label + ' ' + (1 + (SET_INFO[nextSet].offset || 0)) : c.mode === 'levels' ? 'Onto the Open Waters' : c.mode === 'endless' ? 'Keep drifting' : 'Back to levels';
     var s = sheet(sceneSvg(st.perfect) +
       '<div class="verdict"><h2 class="' + (st.perfect ? 'gold' : '') + '">' + title + '</h2><p>' + line + '</p></div>' + hearts +
       '<div class="stats"><div><b>' + recordText(st.elapsedMs) + '</b><span>Time</span></div><div><b>' + st.launches + '</b><span>Launches</span></div><div><b>' + st.hints + '</b><span>Hints used</span></div></div>' + pbRow +
@@ -9144,7 +9157,7 @@ window.UnwindI18n = (function () {
     }
     if (why === 'stuck') {
       if (c.mode === 'poem') {
-        var ps = sheet('<h2>No winning moves left</h2><p>This line can no longer be written. Try it again: the lines you have already written stay written.</p><button class="primary" id="again">Try this line again</button><button class="secondary" id="toLevels">Back to challenges</button>');
+        var ps = sheet('<h2>No winning moves left</h2><p>This line can no longer be written. Try it again: the lines you have already written stay written.</p><button class="primary" id="again">Try this line again</button><button class="secondary" id="toLevels">Back to poems</button>');
         ps.querySelector('#again').onclick = function () { restart(); };
         ps.querySelector('#toLevels').onclick = function () { levelsSheet('poems'); };
         return;
@@ -9249,7 +9262,7 @@ window.UnwindI18n = (function () {
     if (progress.lastTab !== tab) { progress.lastTab = tab; save('unwind.progress2', progress); }
     var html = '<div class="row"><h2>A day on the lake</h2><button class="close" id="x" aria-label="Close">×</button></div>';
     var tabNew = { boarding: !tutSeen('boards'), online: !tutSeen('twins') || !tutSeen('sniper') };
-    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['trials', 'Trials'], ['seasons', 'Seasons'], ['extra', 'Challenges'], ['poems', 'Poems'], ['endless', 'Endless'], ['boarding', 'Boarding Up'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + (tabNew[k[0]] ? '<i class="mdot" aria-label="New tutorial"></i>' : '') + '</button>'; }).join('') + '</div>';
+    html += '<div class="tabs" role="tablist">' + [['calm', 'Calm'], ['trials', 'Trials'], ['seasons', 'Seasons'], ['extra', 'Challenges'], ['poems', 'Poems'], ['boarding', 'Boarding Up'], ['endless', 'Endless'], ['online', 'Online']].map(function (k) { return '<button role="tab" aria-selected="' + (k[0] === tab) + '" data-tab="' + k[0] + '">' + k[1] + (tabNew[k[0]] ? '<i class="mdot" aria-label="New tutorial"></i>' : '') + '</button>'; }).join('') + '</div>';
     var grid = function (set, from, to) {
       var out = '<div class="lv">', info = SET_INFO[set];
       for (var i = from; i < to; i++) {
@@ -9313,9 +9326,7 @@ window.UnwindI18n = (function () {
       '<div class="setting"><span>Difficulty<small>' + (endlessOpts().hard ? '2 lives, no hints, and combo arrows that mix up to 3 effects' : 'No lives to lose and a hint on every board') + '</small></span></div><div class="sizes lseg" role="group" aria-label="Difficulty"><button data-ohard="0" aria-pressed="' + !endlessOpts().hard + '">Normal</button><button data-ohard="1" aria-pressed="' + !!endlessOpts().hard + '">Hard</button></div>' +
       '<div class="setting"><span>Timer<small>Clear each board before the clock runs out</small></span></div><div class="sizes lseg" role="group" aria-label="Timer"><button data-otimed="0" aria-pressed="' + !endlessOpts().timed + '">No timer</button><button data-otimed="1" aria-pressed="' + !!endlessOpts().timed + '">Timed</button></div>' +
       '<div class="setting"><span>Boards<small>' + ((endlessOpts().boards || 1) > 1 ? 'You play every board, up to 5x each. The timer adds up every board and doubles it.' : 'One board, or several linked boards to play alone') + '</small></span></div><div class="sizes lseg o3" role="group" aria-label="Boards">' + [1, 2, 4].map(function (x) { return '<button data-oboards="' + x + '" aria-pressed="' + ((endlessOpts().boards || 1) === x) + '">' + (x === 1 ? '1 board' : x + ' boards') + '</button>'; }).join('') + '</div>' +
-      '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off, (endlessOpts().boards || 1) > 1) + '</small></span><b>›</b></button>' +
-      '<div class="setting"><span>Season effects<small>' + ((endlessOpts().boards || 1) > 1 ? 'Each board gets its own season effects.' : 'Pick any number, or All for every effect at once.') + '</small></span></div><div class="sizes seasons fx" role="group" aria-label="Season effects">' + [['winter', 'Winter'], ['spring', 'Spring'], ['summer', 'Summer'], ['autumn', 'Autumn'], ['none', 'None'], ['random', 'All']].map(function (x) { var c = effectChoice(), on = x[0] === 'random' ? c.list.length === 4 : x[0] === 'none' ? !c.list.length : c.list.indexOf(x[0]) >= 0; return '<button data-effect="' + x[0] + '" aria-pressed="' + on + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="setting"><span>Background<small data-bgnote="You can also change it while playing.">' + bgNote('You can also change it while playing.') + '</small></span></div>' + backgroundButtons() +
+      '<button class="typesbtn" id="oTypes"><span>Arrow types<small id="oTypesLbl">' + typesLabel(endlessOpts().off, (endlessOpts().boards || 1) > 1) + '</small><small id="oSeasLbl">' + seasonsLabel(effectChoice().list) + '</small></span><b>›</b></button>' +
       '<div class="setting"><span>Map size<small>Bigger maps can be zoomed and moved around</small></span></div><div class="sizes maps" role="group" aria-label="Map size">' + [1, 2, 3, 5, 10, 25].map(function (x) { var multi = (endlessOpts().boards || 1) > 1; return '<button data-scale="' + x + '" aria-pressed="' + (Math.min(multi ? 5 : 99, endlessOpts().scale || 1) === x) + '"' + (multi && x > 5 ? ' disabled' : '') + '>' + (x === 1 ? '1x' : x + 'x') + '</button>'; }).join('') + '</div><button class="primary" id="mGo">Play Open Waters</button></div></div>';
     }
     html += '<button class="tomenu" id="toMenu">Go to Main Menu</button>';
@@ -9369,19 +9380,8 @@ window.UnwindI18n = (function () {
     });
     s.querySelectorAll('[data-oboards]').forEach(function (b) { b.onclick = function () { var o = endlessOpts(); o.boards = +b.getAttribute('data-oboards'); progress.endlessOpts = o; save('unwind.progress2', progress); levelsSheet('endless', true); }; });
     s.querySelector('#oTypes').onclick = function () {
-      arrowTypesBox(endlessOpts().off, (endlessOpts().boards || 1) > 1, function (off) { var o = endlessOpts(); o.off = off; progress.endlessOpts = o; save('unwind.progress2', progress); var l = $('oTypesLbl'); if (l) l.textContent = typesLabel(off, (endlessOpts().boards || 1) > 1); });
+      arrowTypesBox(endlessOpts().off, (endlessOpts().boards || 1) > 1, function (off, seas) { var o = endlessOpts(); o.off = off; o.effectList = seas; o.effectRandom = false; delete o.seasonChoice; progress.endlessOpts = o; save('unwind.progress2', progress); var sl = $('oSeasLbl'); if (sl) { sl.innerHTML = seasonsLabel(seas); window.UnwindI18n && window.UnwindI18n.flush && window.UnwindI18n.flush(); } var l = $('oTypesLbl'); if (l) l.textContent = typesLabel(off, (endlessOpts().boards || 1) > 1); }, false, effectChoice().list);
     };
-    wireBackgrounds(s);
-    s.querySelectorAll('[data-effect]').forEach(function (b) {
-      b.onclick = function () {
-        var o = endlessOpts(), c = effectChoice(), k = b.getAttribute('data-effect'), list = c.list.slice(), random = c.random;
-        if (k === 'none') { list = []; random = false; }
-        else if (k === 'random') { random = false; list = list.length === 4 ? [] : SEASON_ORDER.slice(); }
-        else { random = false; var at = list.indexOf(k); if (at >= 0) list.splice(at, 1); else list.push(k); }
-        o.effectList = list; o.effectRandom = random; delete o.seasonChoice; progress.endlessOpts = o; save('unwind.progress2', progress);
-        s.querySelectorAll('[data-effect]').forEach(function (x) { var e = x.getAttribute('data-effect'); x.setAttribute('aria-pressed', e === 'random' ? list.length === 4 : e === 'none' ? !random && !list.length : !random && list.indexOf(e) >= 0); });
-      };
-    });
     s.querySelectorAll('[data-scale]').forEach(function (b) {
       b.onclick = function () {
         var o = endlessOpts(); o.scale = +b.getAttribute('data-scale'); progress.endlessOpts = o; save('unwind.progress2', progress);
@@ -9393,6 +9393,12 @@ window.UnwindI18n = (function () {
   /* Arrow types: which special arrows a generated board may use. Shown as a small box over the menu. */
   var ARROW_TYPES = [['twins', 'Twins'], ['compass', 'Compass'], ['moon', 'Moon and star'], ['mirror', 'Mirror'], ['patient', 'Patient'], ['ghost', 'Ghost'], ['phase', 'Phase'], ['red', 'Red card'], ['reverse', 'Reverse']];
   var MP_TYPES = [['twinshared', 'Twin-shared'], ['sniper', 'Sniper']];
+  var SEASON_TYPES = [['winter', 'Winter', 'Ice'], ['spring', 'Spring', 'Flowers'], ['summer', 'Summer', 'Fire'], ['autumn', 'Autumn', 'Wind']];
+  function seasonsLabel(list) {
+    if (!list || !list.length) return 'No season effects';
+    if (list.length === 4) return 'All season effects';
+    return SEASON_TYPES.filter(function (t) { return list.indexOf(t[0]) >= 0; }).map(function (t) { return '<span>' + t[1] + '</span>'; }).join(', ');
+  }
   // Small pictures for the arrow type buttons. They use the text colour, so they follow the button's state.
   // Small pictures for the arrow type buttons, in the colours the arrows really have in the current scene.
   // Small pictures for the arrow type buttons, in the colours the arrows really have in the current scene. All arrows share one length.
@@ -9412,14 +9418,19 @@ window.UnwindI18n = (function () {
     else if (k === 'reverse') { var rc = dark ? '#ffc069' : '#c85a00'; o = '<path d="M5 13H35" stroke="' + rc + '"/><path d="M30 7.5L36 13L30 18.5" stroke="' + rc + '"/><path d="M10 7.5L4 13L10 18.5" stroke="' + rc + '"/>'; }
     else if (k === 'twinshared') { var sc = colors.twins[colors.twins.length - 1]; o = line(sc) + '<circle cx="14" cy="14" r="6" fill="' + sc + '" stroke="none"/><text x="14" y="17.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="' + card + '" stroke="none">X</text><circle cx="19" cy="8.5" r="3.6" fill="' + sc + '" stroke="none"/><path d="M17.6 8.5H20.4M19 7.1V9.9" stroke="' + card + '" stroke-width="1.2"/>'; }
     else if (k === 'sniper') { var nc = dark ? '#ff6b6b' : '#b3122e'; o = line(nc) + '<circle cx="15" cy="13" r="5.5" fill="' + card + '" stroke="' + nc + '" stroke-width="1.8"/><circle cx="15" cy="13" r="1.8" fill="' + nc + '" stroke="none"/>'; }
+    else if (k === 'winter') { var wc = dark ? '#9fd0ff' : '#2f7fd0'; o = '<g stroke="' + wc + '" stroke-width="2.2"><path d="M19 3.5V22.5M10.8 8.25L27.2 17.75M10.8 17.75L27.2 8.25"/><path d="M16.5 5.5L19 8L21.5 5.5M16.5 20.5L19 18L21.5 20.5"/></g>'; }
+    else if (k === 'spring') o = [[19, 7.6], [24.1, 11.3], [22.2, 17.4], [15.8, 17.4], [13.9, 11.3]].map(function (q) { return '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="3.7" fill="#ec6b9a" stroke="none"/>'; }).join('') + '<circle cx="19" cy="13" r="2.9" fill="#ffc93c" stroke="none"/>';
+    else if (k === 'summer') o = '<path d="M19 3c1.2 4 6.5 6.2 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3.2 2-4.8 3.1-7c.6 2 1.6 3.2 2.6 3.7C18.4 8.6 18 6 19 3Z" fill="#e8552b" stroke="none"/><path d="M19 12.5c.6 2 3 3 3 5.3a3 3 0 0 1-6 0c0-1.6 1.2-2.6 1.8-3.6c.3.8.7 1.2 1.2 1.4Z" fill="#ffc93c" stroke="none"/>';
+    else if (k === 'autumn') { var ac = dark ? '#ffa45c' : '#d06a1a'; o = '<path d="M10 21C10 11.5 16 5 29 5C29 16.5 22.5 21.5 12 21.5Z" fill="' + ac + '" stroke="none"/><path d="M11 21L24 10M16.5 16.3L16 12M20.2 13.2L23.5 13.6" stroke="' + card + '" stroke-width="1.5"/>'; }
     return '<svg viewBox="0 0 39 26" aria-hidden="true" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + o + '</svg>';
   }
   function typesLabel(off, mp) {
     var all = ARROW_TYPES.concat(mp ? MP_TYPES : []), on = all.filter(function (t) { return !off || !off[t[0]]; }).length;
     return on === all.length ? 'All arrow types' : on === 0 ? 'Plain arrows only' : on + ' of ' + all.length + ' arrow types';
   }
-  function arrowTypesBox(off, mp, onChange, locked) {
+  function arrowTypesBox(off, mp, onChange, locked, seasons) {
     off = Object.assign({}, off || {});
+    var seas = seasons ? seasons.slice() : null;
     var box = document.createElement('div');
     box.className = 'ocodebox typesbox';
     var paint = function () {
@@ -9427,18 +9438,20 @@ window.UnwindI18n = (function () {
       box.innerHTML = '<div class="obox" role="dialog" aria-label="Arrow types"><h3>Arrow types</h3><p class="note">' + (locked ? 'Chosen by the host.' : 'Choose which arrows can appear on the boards. Plain arrows are always there.') + '</p>' +
         '<div class="chapter">Arrows</div><div class="tgrid">' + ARROW_TYPES.map(chip).join('') + '</div>' +
         (mp ? '<div class="chapter">Multiple boards</div><div class="tgrid">' + MP_TYPES.map(chip).join('') + '</div>' : '') +
+        (seas ? '<div class="chapter">Seasons of the year</div><p class="note">' + (mp ? 'Each board gets its own season effects.' : 'Season effects on the boards. Pick any number.') + '</p><div class="tgrid">' + SEASON_TYPES.map(function (t) { return '<button data-season="' + t[0] + '" aria-pressed="' + (seas.indexOf(t[0]) >= 0) + '">' + typeIcon(t[0]) + '<span>' + t[1] + '<small>' + t[2] + '</small></span></button>'; }).join('') + '</div>' : '') +
         (locked ? '' : '<div class="obtns"><button id="tAll">All</button><button id="tNone">None</button></div>') + '<button class="primary" id="tDone">Done</button></div>';
       // Chips change in place, so the box does not pop in again on every tap.
-      var sync = function () { box.querySelectorAll('[data-type]').forEach(function (x) { x.setAttribute('aria-pressed', !off[x.getAttribute('data-type')]); }); };
+      var sync = function () { box.querySelectorAll('[data-type]').forEach(function (x) { x.setAttribute('aria-pressed', !off[x.getAttribute('data-type')]); }); box.querySelectorAll('[data-season]').forEach(function (x) { x.setAttribute('aria-pressed', seas.indexOf(x.getAttribute('data-season')) >= 0); }); };
+      box.querySelectorAll('[data-season]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-season'), at = seas.indexOf(k); if (at >= 0) seas.splice(at, 1); else seas.push(k); seas.sort(function (x, y) { return SEASON_ORDER.indexOf(x) - SEASON_ORDER.indexOf(y); }); sync(); }; });
       box.querySelectorAll('[data-type]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-type'); if (off[k]) delete off[k]; else off[k] = true; sync(); }; });
       if (!locked) {
-        box.querySelector('#tAll').onclick = function () { off = {}; sync(); };
-        box.querySelector('#tNone').onclick = function () { ARROW_TYPES.concat(mp ? MP_TYPES : []).forEach(function (t) { off[t[0]] = true; }); sync(); };
+        box.querySelector('#tAll').onclick = function () { off = {}; if (seas) seas = SEASON_ORDER.slice(); sync(); };
+        box.querySelector('#tNone').onclick = function () { ARROW_TYPES.concat(mp ? MP_TYPES : []).forEach(function (t) { off[t[0]] = true; }); if (seas) seas = []; sync(); };
       }
-      box.querySelector('#tDone').onclick = function () { box.remove(); if (!locked) onChange(off); };
+      box.querySelector('#tDone').onclick = function () { box.remove(); if (!locked) onChange(off, seas); };
     };
     paint();
-    box.onclick = function (ev) { if (ev.target === box) { box.remove(); if (!locked) onChange(off); } };
+    box.onclick = function (ev) { if (ev.target === box) { box.remove(); if (!locked) onChange(off, seas); } };
     document.body.appendChild(box);
   }
   function openLabel() {

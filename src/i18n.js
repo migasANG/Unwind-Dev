@@ -212,7 +212,7 @@ window.UnwindI18n = (function () {
     'Spring - Alternative': 'Primavera - Alternativa',
     'Summer - Alternative': 'Verão - Alternativo',
     'Autumn - Alternative': 'Outono - Alternativo',
-    'Focus the background': 'Focar o fundo',
+    'Focus the background': 'Focar o fundo', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
     'Hides everything but the background, so you can enjoy it. Tap anywhere to come back.': 'Esconde tudo menos o fundo, para o poderes apreciar. Toca em qualquer lado para voltar.',
     'Tap anywhere to come back': 'Toca em qualquer lado para voltar',
     'The background changes with the music in Open Waters, Boarding Up, the challenges and the poem.': 'O fundo muda com a música nas Águas Abertas, nos Tabuleiros em Grupo, nos desafios e no poema.',

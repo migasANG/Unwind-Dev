@@ -108,7 +108,8 @@ body.bgfocus>*:not(#sky):not(#sky2):not(#sun):not(.scenebg):not(#bgFocusHint){op
 .pb.new{background:color-mix(in srgb,#ffc21f 30%,transparent)}
 .records{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8125rem;font-variant-numeric:tabular-nums}
 .records b{font-weight:600}
-.sizes.maps{grid-template-columns:repeat(5,1fr)}
+.sizes.maps{grid-template-columns:repeat(6,minmax(0,1fr))}
+.sizes.maps button{height:36px;font-size:.875rem}
 .sizes.bgs{grid-template-columns:repeat(3,1fr)}
 .sizes.bgs button:first-child{grid-column:1/-1}
 .sizes.bgs.inlevel button,.sizes.seasons.fx button{height:36px}
@@ -359,6 +360,9 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv button{position:relative;aspect-ratio:1;border-radius:50%;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;border:1.5px solid currentColor}
 .lv.wide{grid-template-columns:1fr}
 .lv.wide button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:.9375rem}
+.lv.wide button{display:flex;align-items:center;justify-content:center;gap:8px}
+.lv.wide .mk{position:static;width:20px;height:20px;flex:none}
+.lv.wide .mk.m{order:-1}
 .poemcard{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.96);z-index:7;width:min(420px,calc(100vw - 32px));padding:20px 22px;border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 8px 30px rgba(0,0,0,.28);text-align:center;opacity:0;transition:opacity .5s ease,transform .5s ease;pointer-events:none}
 .poemcard.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .poemcard.out{opacity:0}
@@ -580,6 +584,13 @@ body.sheetopen #capTip{display:none}
 .tgrid button[disabled]{cursor:default}
 .tgrid svg{width:39px;height:26px;flex:none}
 .tgrid button span{min-width:0;line-height:1.15}
+.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tgrid button{min-width:0;padding:0 22px 0 7px;gap:5px}
+.tgrid button[aria-pressed="true"]::after{right:7px}
+.tgrid button span{padding-right:0;overflow-wrap:anywhere;hyphens:auto}
+.tgrid svg{width:34px;height:23px}
+.tgrid button span small{display:block;font-weight:500;font-size:.72rem;opacity:.75}
+.typesbtn small+small{margin-top:0}
 .tomenu{height:46px;border-radius:23px;border:1.5px solid currentColor;font-weight:700;flex:none}
 .typesbox .primary{height:46px;border-radius:23px}
 .card.start{max-width:380px;gap:14px;text-align:center;padding-block:30px}
