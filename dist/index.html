@@ -362,9 +362,7 @@ nav button.call{background:color-mix(in srgb,currentColor 15%,transparent)}
 .lv button{position:relative;aspect-ratio:1;border-radius:50%;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;border:1.5px solid currentColor}
 .lv.wide{grid-template-columns:1fr}
 .lv.wide button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:.9375rem}
-.lv.wide button{display:flex;align-items:center;justify-content:center;gap:8px}
-.lv.wide .mk{position:static;width:20px;height:20px;flex:none}
-.lv.wide .mk.m{order:-1}
+.lv.wide button{display:flex;align-items:center;justify-content:center;gap:6px}
 .poemcard{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.96);z-index:7;width:min(420px,calc(100vw - 32px));padding:20px 22px;border-radius:20px;background:color-mix(in srgb,var(--card) 94%,transparent);box-shadow:0 8px 30px rgba(0,0,0,.28);text-align:center;opacity:0;transition:opacity .5s ease,transform .5s ease;pointer-events:none}
 .poemcard.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .poemcard.out{opacity:0}
@@ -1448,6 +1446,68 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
       state.rescueCount = (state.rescueCount || 0) + 1;
     }
   }
+  /* ---------- Several boards at once: twins that span boards can lock each other ---------- */
+  // Moves anywhere in a room. A cross-board twin only counts if every copy that is still on the board can go.
+  function roomMoves(boards, states, groups) {
+    var out = [];
+    boards.forEach(function (l, b) {
+      legalMoves(l, states[b]).forEach(function (id) {
+        var a = l.arrows[id];
+        if (a.coopGroup !== undefined && groups && groups[a.coopGroup]) {
+          var ok = groups[a.coopGroup].members.every(function (m) {
+            if (m[0] === b) return true;
+            var L = boards[m[0]], S = states[m[0]], o = L.arrows[m[1]];
+            return S.removed[o.id] || (isReady(S, o) && check(L, S, o).clear);
+          });
+          if (!ok) return;
+        }
+        out.push([b, id]);
+      });
+    });
+    return out;
+  }
+  function roomHasPlay(boards, states, groups) {
+    if (roomMoves(boards, states, groups).length) return true;
+    return boards.some(function (l, b) { return !isWon(states[b]) && iceOpensPlay(l, states[b]); });
+  }
+  // When nothing in the room can move: fire dies and ice melts everywhere, and if that is not enough,
+  // a golden arrow (every copy of it, for a cross-board twin) flies through anything.
+  function roomRescue(boards, states, groups) {
+    if (states.every(isWon) || roomHasPlay(boards, states, groups)) return false;
+    var log = function (b) { return (states[b].rescued = states[b].rescued || { fire: [], ice: [], freed: [] }); };
+    boards.forEach(function (l, b) {
+      var S = states[b], fire = Object.keys(S.burning || {}).filter(function (k) { return S.burning[k] > S.launches; }), ice = Object.keys(S.frozen || {});
+      if (fire.length || ice.length) {
+        fire.forEach(function (k) { log(b).fire.push(+k); }); ice.forEach(function (id) { log(b).ice.push(+id); });
+        S.burning = {}; S.frozen = {};
+      }
+    });
+    if (roomHasPlay(boards, states, groups)) return true;
+    var units = [], seenGroup = {};
+    boards.forEach(function (l, b) {
+      var S = states[b];
+      l.arrows.forEach(function (a) {
+        if (S.removed[a.id] || (paired(S, a) && a.twin < a.id)) return;
+        var members = [];
+        if (a.coopGroup !== undefined && groups && groups[a.coopGroup]) {
+          if (seenGroup[a.coopGroup]) return; seenGroup[a.coopGroup] = 1;
+          groups[a.coopGroup].members.forEach(function (m) { if (!states[m[0]].removed[m[1]]) members.push([m[0], m[1]]); });
+        } else group(l, a, S).forEach(function (m) { members.push([b, m.id]); });
+        var cost = 0;
+        members.forEach(function (m) { cost += obstaclesOf(boards[m[0]], states[m[0]], boards[m[0]].arrows[m[1]]).solid; });
+        units.push({ members: members, cost: cost + (a.kind === 'compass' ? 1000 : 0) });
+      });
+    });
+    units.sort(function (p, q) { return p.cost - q.cost; });
+    var free = function (u, on) { u.members.forEach(function (m) { var S = states[m[0]]; S.freed = Object.assign({}, S.freed); if (on) S.freed[m[1]] = true; else delete S.freed[m[1]]; }); };
+    for (var i = 0; i < units.length && i < 24; i++) {
+      free(units[i], true);
+      if (roomHasPlay(boards, states, groups)) { units[i].members.forEach(function (m) { log(m[0]).freed.push(m[1]); }); return true; }
+      free(units[i], false);
+    }
+    if (units.length) { free(units[0], true); units[0].members.forEach(function (m) { log(m[0]).freed.push(m[1]); }); return true; }
+    return false;
+  }
   function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && !iceOpensPlay(level, state); }
 
   /* ---------- Seasons: what happens after each successful launch ---------- */
@@ -2212,7 +2272,7 @@ body.sheetopen>:not(#sheetHost):not(#loading):not(.sheet):not(.ocodebox):not(.to
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     SPECIALS: SPECIALS, specialRoom: specialRoom, BIRD_COLORS: BIRD_COLORS,
     edgeKey: edgeKey, wallOn: wallOn, propAt: propAt, slideProp: slideProp, pushMoves: pushMoves, settle: settle, slotsDone: slotsDone, findProp: findProp, anyMove: anyMove, carry: carry, throwBird: throwBird, solveSpecial: solveSpecial, resetBall: resetBall, roomTap: roomTap,
-    isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
+    isStuck: isStuck, roomMoves: roomMoves, roomHasPlay: roomHasPlay, roomRescue: roomRescue, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
 });
 </script>
@@ -3890,7 +3950,7 @@ window.UnwindI18n = (function () {
     'Spring - Alternative': 'Primavera - Alternativa',
     'Summer - Alternative': 'Verão - Alternativo',
     'Autumn - Alternative': 'Outono - Alternativo',
-    'Focus the background': 'Focar o fundo', 'The Quiver': 'A Aljava', 'Board Hoppers': 'Saltimbancos de Tabuleiro', 'Lines': 'Versos', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
+    'Focus the background': 'Focar o fundo', 'Every board was stuck, so a golden arrow came to help.': 'Todos os tabuleiros estavam presos, por isso veio uma seta dourada ajudar.', 'Every board was stuck: a golden arrow is waiting on another board.': 'Todos os tabuleiros estavam presos: há uma seta dourada à espera noutro tabuleiro.', 'The Quiver': 'A Aljava', 'Board Hoppers': 'Saltimbancos de Tabuleiro', 'Lines': 'Versos', 'Back to poems': 'Voltar aos poemas', 'Seasons of the year': 'Estações do ano', 'Season effects on the boards. Pick any number.': 'Efeitos das estações nos tabuleiros. Escolhe quantos quiseres.', 'Ice': 'Gelo', 'Flowers': 'Flores', 'Fire': 'Fogo', 'No season effects': 'Sem efeitos de estação', 'All season effects': 'Todos os efeitos de estação',
     'Hides everything but the background, so you can enjoy it. Tap anywhere to come back.': 'Esconde tudo menos o fundo, para o poderes apreciar. Toca em qualquer lado para voltar.',
     'Tap anywhere to come back': 'Toca em qualquer lado para voltar',
     'The background changes with the music in Open Waters, Boarding Up, the challenges and the poem.': 'O fundo muda com a música nas Águas Abertas, nos Tabuleiros em Grupo, nos desafios e no poema.',
@@ -4819,6 +4879,8 @@ window.UnwindI18n = (function () {
   function openCoopRoom(make, names) {
     if (coop && coop.online && !(names && names.keepOnline)) { netSend({ t: 'leave' }); netClose(); }
     var room = make();
+    // Open Waters rooms roll fresh fire, ice, wind and flowers every game, like a single Open Waters board.
+    if (room.endless) room.boards.forEach(function (l) { l.seed = Math.floor(Math.random() * 1e9); });
     room.names = names || room.names || COOP_NAMES;
     coopZoomK = 1; coopFocus = -1;
     coop = { room: room, make: make, n: room.boards.length, idx: 0, lives: room.lives || 12, burners: [], effects: [], poemDone: 0, boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
@@ -5556,7 +5618,8 @@ window.UnwindI18n = (function () {
       host.classList.add('out');
       setTimeout(function () { host.hidden = true; host.classList.remove('on', 'out'); }, 500);
       if (current !== c) return;
-      if (next < 0) { pr.finished = true; save('unwind.progress2', progress); poemFinale(function () { ended = false; finish(true); }, c.lines); }
+      // The poem counts as cleared the moment its last line is written, even if the finale is never closed.
+      if (next < 0) { pr.finished = true; progress.done[P.id] = true; if (!pr.hits) progress.perfect[P.id] = true; save('unwind.progress2', progress); poemFinale(function () { ended = false; finish(true); }, c.lines); }
       else openPoem(next, c.poem);
     }, 3600);
   }
@@ -5800,6 +5863,20 @@ window.UnwindI18n = (function () {
     coop.boards.forEach(function (B) { if (B.state) B.state.lives = coop.lives; });
   }
   function coopAllWon() { return !!coop && coop.boards.every(function (B) { return B.state && E.isWon(B.state); }); }
+  // Twins that span boards can lock each other (one copy is clear, the other blocked by fire or an arrow).
+  // When nothing in the whole room can move, fire and ice go and, if needed, a golden arrow comes.
+  function coopRoomRescue() {
+    if (!coop || coop.online || ended) return;
+    var levels = coop.boards.map(function (B) { return B.level; }), states = coop.boards.map(function (B) { return B.state; });
+    if (states.some(function (S) { return !S || !S.safe; })) return;
+    if (!E.roomRescue(levels, states, coop.room.groups)) return;
+    boardLayer = null;
+    takeEarlyFlowers(performance.now());
+    var here = goldAlive();
+    setCaption(here ? 'Every board was stuck, so a golden arrow came to help.' : 'Every board was stuck: a golden arrow is waiting on another board.', 'gold');
+    capMode = here ? 'gold' : '';
+    refresh(); coopNav();
+  }
   function coopMember(b, id) { var B = coop.boards[b]; return { b: b, B: B, a: B.level.arrows[id], st: B.state, l: B.level }; }
   // Before a tap: a sniper on its way may hold the board, and a cross-board twin needs its partners ready and clear.
   function coopAllow(id) {
@@ -5822,6 +5899,7 @@ window.UnwindI18n = (function () {
       setCaption('Its twin on board ' + (blocked.b + 1) + ' is blocked.');
       refresh();
       if (state.lives === 0) finish(false, 'lives');
+      else setTimeout(coopRoomRescue, 700);
       return false;
     }
     return true;
@@ -5839,6 +5917,7 @@ window.UnwindI18n = (function () {
         if (tr.ok && !tr.won && E.effectsOf(o.l).length) E.seasonStep(o.l, o.st);
       });
     }
+    setTimeout(coopRoomRescue, 900);
     res.results.forEach(function (r, k) {
       var m = l.arrows[r.id];
       if (!m.sniper) return;
@@ -5940,6 +6019,7 @@ window.UnwindI18n = (function () {
     }
     // A hit is not a move: only the golden arrow check runs, in case the board can no longer be cleared.
     if (S.safe && E.isStuck(L, S)) E.ensurePlay(L, S);
+    setTimeout(coopRoomRescue, 700);
     refresh();
     if (coopAllWon()) { finish(true); return; }
     if (!B.queue.length && b === coop.idx) setCaption(coopBoardCaption(b));
@@ -6378,7 +6458,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-j';
+  var BUILD = '2026.11.27-k';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -6617,6 +6697,7 @@ window.UnwindI18n = (function () {
       });
       if (ev.kind === 'flower') { S.picked = Object.assign({}, S.picked); S.picked[ev.k] = true; }
       if (S.safe && E.isStuck(L, S)) E.ensurePlay(L, S);
+      if (!quiet) setTimeout(coopRoomRescue, 300);
       if (!quiet && ev.b === coop.idx && ev.ids && ev.ids.length) sniperBlast();
       boardLayer = null;
       if (!quiet) coopMaybeStart(ev.b);
@@ -7965,10 +8046,10 @@ window.UnwindI18n = (function () {
     autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] },
     // The alternative scenes. Their master pictures have other sizes (master), and their portraits are cut from a
     // part of the picture (port's third number is where that cut starts). Positions are in master coordinates.
-    'winter-alt': { master: [6144, 2032], land: [0.70866, 0, 0], port: [0.68571, 1727, 100], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
-    'spring-alt': { master: [6144, 2036], land: [0.70727, 0, 0], port: [0.68571, 1724, 100], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
-    'summer-alt': { master: [2016, 956], land: [1.50628, 238, 0], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
-    'autumn-alt': { master: [2016, 1044], land: [1.37931, 0, 0], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
+    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55385, 1995, 0], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
+    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55385, 1992, 0], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
+    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
+    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
   };
   // An alternative scene has its season's weather, wildlife and music.
   function photoBase(season) { return String(season).replace(/-alt$/, ''); }
@@ -8018,6 +8099,10 @@ window.UnwindI18n = (function () {
       // On tall screens a few more clouds spread over the extra sky, sized like the first scenes' clouds.
       var cb = G.clouds.big, cs = G.clouds.small || G.clouds.big, sm = G.clouds.small ? 'small' : 'big', zk = G.master ? 0.94737 * 446 / cb[2] : k;
       clouds.push(['big', 760, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+    } else if (G.land[2] < -150) {
+      // A wide picture shown whole has extra sky above it: a couple more clouds drift there.
+      var lb = G.clouds.big, ls = G.clouds.small || G.clouds.big, lsm = G.clouds.small ? 'small' : 'big', lk = 0.77 * 446 / lb[2], sky = -G.land[2];
+      clouds.push(['big', 1500, Math.max(40, sky * 0.18), lb[2] * lk * 0.8, lb[3] * lk * 0.8], [lsm, 300, Math.max(60, sky * 0.42), ls[2] * lk * 0.7, ls[3] * lk * 0.7]);
     }
     clouds.forEach(function (c, i) {
       out += '<image class="pdrift" style="--a:' + (-60 - i * 25) + ';--b:' + (90 + i * 20) + ';animation-duration:' + (70 + i * 17) + 's;animation-delay:' + (-i * 23) + 's" href="bg/' + season + '-cloud-' + c[0] + '.webp" x="' + f(c[1]) + '" y="' + f(c[2]) + '" width="' + f(c[3]) + '" height="' + f(c[4]) + '"/>';
@@ -8029,7 +8114,7 @@ window.UnwindI18n = (function () {
     });
     // Smoke from the chimney: soft puffs that rise, grow and fade, drifting with the wind.
     var base = photoBase(season), ch = G.chimney ? T(G.chimney[0], G.chimney[1]) : null, puffs = ch ? 7 : 0, lean = base === 'autumn' ? 150 : base === 'winter' ? 90 : 60;
-    var sk = G.master ? 0.77 : k;   // smoke puffs keep the first scenes' size on screen
+    var sk = G.master ? Math.min(0.77, k * 1.09) : k;   // smoke puffs keep the first scenes' size on screen
     for (var i = 0; i < puffs; i++) {
       var pr = (34 + r() * 10) * sk;
       out += '<circle class="psmoke" style="--dx:' + Math.round(lean * sk * 2.2 + r() * 40) + ';--dy:' + Math.round(-(300 + r() * 80) * sk * 1.4) + ';animation-duration:8.4s;animation-delay:' + (-i * 1.2).toFixed(1) + 's" cx="' + f(ch[0] + (r() - 0.5) * 10 * sk) + '" cy="' + f(ch[1] - pr * 0.4) + '" r="' + f(pr) + '" fill="url(#pSmoke)"/>';
@@ -9331,14 +9416,6 @@ window.UnwindI18n = (function () {
         var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
         return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + '"><span>' + P.title + '</span>' + (started ? '<span>· Line ' + (pr.at + 1) + '</span>' : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
       }).join('') + '</div>';
-      POEMS.forEach(function (P, pi) {
-        var pr = poemProgress(P.id), n = E.specialRoom(P.key, window.UnwindI18n.lang()).boards.length, out = '';
-        for (var li = 0; li < n; li++) {
-          var id = P.id + '-' + (li + 1), open = li <= (pr.at || 0) || progress.done[id];
-          out += '<button data-pl="' + pi + ':' + li + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '"' + (open ? '' : ' disabled') + ' aria-label="Line ' + (li + 1) + (progress.perfect[id] ? ', perfect' : progress.done[id] ? ', cleared' : '') + '">' + (li + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
-        }
-        html += '<div class="chapter">' + (POEMS.length > 1 ? P.title + ' · ' : '') + 'Lines</div><div class="lv">' + out + '</div>';
-      });
       if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
     }
     if (tab === 'endless') {
@@ -9384,7 +9461,6 @@ window.UnwindI18n = (function () {
     if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { markTut('boards'); showTutorial(['boards'], 0, false, 'play'); };
     s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
     s.querySelectorAll('[data-poem]').forEach(function (b) { b.onclick = function () { openPoem(undefined, +b.getAttribute('data-poem')); }; });
-    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { var v = b.getAttribute('data-pl').split(':'); openPoem(+v[1], +v[0]); }; });
     if (s.querySelector('#mPoemRead')) s.querySelector('#mPoemRead').onclick = function () { var room = E.specialRoom('poem', window.UnwindI18n.lang()); poemFinale(null, room.boards.map(function (L) { return L.line; })); };
     if (tab !== 'endless') return;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };

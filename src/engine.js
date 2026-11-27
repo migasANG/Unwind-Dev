@@ -698,6 +698,68 @@
       state.rescueCount = (state.rescueCount || 0) + 1;
     }
   }
+  /* ---------- Several boards at once: twins that span boards can lock each other ---------- */
+  // Moves anywhere in a room. A cross-board twin only counts if every copy that is still on the board can go.
+  function roomMoves(boards, states, groups) {
+    var out = [];
+    boards.forEach(function (l, b) {
+      legalMoves(l, states[b]).forEach(function (id) {
+        var a = l.arrows[id];
+        if (a.coopGroup !== undefined && groups && groups[a.coopGroup]) {
+          var ok = groups[a.coopGroup].members.every(function (m) {
+            if (m[0] === b) return true;
+            var L = boards[m[0]], S = states[m[0]], o = L.arrows[m[1]];
+            return S.removed[o.id] || (isReady(S, o) && check(L, S, o).clear);
+          });
+          if (!ok) return;
+        }
+        out.push([b, id]);
+      });
+    });
+    return out;
+  }
+  function roomHasPlay(boards, states, groups) {
+    if (roomMoves(boards, states, groups).length) return true;
+    return boards.some(function (l, b) { return !isWon(states[b]) && iceOpensPlay(l, states[b]); });
+  }
+  // When nothing in the room can move: fire dies and ice melts everywhere, and if that is not enough,
+  // a golden arrow (every copy of it, for a cross-board twin) flies through anything.
+  function roomRescue(boards, states, groups) {
+    if (states.every(isWon) || roomHasPlay(boards, states, groups)) return false;
+    var log = function (b) { return (states[b].rescued = states[b].rescued || { fire: [], ice: [], freed: [] }); };
+    boards.forEach(function (l, b) {
+      var S = states[b], fire = Object.keys(S.burning || {}).filter(function (k) { return S.burning[k] > S.launches; }), ice = Object.keys(S.frozen || {});
+      if (fire.length || ice.length) {
+        fire.forEach(function (k) { log(b).fire.push(+k); }); ice.forEach(function (id) { log(b).ice.push(+id); });
+        S.burning = {}; S.frozen = {};
+      }
+    });
+    if (roomHasPlay(boards, states, groups)) return true;
+    var units = [], seenGroup = {};
+    boards.forEach(function (l, b) {
+      var S = states[b];
+      l.arrows.forEach(function (a) {
+        if (S.removed[a.id] || (paired(S, a) && a.twin < a.id)) return;
+        var members = [];
+        if (a.coopGroup !== undefined && groups && groups[a.coopGroup]) {
+          if (seenGroup[a.coopGroup]) return; seenGroup[a.coopGroup] = 1;
+          groups[a.coopGroup].members.forEach(function (m) { if (!states[m[0]].removed[m[1]]) members.push([m[0], m[1]]); });
+        } else group(l, a, S).forEach(function (m) { members.push([b, m.id]); });
+        var cost = 0;
+        members.forEach(function (m) { cost += obstaclesOf(boards[m[0]], states[m[0]], boards[m[0]].arrows[m[1]]).solid; });
+        units.push({ members: members, cost: cost + (a.kind === 'compass' ? 1000 : 0) });
+      });
+    });
+    units.sort(function (p, q) { return p.cost - q.cost; });
+    var free = function (u, on) { u.members.forEach(function (m) { var S = states[m[0]]; S.freed = Object.assign({}, S.freed); if (on) S.freed[m[1]] = true; else delete S.freed[m[1]]; }); };
+    for (var i = 0; i < units.length && i < 24; i++) {
+      free(units[i], true);
+      if (roomHasPlay(boards, states, groups)) { units[i].members.forEach(function (m) { log(m[0]).freed.push(m[1]); }); return true; }
+      free(units[i], false);
+    }
+    if (units.length) { free(units[0], true); units[0].members.forEach(function (m) { log(m[0]).freed.push(m[1]); }); return true; }
+    return false;
+  }
   function isStuck(level, state) { return !isWon(state) && legalMoves(level, state).length === 0 && !iceOpensPlay(level, state); }
 
   /* ---------- Seasons: what happens after each successful launch ---------- */
@@ -1462,6 +1524,6 @@
     check: check, canLaunch: canLaunch, tap: tap, rewind: rewind, legalMoves: legalMoves, isWon: isWon,
     SPECIALS: SPECIALS, specialRoom: specialRoom, BIRD_COLORS: BIRD_COLORS,
     edgeKey: edgeKey, wallOn: wallOn, propAt: propAt, slideProp: slideProp, pushMoves: pushMoves, settle: settle, slotsDone: slotsDone, findProp: findProp, anyMove: anyMove, carry: carry, throwBird: throwBird, solveSpecial: solveSpecial, resetBall: resetBall, roomTap: roomTap,
-    isStuck: isStuck, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
+    isStuck: isStuck, roomMoves: roomMoves, roomHasPlay: roomHasPlay, roomRescue: roomRescue, solve: solve, trapRate: trapRate, depthOf: depthOf, generate: generate
   };
 });

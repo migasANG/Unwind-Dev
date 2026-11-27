@@ -11,10 +11,10 @@
     autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] },
     // The alternative scenes. Their master pictures have other sizes (master), and their portraits are cut from a
     // part of the picture (port's third number is where that cut starts). Positions are in master coordinates.
-    'winter-alt': { master: [6144, 2032], land: [0.70866, 0, 0], port: [0.68571, 1727, 100], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
-    'spring-alt': { master: [6144, 2036], land: [0.70727, 0, 0], port: [0.68571, 1724, 100], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
-    'summer-alt': { master: [2016, 956], land: [1.50628, 238, 0], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
-    'autumn-alt': { master: [2016, 1044], land: [1.37931, 0, 0], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
+    'winter-alt': { master: [6144, 2032], land: [0.41667, 0, -593], port: [0.55385, 1995, 0], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
+    'spring-alt': { master: [6144, 2036], land: [0.41667, 0, -592], port: [0.55385, 1992, 0], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
+    'summer-alt': { master: [2016, 956], land: [1.26984, 0, -226], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
+    'autumn-alt': { master: [2016, 1044], land: [1.26984, 0, -114], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
   };
   // An alternative scene has its season's weather, wildlife and music.
   function photoBase(season) { return String(season).replace(/-alt$/, ''); }
@@ -64,6 +64,10 @@
       // On tall screens a few more clouds spread over the extra sky, sized like the first scenes' clouds.
       var cb = G.clouds.big, cs = G.clouds.small || G.clouds.big, sm = G.clouds.small ? 'small' : 'big', zk = G.master ? 0.94737 * 446 / cb[2] : k;
       clouds.push(['big', 760, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+    } else if (G.land[2] < -150) {
+      // A wide picture shown whole has extra sky above it: a couple more clouds drift there.
+      var lb = G.clouds.big, ls = G.clouds.small || G.clouds.big, lsm = G.clouds.small ? 'small' : 'big', lk = 0.77 * 446 / lb[2], sky = -G.land[2];
+      clouds.push(['big', 1500, Math.max(40, sky * 0.18), lb[2] * lk * 0.8, lb[3] * lk * 0.8], [lsm, 300, Math.max(60, sky * 0.42), ls[2] * lk * 0.7, ls[3] * lk * 0.7]);
     }
     clouds.forEach(function (c, i) {
       out += '<image class="pdrift" style="--a:' + (-60 - i * 25) + ';--b:' + (90 + i * 20) + ';animation-duration:' + (70 + i * 17) + 's;animation-delay:' + (-i * 23) + 's" href="bg/' + season + '-cloud-' + c[0] + '.webp" x="' + f(c[1]) + '" y="' + f(c[2]) + '" width="' + f(c[3]) + '" height="' + f(c[4]) + '"/>';
@@ -75,7 +79,7 @@
     });
     // Smoke from the chimney: soft puffs that rise, grow and fade, drifting with the wind.
     var base = photoBase(season), ch = G.chimney ? T(G.chimney[0], G.chimney[1]) : null, puffs = ch ? 7 : 0, lean = base === 'autumn' ? 150 : base === 'winter' ? 90 : 60;
-    var sk = G.master ? 0.77 : k;   // smoke puffs keep the first scenes' size on screen
+    var sk = G.master ? Math.min(0.77, k * 1.09) : k;   // smoke puffs keep the first scenes' size on screen
     for (var i = 0; i < puffs; i++) {
       var pr = (34 + r() * 10) * sk;
       out += '<circle class="psmoke" style="--dx:' + Math.round(lean * sk * 2.2 + r() * 40) + ';--dy:' + Math.round(-(300 + r() * 80) * sk * 1.4) + ';animation-duration:8.4s;animation-delay:' + (-i * 1.2).toFixed(1) + 's" cx="' + f(ch[0] + (r() - 0.5) * 10 * sk) + '" cy="' + f(ch[1] - pr * 0.4) + '" r="' + f(pr) + '" fill="url(#pSmoke)"/>';

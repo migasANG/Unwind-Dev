@@ -492,6 +492,8 @@
   function openCoopRoom(make, names) {
     if (coop && coop.online && !(names && names.keepOnline)) { netSend({ t: 'leave' }); netClose(); }
     var room = make();
+    // Open Waters rooms roll fresh fire, ice, wind and flowers every game, like a single Open Waters board.
+    if (room.endless) room.boards.forEach(function (l) { l.seed = Math.floor(Math.random() * 1e9); });
     room.names = names || room.names || COOP_NAMES;
     coopZoomK = 1; coopFocus = -1;
     coop = { room: room, make: make, n: room.boards.length, idx: 0, lives: room.lives || 12, burners: [], effects: [], poemDone: 0, boards: room.boards.map(function (l) { return { level: l, state: null, fx: null, queue: [] }; }) };
@@ -1229,7 +1231,8 @@
       host.classList.add('out');
       setTimeout(function () { host.hidden = true; host.classList.remove('on', 'out'); }, 500);
       if (current !== c) return;
-      if (next < 0) { pr.finished = true; save('unwind.progress2', progress); poemFinale(function () { ended = false; finish(true); }, c.lines); }
+      // The poem counts as cleared the moment its last line is written, even if the finale is never closed.
+      if (next < 0) { pr.finished = true; progress.done[P.id] = true; if (!pr.hits) progress.perfect[P.id] = true; save('unwind.progress2', progress); poemFinale(function () { ended = false; finish(true); }, c.lines); }
       else openPoem(next, c.poem);
     }, 3600);
   }
@@ -1473,6 +1476,20 @@
     coop.boards.forEach(function (B) { if (B.state) B.state.lives = coop.lives; });
   }
   function coopAllWon() { return !!coop && coop.boards.every(function (B) { return B.state && E.isWon(B.state); }); }
+  // Twins that span boards can lock each other (one copy is clear, the other blocked by fire or an arrow).
+  // When nothing in the whole room can move, fire and ice go and, if needed, a golden arrow comes.
+  function coopRoomRescue() {
+    if (!coop || coop.online || ended) return;
+    var levels = coop.boards.map(function (B) { return B.level; }), states = coop.boards.map(function (B) { return B.state; });
+    if (states.some(function (S) { return !S || !S.safe; })) return;
+    if (!E.roomRescue(levels, states, coop.room.groups)) return;
+    boardLayer = null;
+    takeEarlyFlowers(performance.now());
+    var here = goldAlive();
+    setCaption(here ? 'Every board was stuck, so a golden arrow came to help.' : 'Every board was stuck: a golden arrow is waiting on another board.', 'gold');
+    capMode = here ? 'gold' : '';
+    refresh(); coopNav();
+  }
   function coopMember(b, id) { var B = coop.boards[b]; return { b: b, B: B, a: B.level.arrows[id], st: B.state, l: B.level }; }
   // Before a tap: a sniper on its way may hold the board, and a cross-board twin needs its partners ready and clear.
   function coopAllow(id) {
@@ -1495,6 +1512,7 @@
       setCaption('Its twin on board ' + (blocked.b + 1) + ' is blocked.');
       refresh();
       if (state.lives === 0) finish(false, 'lives');
+      else setTimeout(coopRoomRescue, 700);
       return false;
     }
     return true;
@@ -1512,6 +1530,7 @@
         if (tr.ok && !tr.won && E.effectsOf(o.l).length) E.seasonStep(o.l, o.st);
       });
     }
+    setTimeout(coopRoomRescue, 900);
     res.results.forEach(function (r, k) {
       var m = l.arrows[r.id];
       if (!m.sniper) return;
@@ -1613,6 +1632,7 @@
     }
     // A hit is not a move: only the golden arrow check runs, in case the board can no longer be cleared.
     if (S.safe && E.isStuck(L, S)) E.ensurePlay(L, S);
+    setTimeout(coopRoomRescue, 700);
     refresh();
     if (coopAllWon()) { finish(true); return; }
     if (!B.queue.length && b === coop.idx) setCaption(coopBoardCaption(b));
@@ -2051,7 +2071,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-j';
+  var BUILD = '2026.11.27-k';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -2290,6 +2310,7 @@
       });
       if (ev.kind === 'flower') { S.picked = Object.assign({}, S.picked); S.picked[ev.k] = true; }
       if (S.safe && E.isStuck(L, S)) E.ensurePlay(L, S);
+      if (!quiet) setTimeout(coopRoomRescue, 300);
       if (!quiet && ev.b === coop.idx && ev.ids && ev.ids.length) sniperBlast();
       boardLayer = null;
       if (!quiet) coopMaybeStart(ev.b);
@@ -4833,14 +4854,6 @@
         var pr = poemProgress(P.id), started = !pr.finished && (pr.at > 0 || pr.written.length);
         return '<button data-poem="' + i + '" class="' + (progress.done[P.id] ? 'done ' : '') + (progress.perfect[P.id] ? 'perfect' : '') + '" aria-label="' + P.title + '"><span>' + P.title + '</span>' + (started ? '<span>· Line ' + (pr.at + 1) + '</span>' : '') + (progress.done[P.id] ? MOON_MARK : '') + (progress.perfect[P.id] ? STAR_MARK : '') + '</button>';
       }).join('') + '</div>';
-      POEMS.forEach(function (P, pi) {
-        var pr = poemProgress(P.id), n = E.specialRoom(P.key, window.UnwindI18n.lang()).boards.length, out = '';
-        for (var li = 0; li < n; li++) {
-          var id = P.id + '-' + (li + 1), open = li <= (pr.at || 0) || progress.done[id];
-          out += '<button data-pl="' + pi + ':' + li + '" class="' + (progress.done[id] ? 'done ' : '') + (progress.perfect[id] ? 'perfect' : '') + '"' + (open ? '' : ' disabled') + ' aria-label="Line ' + (li + 1) + (progress.perfect[id] ? ', perfect' : progress.done[id] ? ', cleared' : '') + '">' + (li + 1) + (progress.done[id] ? MOON_MARK : '') + (progress.perfect[id] ? STAR_MARK : '') + '</button>';
-        }
-        html += '<div class="chapter">' + (POEMS.length > 1 ? P.title + ' · ' : '') + 'Lines</div><div class="lv">' + out + '</div>';
-      });
       if (progress.tutorials && progress.tutorials.poemRead) html += '<div class="modes"><button id="mPoemRead"><b>Read the poem again</b><span>The whole poem, with its music.</span></button></div>';
     }
     if (tab === 'endless') {
@@ -4886,7 +4899,6 @@
     if (s.querySelector('#mTutBoards')) s.querySelector('#mTutBoards').onclick = function () { markTut('boards'); showTutorial(['boards'], 0, false, 'play'); };
     s.querySelectorAll('[data-bu]').forEach(function (b) { b.onclick = function () { openBoarding(+b.getAttribute('data-bu')); }; });
     s.querySelectorAll('[data-poem]').forEach(function (b) { b.onclick = function () { openPoem(undefined, +b.getAttribute('data-poem')); }; });
-    s.querySelectorAll('[data-pl]').forEach(function (b) { b.onclick = function () { var v = b.getAttribute('data-pl').split(':'); openPoem(+v[1], +v[0]); }; });
     if (s.querySelector('#mPoemRead')) s.querySelector('#mPoemRead').onclick = function () { var room = E.specialRoom('poem', window.UnwindI18n.lang()); poemFinale(null, room.boards.map(function (L) { return L.line; })); };
     if (tab !== 'endless') return;
     s.querySelector('#mOpen').onclick = function () { openEndless(); };
