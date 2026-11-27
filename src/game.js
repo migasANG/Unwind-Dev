@@ -41,6 +41,8 @@
   function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
 
   var progress = load('unwind.progress2', { last: { set: 'calm', index: 0 }, done: {}, perfect: {}, best: {}, endlessBy: {}, endlessOpts: { hard: false, timed: false }, daily: null });
+  // An older or partly written save may lack some parts: fill them in so nothing reads from a missing one.
+  (function () { var d = { last: { set: 'calm', index: 0 }, done: {}, perfect: {}, best: {}, endlessBy: {}, endlessOpts: { hard: false, timed: false } }; if (!progress || typeof progress !== 'object') progress = {}; Object.keys(d).forEach(function (k) { if (!progress[k] || typeof progress[k] !== 'object') progress[k] = d[k]; }); })();
   var audioPrefs = load('unwind.audio', { music: true, sound: true, theme: 'auto' });
   // Every session starts on Follow the level, while music and sound on/off are remembered.
   audioPrefs.theme = 'auto';
@@ -2012,7 +2014,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.26-j';
+  var BUILD = '2026.11.27-a';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {

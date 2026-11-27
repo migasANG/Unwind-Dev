@@ -2,10 +2,10 @@
      The rules live in guide3.js. Each phone shows only its own role's view:
      - the keeper sees the real sea only in the 7.5 s beam (and the boat, if the beam finds it), and otherwise an old
        paper chart that only holds what they drew;
-     - the captain only ever sees a green radar screen: the keeper's chart, the boat's square, and the deep treasure
-       and serpents the radar picks up.
+     - the captain only ever sees a green radar screen: the squares, the boat, the lighthouse, traps, and the deep
+       treasure and serpents inside the radar's circle. The keeper's drawings stay on the keeper's chart, so they talk.
      The screen uses the game's usual header and footer, and the chart can be zoomed. */
-  var G3 = window.UnwindGuide3, g3 = null, g3ctx = null, g3w = 0, g3h = 0, g3dpr = 1, g3off = null;
+  var G3 = window.UnwindGuide3, g3 = null, g3ctx = null, g3w = 0, g3h = 0, g3dpr = 1;
   var G3_PHASE = { start: 'Get ready', light: 'Light', write: 'Chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
   // One small picture per step, for the step banner under the counters.
   var G3_PHICON = {
@@ -16,16 +16,31 @@
     next: '<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8"/>',
     over: '<path d="M6 4v16M6 5h11l-2 4 2 4H6"/>'
   };
-  var G3_PAPER = { bg: '#ead9b0', edge: '#d9c08a', ink: '#6b4a26', line: 'rgba(107,74,38,.22)', wash: 'rgba(28,52,96,.92)' };
+  var G3_PAPER = { bg: '#d9ab68', table: '#24150d', grid: '#dcb072', ink: '#3d2314', red: '#a3291c', line: 'rgba(61,35,20,.42)' };
   var G3_RADAR = { bg: '#020c07', sea: '#03170c', line: 'rgba(90,255,160,.16)', ink: '#7dffb0', glow: 'rgba(90,255,160,' };
   function g3El() { return $('guide3'); }
+  // The art's pictures, made once and kept. A picture may still be loading: it is simply skipped until it is ready.
+  var g3Pics = {};
+  function g3Pic(group, key) {
+    var id = group + '.' + key, im = g3Pics[id];
+    if (!im) { var src = group ? G3ART[group][key] : G3ART[key]; im = g3Pics[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src); }
+    return im;
+  }
+  function g3PicsLoad() { ['chart', 'radar', 'sea'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
+  // Draws a square picture centred on cx, cy, size wide, turned by rot.
+  function g3Put(c, im, cx, cy, size, rot, alpha) {
+    if (!im.complete || !im.naturalWidth) return;
+    c.save(); if (alpha !== undefined) c.globalAlpha *= alpha; c.translate(cx, cy); if (rot) c.rotate(rot);
+    c.drawImage(im, -size / 2, -size / 2, size, size); c.restore();
+  }
+  var G3_ROT = { n: -Math.PI / 2, e: 0, s: Math.PI / 2, w: Math.PI };
 
   /* ---------- The menu (online) ---------- */
   function guide3Menu() {
     var o = load('unwind.guide3Opts', { size: 0, hard: false });
     var seg = function (key, opts) { return '<div class="sizes lseg ' + (opts.length === 3 ? 'o3' : '') + '" role="group">' + opts.map(function (v) { return '<button data-g3="' + key + '" data-v="' + v[0] + '" aria-pressed="' + (String(o[key]) === String(v[0])) + '">' + v[1] + '</button>'; }).join('') + '</div>'; };
     var html = '<div class="row" id="g3MenuCard"><h2>Guiding Light 3.0</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<p class="note">A game of memory and talk for two, online. The keeper sees the real sea only in short flashes of the lighthouse beam and draws the chart from memory. The captain never sees the sea: only that chart on a radar screen, with the coordinates, deep treasure and serpents. Talk to each other!</p>' +
+      '<p class="note">A game of memory and talk for two, online. The keeper sees the real sea only in short flashes of the lighthouse beam and draws the chart from memory. The captain never sees the sea, nor the chart: only a radar with the coordinates, the lighthouse, traps, deep treasure and serpents. Talk to each other!</p>' +
       '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('size', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]) +
       '<div class="setting"><span>Difficulty<small>' + (o.hard ? 'Two moves a turn, more tall rocks, gusts and serpents, 2 sailors' : 'Three moves a turn, 3 sailors') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]) +
       '<button class="obig" id="g3Host"><b>Host a room</b><span>Send your partner the room code. Seat 1 keeps the lighthouse, seat 2 sails.</span></button>' +
@@ -43,11 +58,11 @@
      The first time, both roles are explained. In a game, the guide only explains your own role. The pages change in
      place, so the card does not close and open again between them. */
   var G3_PAGES = {
-    roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all: only a radar screen with the chart the keeper draws. You win together, so talk!'],
+    roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all, nor the keeper\'s chart: only a radar screen. You win together, so talk!'],
     light: ['The keeper: the light', 'Each turn starts with the light. Drag to aim the beam: for 7.5 seconds you see the real sea. Rocks, tall rocks (they hide what is behind them), whirlpools, gusts of wind, floating treasure, serpents, and the boat if the beam finds it. Remember all you can! Done ends it early.'],
-    chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. The captain sees your drawings on the radar as you make them. Done ends it early.'],
+    chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. Your chart is only for you: tell the captain what is out there. Done ends it early.'],
     trap: ['The keeper: traps', 'While drawing, you can also throw one trap a turn: tap a square and pick Trap. Changed your mind? Pick it again on the same turn to take it back. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.'],
-    radar: ['The captain: the radar', 'You only see the radar: the keeper\'s chart, your boat\'s square (like E7), and what the radar picks up within 3 squares: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
+    radar: ['The captain: the radar', 'You only see the radar: your boat\'s square (like E7), the lighthouse, traps, and what the radar picks up inside its circle, about 3 squares around you: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
     sail: ['The captain: sailing', 'You have 30 seconds to plan up to 3 moves (2 on Hard). Tap a square next to the boat, then the next one. Tap a planned square again to take it back. Pinch, scroll or use + and − to zoom. Sail ends it early. Then press Next turn when you are both ready.'],
     danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
     win: ['Winning', 'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
@@ -98,7 +113,7 @@
     el.querySelector('.g3-opts').innerHTML = $('mute').innerHTML;
     document.body.classList.add('guideon');
     guideMusic(true);
-    g3Paint(); g3Layout(); g3Hud();
+    g3PicsLoad(); g3Edge(); g3Paint(); g3Layout(); g3Hud();
     track('guide3_start', { size: opts.size, hard: !!opts.hard, role: role, local: !!local });
     if (!(progress.tutorials && progress.tutorials.guide3)) { progress.tutorials = progress.tutorials || {}; progress.tutorials.guide3 = 1; save('unwind.progress2', progress); g3Help('all'); }
     if (!g3.loop) g3Loop();
@@ -216,8 +231,8 @@
   }
 
   /* ---------- Around the chart: the header, the pills and the buttons ---------- */
-  // The crew counter's sailor: a round badge with a white cap and a golden anchor.
-  var G3_SAILOR = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><clipPath id="g3SailorClip"><circle cx="24" cy="24" r="23"/></clipPath></defs><circle cx="24" cy="24" r="23" fill="#24376f"/><g clip-path="url(#g3SailorClip)"><path d="M7 48c1-8.500 7.500-12.500 17-12.500S40 39.500 41 48z" fill="#9ccbf0"/><path d="M13.500 37.500l10.500 7 10.500-7-3.200-2.200-7.300 4.400-7.300-4.400z" fill="#2c84d6"/><rect x="20" y="27" width="8" height="10" rx="3.500" fill="#ef9f82"/><ellipse cx="24" cy="23.500" rx="8.200" ry="9.600" fill="#f8bc9e"/><path d="M15.500 24c0-4 3.800-6.500 8.500-6.500" fill="none" stroke="#fbd0b6" stroke-width="2" stroke-linecap="round" opacity=".7"/><path d="M13.400 17.400C14.200 11.200 18.600 7.600 24 7.600S33.800 11.200 34.600 17.400C31.500 16.200 27.900 15.600 24 15.600S16.500 16.200 13.400 17.400z" fill="#eef5fc"/><path d="M12.800 17.200C16 15.800 19.900 15.100 24 15.100S32 15.800 35.200 17.200L34.500 19.800C31.400 18.600 27.800 18 24 18S16.600 18.600 13.500 19.800z" fill="#bcd8f0"/><g fill="none" stroke="#f5b62c" stroke-width="1.500" stroke-linecap="round"><circle cx="24" cy="9.900" r="1.300"/><path d="M24 11.200v4.400M22 12.800h4M21.100 13.900c.8 1.600 1.700 2.200 2.900 2.200s2.100-.6 2.900-2.200"/></g><path d="M21.600 40.300L24 38.400 26.400 40.300 24 42.200z" fill="#1d5ea6"/><path d="M22.600 41.600L19.600 47h3L24 43.800zM25.400 41.600L28.400 47h-3L24 43.800z" fill="#2c84d6"/></g></svg>';
+  // The crew counter's sailor: a round badge, a sailor in a striped shirt and a peaked cap.
+  var G3_SAILOR = G3ART.sailor;
   function g3Hud() {
     var G = g3.G, el = g3El(), me = g3.role;
     el.querySelector('.g3-where').textContent = 'Guiding Light 3.0 · ' + (me === 'keeper' ? 'Lighthouse keeper' : 'Boat captain') + (g3.local ? ' · one device' : '');
@@ -278,8 +293,6 @@
     g3dpr = Math.min(2, window.devicePixelRatio || 1); g3w = r.width; g3h = r.height;
     cv.width = Math.round(g3w * g3dpr); cv.height = Math.round(g3h * g3dpr);
     g3ctx = cv.getContext('2d');
-    if (!g3off) g3off = document.createElement('canvas');
-    g3off.width = cv.width; g3off.height = cv.height;
   }
   window.addEventListener('resize', function () { if (g3) g3Layout(); });
   if (window.ResizeObserver) new ResizeObserver(function () { if (g3) g3Layout(); }).observe(g3El().querySelector('canvas'));
@@ -327,19 +340,19 @@
     var X = function (x) { return cam.ox + x * cam.cs; }, Y = function (y) { return cam.oy + y * cam.cs; }, cs = cam.cs;
     g3.pings = g3.pings.filter(function (p) { return now - p.t0 < 2600; });
     g3.pings.forEach(function (p) {
-      var u = Math.max(0, now - p.t0) / 2600, px2 = X(p.x) + cs / 2, py2 = Y(p.y) + cs / 2, col = view === 'paper' ? '176,58,46' : p.role === 'keeper' ? '255,214,120' : '125,255,154';
+      var u = Math.max(0, now - p.t0) / 2600, px2 = X(p.x) + cs / 2, py2 = Y(p.y) + cs / 2, col = view === 'paper' ? '163,41,28' : p.role === 'keeper' ? '255,214,120' : '125,255,154';
       for (var q = 0; q < 2; q++) { var v = (u * 2 + q * 0.5) % 1; c.strokeStyle = 'rgba(' + col + ',' + (1 - v) + ')'; c.lineWidth = 3; c.beginPath(); c.arc(px2, py2, cs * (0.3 + v * 0.9), 0, 7); c.stroke(); }
     });
-    if (g3.picker) { c.strokeStyle = view === 'paper' ? '#b03a2e' : '#ffe9a8'; c.lineWidth = 2.5; c.strokeRect(X(g3.picker[0]) + 1, Y(g3.picker[1]) + 1, cs - 2, cs - 2); }
+    if (g3.picker) { c.strokeStyle = view === 'paper' ? '#a3291c' : '#ffe9a8'; c.lineWidth = 2.5; c.strokeRect(X(g3.picker[0]) + 1, Y(g3.picker[1]) + 1, cs - 2, cs - 2); }
   }
   // Coordinates along the top and the left. When zoomed in they stay pinned to the edges of the screen.
-  function g3Labels(c, cam, ink, band) {
+  function g3Labels(c, cam, ink, band, serif) {
     var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; };
     var ty = Math.max(Y(0) - cs * 0.38, Math.min(cs * 0.36, 14)), lx = Math.max(X(0) - cs * 0.42, Math.min(cs * 0.42, 14));
     var fs = Math.max(9, Math.min(18, Math.round(cs * 0.36)));
     if (ty > Y(0) - cs * 0.38 + 0.5) { c.fillStyle = band; c.fillRect(0, 0, g3w, ty + fs * 0.75); }
     if (lx > X(0) - cs * 0.42 + 0.5) { c.fillStyle = band; c.fillRect(0, 0, lx + fs * 1.1, g3h); }
-    c.fillStyle = ink; c.font = '600 ' + fs + 'px Fredoka, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = ink; c.font = serif ? 'italic 600 ' + fs + 'px Georgia, \'Times New Roman\', serif' : '600 ' + fs + 'px Fredoka, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     for (var i = 0; i < G.n; i++) {
       if (X(i) + cs > 0 && X(i) < g3w) c.fillText(String.fromCharCode(65 + i), X(i) + cs / 2, ty);
       if (Y(i) + cs > 0 && Y(i) < g3h) c.fillText(String(i + 1), lx, Y(i) + cs / 2);
@@ -373,7 +386,8 @@
     for (var yy = 0; yy < G.n; yy++) for (var xx = 0; xx < G.n; xx++) {
       var kk = yy * G.n + xx, t = G.grid[kk];
       if (!lit[kk]) continue;
-      if (t === G3.ROCK || t === G3.TALL || t === G3.WHIRL) guideTerrain(c, g3.paint, xx, yy, X(xx), Y(yy), cs, now, 1);
+      if (t === G3.ROCK || t === G3.TALL) g3Rock(c, xx, yy, X(xx), Y(yy), cs, t === G3.TALL);
+      else if (t === G3.WHIRL) guideTerrain(c, g3.paint, xx, yy, X(xx), Y(yy), cs, now, 1);
       var w = G3.windAt(G, xx, yy);
       if (w) g3Wind(c, X(xx) + cs / 2, Y(yy) + cs / 2, cs, w.dir, now, 1);
     }
@@ -383,79 +397,133 @@
       if (!lit[s.y * G.n + s.x]) return; if (s.stun) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); else guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
     g3Lighthouse(c, cam, lighting ? 0.9 : 0.45);
     var bp = g3BoatPos(now);
-    if (lit[Math.round(bp.y) * G.n + Math.round(bp.x)]) guideBoat(c, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0);
+    if (lit[Math.round(bp.y) * G.n + Math.round(bp.x)]) g3Boat(c, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now);
     g3Labels(c, cam, 'rgba(238,240,255,.7)', '#060a1c');
   }
-  // The keeper's paper chart: only what they drew, in the same pictures as the real sea, each on a wash of ink-blue.
+  // The real sea's rocks: one of several pictures per square, always the same one for the same square.
+  var G3_LOW = ['boulders', 'mossy', 'gull', 'barnacle', 'seaweed'], G3_TALL = ['stack', 'arch', 'nest', 'twin'];
+  function g3Rock(c, x, y, px, py, cs, tall) {
+    var h = ((x * 73856093) ^ (y * 19349663) ^ (g3.seed | 0)) >>> 0, list = tall ? G3_TALL : G3_LOW;
+    g3Put(c, g3Pic('sea', list[h % list.length]), px + cs / 2, py + cs * 0.42, cs * 1.3);
+  }
+  // The boat: a little sailboat, the captain at the stern and a lantern on its post.
+  function g3Boat(c, cx, cy, cs, now) {
+    var im = g3Pic('', 'boat'); if (!im.complete || !im.naturalWidth) return;
+    var w = cs * 1.3, h = w * 84 / 128, bob = reducedMotion() ? 0 : Math.sin(now / 650) * cs * 0.025;
+    c.drawImage(im, cx - w / 2, cy + cs * 0.3 - h * 76 / 84 + bob, w, h);
+  }
+  // The keeper's chart: torn, worn paper, a checkered border round the squares, rhumb lines from a compass rose,
+  // and the keeper's drawings in brown ink.
+  function g3Edge() {
+    // The sheet's ragged outline, in squares around the chart: made once per game.
+    var n = g3.G.n, r = guideRand((g3.seed % 99991) + 7), pts = [], x0 = -1.05, y0 = -1.05, x1 = n + 0.4, y1 = n + 0.4;
+    var side = function (ax, ay, bx, by, nx, ny) {
+      var len = Math.hypot(bx - ax, by - ay), k = Math.max(8, Math.round(len * 5)), tear = 0;
+      for (var i = 0; i < k; i++) {
+        var t = i / k, d = 0.05 + r() * 0.07;
+        if (tear > 0) { d += tear * 0.09; tear--; } else if (r() < 0.04) tear = 2 + Math.floor(r() * 2);
+        pts.push([ax + (bx - ax) * t + nx * d, ay + (by - ay) * t + ny * d]);
+      }
+    };
+    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0);
+    g3.edge = pts;
+  }
   function g3DrawPaper(c, cam, now) {
-    var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n;
-    c.fillStyle = '#060a1c'; c.fillRect(0, 0, g3w, g3h);
-    var m = cs * 0.95, px = X(0) - m, py = Y(0) - m, pw = n * cs + m * 1.25, ph = n * cs + m * 1.25;
-    c.fillStyle = G3_PAPER.bg; c.fillRect(px, py, pw, ph);
-    // Old paper: soft stains and darker edges.
+    var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n, P = G3_PAPER;
+    c.fillStyle = P.table; c.fillRect(0, 0, g3w, g3h);
+    var sheet = function () { c.beginPath(); g3.edge.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
+    c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.3; c.shadowOffsetY = cs * 0.1; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
+    c.save(); sheet(); c.clip();
+    var pg = c.createLinearGradient(X(-1), Y(-1), X(n + 0.4), Y(n + 0.4)); pg.addColorStop(0, '#e2b877'); pg.addColorStop(0.5, '#d9ab68'); pg.addColorStop(1, '#cc9a58');
+    c.fillStyle = pg; c.fillRect(X(-1.2), Y(-1.2), (n + 1.8) * cs, (n + 1.8) * cs);
     var rs = guideRand(g3.seed % 100000);
-    c.save(); c.beginPath(); c.rect(px, py, pw, ph); c.clip();
-    for (var st = 0; st < 9; st++) { var sx = px + rs() * pw, sy = py + rs() * ph, sr = cs * (1.5 + rs() * 3), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(160,120,60,.12)'); sg.addColorStop(1, 'rgba(160,120,60,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
-    var eg = c.createRadialGradient(px + pw / 2, py + ph / 2, Math.min(pw, ph) * 0.35, px + pw / 2, py + ph / 2, Math.max(pw, ph) * 0.75); eg.addColorStop(0, 'rgba(120,80,30,0)'); eg.addColorStop(1, 'rgba(120,80,30,.35)');
-    c.fillStyle = eg; c.fillRect(px, py, pw, ph);
+    for (var st = 0; st < 7; st++) { var sx = X(-1) + rs() * (n + 1.4) * cs, sy = Y(-1) + rs() * (n + 1.4) * cs, sr = cs * (1.2 + rs() * 2.4), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.85, 'rgba(138,90,34,.08)'); sg.addColorStop(1, 'rgba(138,90,34,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+    // Rhumb lines fanning out from the rose.
+    var rx = X(0) + cs * 1.25, ry = Y(n) - cs * 1.25;   // bottom left, clear of the zoom buttons
+    c.strokeStyle = 'rgba(61,35,20,.16)'; c.lineWidth = 1; c.beginPath();
+    for (var rl = 0; rl < 32; rl++) { var ra = rl * Math.PI / 16; c.moveTo(rx, ry); c.lineTo(rx + Math.cos(ra) * cs * 40, ry + Math.sin(ra) * cs * 40); }
+    c.stroke();
+    // The squares sit on slightly lighter paper.
+    c.fillStyle = 'rgba(220,176,114,.82)'; c.fillRect(X(0), Y(0), n * cs, n * cs);
+    var eg = c.createRadialGradient(X(n / 2), Y(n / 2), n * cs * 0.42, X(n / 2), Y(n / 2), n * cs * 0.8); eg.addColorStop(0, 'rgba(106,60,18,0)'); eg.addColorStop(1, 'rgba(74,40,10,.42)');
+    c.fillStyle = eg; c.fillRect(X(-1.2), Y(-1.2), (n + 1.8) * cs, (n + 1.8) * cs);
     c.restore();
-    c.strokeStyle = G3_PAPER.line; c.lineWidth = 1;
+    c.strokeStyle = '#1d0f06'; c.lineWidth = 2; sheet(); c.stroke();
+    // The compass rose, faint, under the drawings.
+    g3Put(c, g3Pic('', 'rose'), rx, ry - cs * 0.06, cs * 2.3, 0, 0.32);
+    c.strokeStyle = P.line; c.lineWidth = 1;
     for (var gl = 1; gl < n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(n), Y(gl)); c.stroke(); }
-    c.strokeStyle = G3_PAPER.ink; c.lineWidth = 2; c.strokeRect(X(0), Y(0), n * cs, n * cs);
-    c.lineWidth = 1; c.strokeRect(X(0) - 4, Y(0) - 4, n * cs + 8, n * cs + 8);
-    // A compass rose in the corner, faint, under the drawings.
-    var rx = X(n) - cs * 1.3, ry = Y(n) - cs * 1.3, rr = cs * 0.95;
-    c.save(); c.globalAlpha = 0.35; c.fillStyle = G3_PAPER.ink; c.strokeStyle = G3_PAPER.ink; c.lineWidth = 1;
-    for (var d = 0; d < 8; d++) { var a = d * Math.PI / 4, l = d % 2 ? rr * 0.55 : rr, w2 = rr * 0.16; c.beginPath(); c.moveTo(rx + Math.sin(a) * l, ry - Math.cos(a) * l); c.lineTo(rx + Math.sin(a + 1.57) * w2, ry - Math.cos(a + 1.57) * w2); c.lineTo(rx + Math.sin(a - 1.57) * w2, ry - Math.cos(a - 1.57) * w2); c.closePath(); if (d % 2) c.stroke(); else c.fill(); }
-    c.beginPath(); c.arc(rx, ry, rr * 0.7, 0, 7); c.stroke();
-    c.font = '700 ' + Math.round(cs * 0.36) + 'px Fredoka, system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('N', rx, ry - rr - cs * 0.22);
-    c.restore();
-    g3Marks(c, cam, now, true);
+    // A checkered border, like the scale bars round an old chart.
+    var o = Math.max(4, cs * 0.16), half = cs / 2;
+    c.fillStyle = P.ink;
+    for (var b = 0; b < n * 2; b += 2) {
+      c.fillRect(X(0) + b * half, Y(0) - o, half, o); c.fillRect(X(0) + b * half, Y(n), half, o);
+      c.fillRect(X(0) - o, Y(0) + b * half, o, half); c.fillRect(X(n), Y(0) + b * half, o, half);
+    }
+    c.strokeStyle = P.ink; c.lineWidth = 1.4; c.strokeRect(X(0), Y(0), n * cs, n * cs); c.strokeRect(X(0) - o, Y(0) - o, n * cs + o * 2, n * cs + o * 2);
+    g3Marks(c, cam, now);
     g3Traps(c, cam, now, 'paper');
     g3Crashes(c, cam);
-    g3Lighthouse(c, cam, 0);
-    g3Labels(c, cam, G3_PAPER.ink, G3_PAPER.bg);
+    g3Put(c, g3Pic('chart', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 44);
+    g3Labels(c, cam, P.ink, '#d9ab68', true);
   }
-  // The captain's radar screen: everything in glowing green, scan lines over it, and a sweep around the boat.
+  // The captain's radar screen: crisp squares, the lighthouse, traps, and a round reach around the boat with a sweep.
+  // The keeper's drawings are not on it.
   function g3DrawRadar(c, cam, now) {
     var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n;
     c.fillStyle = G3_RADAR.bg; c.fillRect(0, 0, g3w, g3h);
     c.fillStyle = G3_RADAR.sea; c.fillRect(X(0), Y(0), n * cs, n * cs);
-    c.strokeStyle = G3_RADAR.line; c.lineWidth = 1;
-    for (var gl = 1; gl < n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(n), Y(gl)); c.stroke(); }
-    c.strokeStyle = G3_RADAR.glow + '.5)'; c.lineWidth = 2; c.strokeRect(X(0), Y(0), n * cs, n * cs);
-    // The keeper's drawings, the lighthouse and the boat, all turned radar-green.
-    var bp = g3BoatPos(now);
-    g3Tinted(c, function (o) { g3Marks(o, cam, now, false); g3Traps(o, cam, now, 'radar'); g3Lighthouse(o, cam, 0); guideBoat(o, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now, true, 1, 0); }, 'rgba(110,255,170,.78)');
+    c.strokeStyle = 'rgba(90,255,158,.3)'; c.lineWidth = 1;
+    for (var gl = 1; gl < n; gl++) { var gx = Math.round(X(gl)) + 0.5, gy = Math.round(Y(gl)) + 0.5; c.beginPath(); c.moveTo(gx, Y(0)); c.lineTo(gx, Y(n)); c.moveTo(X(0), gy); c.lineTo(X(n), gy); c.stroke(); }
+    c.strokeStyle = G3_RADAR.glow + '.55)'; c.lineWidth = 1.5; c.strokeRect(X(0), Y(0), n * cs, n * cs);
+    var bp = g3BoatPos(now), bx = X(bp.x) + cs / 2, by = Y(bp.y) + cs / 2;
+    g3Traps(c, cam, now, 'radar');
     g3Crashes(c, cam);
+    g3Put(c, g3Pic('radar', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 40);
     if (!G.ended) {
-      var R = G3.RADAR, sweep = (now / 2400) % 1 * Math.PI * 2, rx = X(bp.x) + cs / 2, ry = Y(bp.y) + cs / 2, rr = (R + 0.5) * cs;
+      var R = G3.RADAR, rr = R * 1.05 * cs, sweep = (now / 2400) % 1 * Math.PI * 2;
       c.save(); c.beginPath(); c.rect(X(0), Y(0), n * cs, n * cs); c.clip();
-      c.save(); c.beginPath(); c.arc(rx, ry, rr, 0, 7); c.clip();
-      var rg = c.createRadialGradient(rx, ry, 0, rx, ry, rr); rg.addColorStop(0, G3_RADAR.glow + '.10)'); rg.addColorStop(1, G3_RADAR.glow + '.02)');
-      c.fillStyle = rg; c.fillRect(rx - rr, ry - rr, rr * 2, rr * 2);
-      if (c.createConicGradient) { var sg = c.createConicGradient(sweep - 1.2, rx, ry); sg.addColorStop(0, G3_RADAR.glow + '0)'); sg.addColorStop(0.18, G3_RADAR.glow + '.32)'); sg.addColorStop(0.19, G3_RADAR.glow + '0)'); c.fillStyle = sg; c.fillRect(rx - rr, ry - rr, rr * 2, rr * 2); }
+      c.save(); c.beginPath(); c.arc(bx, by, rr, 0, 7); c.clip();
+      var rg = c.createRadialGradient(bx, by, 0, bx, by, rr); rg.addColorStop(0, G3_RADAR.glow + '.14)'); rg.addColorStop(1, G3_RADAR.glow + '.05)');
+      c.fillStyle = rg; c.fillRect(bx - rr, by - rr, rr * 2, rr * 2);
+      if (c.createConicGradient) { var sg = c.createConicGradient(sweep - 0.9, bx, by); sg.addColorStop(0, G3_RADAR.glow + '0)'); sg.addColorStop(0.14, G3_RADAR.glow + '.36)'); sg.addColorStop(0.145, G3_RADAR.glow + '0)'); c.fillStyle = sg; c.fillRect(bx - rr, by - rr, rr * 2, rr * 2); }
+      c.strokeStyle = '#b8ffd2'; c.lineWidth = 2; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + Math.cos(sweep + 0.03) * rr, by + Math.sin(sweep + 0.03) * rr); c.stroke();
       c.restore();
-      c.strokeStyle = G3_RADAR.glow + '.4)'; c.lineWidth = 1.5; for (var q = 1; q <= R; q++) { c.beginPath(); c.arc(rx, ry, (q + 0.5) * cs, 0, 7); c.stroke(); }
+      c.strokeStyle = G3_RADAR.glow + '.28)'; c.lineWidth = 1; for (var q = 1; q < Math.floor(R); q++) { c.beginPath(); c.arc(bx, by, (q + 0.5) * cs, 0, 7); c.stroke(); }
+      c.strokeStyle = 'rgba(125,255,176,.9)'; c.lineWidth = 2; c.beginPath(); c.arc(bx, by, rr, 0, 7); c.stroke();
+      c.lineWidth = 1.5; c.beginPath(); c.moveTo(bx, by - rr); c.lineTo(bx, by - rr - 7); c.moveTo(bx, by + rr); c.lineTo(bx, by + rr + 7); c.moveTo(bx - rr, by); c.lineTo(bx - rr - 7, by); c.moveTo(bx + rr, by); c.lineTo(bx + rr + 7, by); c.stroke();
       c.restore();
-      if (!g3.anim) G3.radar(G).forEach(function (b) { if (b.stun) { c.save(); c.globalAlpha = 0.8; guideBubbles(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.id); c.restore(); } else g3Blip(c, X(b.x) + cs / 2, Y(b.y) + cs / 2, cs, now, b.kind, rx, ry, sweep); });
+      if (!g3.anim) G3.radar(G).forEach(function (b) {
+        var cx = X(b.x) + cs / 2, cy = Y(b.y) + cs / 2;
+        if (b.stun) { g3Put(c, g3Pic('radar', 'stun'), cx, cy, cs * 48 / 40, 0, 0.9); return; }
+        var a = Math.atan2(cy - by, cx - bx), since = ((sweep - a) % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2), glow = Math.max(0.45, 1 - since / (Math.PI * 2));
+        g3Put(c, g3Pic('radar', b.kind === 'treasure' ? 'treasure' : 'serpent'), cx, cy, cs * 48 / 40, 0, glow);
+      });
       // The route being planned, and the squares that can come next.
       if (G.phase === 'boat') {
         var pp = G3.planPath(G, g3.plan), end = pp[pp.length - 1];
         if (g3.plan.length < G.steps) [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(function (d) { var ax = end[0] + d[0], ay = end[1] + d[1]; if (G3.inside(G, ax, ay)) { c.fillStyle = G3_RADAR.glow + (0.1 + 0.06 * Math.sin(now / 300)) + ')'; c.fillRect(X(ax) + 2, Y(ay) + 2, cs - 4, cs - 4); c.strokeStyle = G3_RADAR.glow + '.45)'; c.lineWidth = 1; c.strokeRect(X(ax) + 2.5, Y(ay) + 2.5, cs - 5, cs - 5); } });
         if (pp.length > 1) {
-          c.strokeStyle = '#b8ffd2'; c.lineWidth = Math.max(2, cs * 0.09); c.setLineDash([cs * 0.16, cs * 0.12]); c.lineJoin = 'round';
+          c.strokeStyle = '#b8ffd2'; c.lineWidth = Math.max(2, cs * 0.07); c.setLineDash([cs * 0.14, cs * 0.11]); c.lineJoin = 'round';
           c.beginPath(); pp.forEach(function (p, j) { c[j ? 'lineTo' : 'moveTo'](X(p[0]) + cs / 2, Y(p[1]) + cs / 2); }); c.stroke(); c.setLineDash([]);
-          pp.slice(1).forEach(function (p, j) { c.fillStyle = '#b8ffd2'; c.beginPath(); c.arc(X(p[0]) + cs / 2, Y(p[1]) + cs / 2, cs * 0.17, 0, 7); c.fill(); c.fillStyle = '#03170c'; c.font = '700 ' + Math.round(cs * 0.22) + 'px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(j + 1), X(p[0]) + cs / 2, Y(p[1]) + cs / 2 + 0.5); });
+          pp.slice(1).forEach(function (p, j) { c.fillStyle = 'rgba(90,255,158,.14)'; c.fillRect(X(p[0]) + 1, Y(p[1]) + 1, cs - 2, cs - 2); c.strokeStyle = '#b8ffd2'; c.lineWidth = 1.5; c.strokeRect(X(p[0]) + 1, Y(p[1]) + 1, cs - 2, cs - 2); c.fillStyle = '#d6ffe6'; c.beginPath(); c.arc(X(p[0]) + cs / 2, Y(p[1]) + cs / 2, cs * 0.19, 0, 7); c.fill(); c.fillStyle = '#03170c'; c.font = '700 ' + Math.round(cs * 0.26) + 'px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(j + 1), X(p[0]) + cs / 2, Y(p[1]) + cs / 2 + 0.5); });
         }
       }
+    }
+    // The boat, with brackets round its square.
+    var k = cs * 0.18, x0 = X(bp.x) + 1, y0 = Y(bp.y) + 1, x1 = x0 + cs - 2, y1 = y0 + cs - 2;
+    c.strokeStyle = '#b8ffd2'; c.lineWidth = 2; c.beginPath();
+    c.moveTo(x0, y0 + k); c.lineTo(x0, y0); c.lineTo(x0 + k, y0); c.moveTo(x1 - k, y0); c.lineTo(x1, y0); c.lineTo(x1, y0 + k);
+    c.moveTo(x0, y1 - k); c.lineTo(x0, y1); c.lineTo(x0 + k, y1); c.moveTo(x1 - k, y1); c.lineTo(x1, y1); c.lineTo(x1, y1 - k); c.stroke();
+    g3Put(c, g3Pic('radar', 'boat'), bx, by, cs * 48 / 40);
+    if (!G.ended) {
       var lab = G3.coord(G.boat.x, G.boat.y);
       c.font = '700 ' + Math.max(11, Math.round(cs * 0.34)) + 'px Fredoka, system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
       var tw = c.measureText(lab).width + 12, ly = Y(bp.y) + cs * 1.08;
       if (ly + cs * 0.3 > Y(n)) ly = Y(bp.y) - cs * 0.32;
-      c.fillStyle = 'rgba(2,20,10,.9)'; c.fillRect(X(bp.x) + cs / 2 - tw / 2, ly - cs * 0.22, tw, cs * 0.44);
-      c.strokeStyle = G3_RADAR.glow + '.6)'; c.lineWidth = 1; c.strokeRect(X(bp.x) + cs / 2 - tw / 2, ly - cs * 0.22, tw, cs * 0.44);
-      c.fillStyle = G3_RADAR.ink; c.fillText(lab, X(bp.x) + cs / 2, ly);
+      c.fillStyle = 'rgba(2,20,10,.9)'; c.fillRect(bx - tw / 2, ly - cs * 0.22, tw, cs * 0.44);
+      c.strokeStyle = G3_RADAR.glow + '.6)'; c.lineWidth = 1; c.strokeRect(bx - tw / 2, ly - cs * 0.22, tw, cs * 0.44);
+      c.fillStyle = G3_RADAR.ink; c.fillText(lab, bx, ly);
     }
     g3Labels(c, cam, G3_RADAR.ink, G3_RADAR.bg);
     // Scan lines and a darker rim, like an old screen.
@@ -463,47 +531,30 @@
     var vg = c.createRadialGradient(g3w / 2, g3h / 2, Math.min(g3w, g3h) * 0.4, g3w / 2, g3h / 2, Math.max(g3w, g3h) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
     c.fillStyle = vg; c.fillRect(0, 0, g3w, g3h);
   }
-  // Draws with a colour laid over everything drawn, through a canvas of its own.
-  function g3Tinted(c, draw, color) {
-    var o = g3off.getContext('2d');
-    o.setTransform(1, 0, 0, 1, 0, 0); o.globalCompositeOperation = 'source-over'; o.clearRect(0, 0, g3off.width, g3off.height);
-    o.setTransform(g3dpr, 0, 0, g3dpr, 0, 0);
-    draw(o);
-    o.setTransform(1, 0, 0, 1, 0, 0); o.globalCompositeOperation = 'source-atop'; o.fillStyle = color; o.fillRect(0, 0, g3off.width, g3off.height);
-    o.globalCompositeOperation = 'source-over';
-    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(g3off, 0, 0); c.restore();
+  // The keeper's drawings, in brown ink. Gusts point the way they blow.
+  function g3Sprite(c, icon, cx, cy, cs) {
+    var wind = icon.indexOf('wind-') === 0, key = wind ? 'wind' : icon;
+    if (!G3ART.chart[key]) return;
+    g3Put(c, g3Pic('chart', key), cx, cy, cs * 48 / 44, wind ? G3_ROT[icon.charAt(5)] : 0);
   }
-  // The keeper's drawings, in the same pictures as the real sea.
-  var g3Fake = { n: 0, grid: {} };
-  function g3Sprite(c, icon, x, y, px, py, cs, now) {
-    var cx = px + cs / 2, cy = py + cs / 2;
-    if (icon === 'rock' || icon === 'tall' || icon === 'whirl') {
-      g3Fake.n = g3.G.n; g3Fake.grid = {}; g3Fake.grid[y * g3.G.n + x] = icon === 'rock' ? Gd.ROCK : icon === 'tall' ? Gd.BIG : Gd.WHIRL;
-      guideTerrain(c, g3Fake, x, y, px, py, cs, now, 1);
-    } else if (icon.indexOf('wind-') === 0) g3Wind(c, cx, cy, cs, icon.charAt(5).toUpperCase(), now, 1);
-    else if (icon === 'treasure') g3Chest(c, cx, cy, cs, now, false);
-    else if (icon === 'serpent') guideSerpent(c, cx, cy, cs, now, 0, 1);
-    else if (icon === 'clear') { var s = cs / 24; c.save(); c.translate(cx, cy); c.strokeStyle = '#7dff9a'; c.lineWidth = Math.max(2, 2.8 * s); c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(-6 * s, 0); c.lineTo(-2 * s, 5 * s); c.lineTo(7 * s, -5 * s); c.stroke(); c.restore(); }
-    else if (icon === 'danger') { var d = cs / 24; c.save(); c.translate(cx, cy); c.fillStyle = '#ff6b6b'; c.beginPath(); c.moveTo(0, -9 * d); c.lineTo(9 * d, 7 * d); c.lineTo(-9 * d, 7 * d); c.closePath(); c.fill(); c.fillStyle = '#fff'; c.fillRect(-1.2 * d, -3 * d, 2.4 * d, 6 * d); c.beginPath(); c.arc(0, 5 * d, 1.4 * d, 0, 7); c.fill(); c.restore(); }
-  }
-  function g3Marks(c, cam, now, paper) {
+  function g3Marks(c, cam, now) {
     var G = g3.G, cs = cam.cs;
     Object.keys(G.marks).forEach(function (kk) {
       var mx = +kk % G.n, my = Math.floor(+kk / G.n), px = cam.ox + mx * cs, py = cam.oy + my * cs;
       if (px > g3w || py > g3h || px + cs < 0 || py + cs < 0) return;
-      if (paper) { c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(px + cs / 2, py + cs / 2, cs * 0.47, 0, 7); c.fill(); }
-      g3Sprite(c, G.marks[kk], mx, my, px, py, cs, now);
+      g3Sprite(c, G.marks[kk], px + cs / 2, py + cs / 2, cs);
     });
   }
-  // Where the boat crashed last turn, for both players.
+  // Where the boat crashed last turn, for both players: a red burst (a red X is treasure on the chart).
   function g3Crashes(c, cam) {
     var G = g3.G, cs = cam.cs;
     if (!G.last || !G.last.events) return;
     G.last.events.forEach(function (e) {
       if (e.e !== 'rock') return;
       var bx = cam.ox + (e.x + 0.5) * cs, by = cam.oy + (e.y + 0.5) * cs;
-      c.strokeStyle = '#ff5a5a'; c.lineWidth = Math.max(2, cs * 0.08); c.lineCap = 'round';
-      c.beginPath(); c.moveTo(bx - cs * 0.3, by - cs * 0.3); c.lineTo(bx + cs * 0.3, by + cs * 0.3); c.moveTo(bx + cs * 0.3, by - cs * 0.3); c.lineTo(bx - cs * 0.3, by + cs * 0.3); c.stroke();
+      c.save(); c.translate(bx, by); c.beginPath();
+      for (var k = 0; k < 16; k++) { var r = (k % 2 ? 0.17 : 0.4) * cs, a = k * Math.PI / 8; c[k ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
+      c.closePath(); c.fillStyle = 'rgba(255,90,90,.22)'; c.fill(); c.strokeStyle = '#e8463c'; c.lineWidth = Math.max(1.5, cs * 0.05); c.lineJoin = 'round'; c.stroke(); c.restore();
     });
   }
   // Traps the keeper threw: the trap itself, and the squares around it where serpents get caught.
@@ -511,14 +562,15 @@
     var G = g3.G, cs = cam.cs;
     G.traps.forEach(function (t) {
       var x0 = cam.ox + (t.x - 1) * cs, y0 = cam.oy + (t.y - 1) * cs, cx = cam.ox + (t.x + 0.5) * cs, cy = cam.oy + (t.y + 0.5) * cs;
-      var col = style === 'paper' ? '176,58,46' : style === 'radar' ? '120,255,180' : '255,200,110';
+      var col = style === 'paper' ? '163,41,28' : style === 'radar' ? '120,255,180' : '255,200,110';
       c.save(); c.beginPath(); c.rect(cam.ox, cam.oy, G.n * cs, G.n * cs); c.clip();
       c.fillStyle = 'rgba(' + col + ',' + (style === 'paper' ? 0.08 : 0.07) + ')'; c.fillRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4);
       c.strokeStyle = 'rgba(' + col + ',.6)'; c.lineWidth = 1.5; c.setLineDash([cs * 0.14, cs * 0.1]); c.lineDashOffset = reducedMotion() ? 0 : -now / 60;
       c.strokeRect(x0 + 2, y0 + 2, cs * 3 - 4, cs * 3 - 4); c.setLineDash([]);
       c.restore();
-      if (style === 'paper') { c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(cx, cy, cs * 0.47, 0, 7); c.fill(); }
-      g3Trap(c, cx, cy, cs, now);
+      if (style === 'paper') g3Put(c, g3Pic('chart', 'trap'), cx, cy, cs * 48 / 44);
+      else if (style === 'radar') g3Put(c, g3Pic('radar', 'trap'), cx, cy, cs * 48 / 40);
+      else g3Trap(c, cx, cy, cs, now);
       // How many turns it has left, as small dots.
       var left = t.until - G.turn + 1;
       for (var d = 0; d < left; d++) { c.fillStyle = 'rgba(' + col + ',.9)'; c.beginPath(); c.arc(cx + (d - (left - 1) / 2) * cs * 0.16, cy + cs * 0.4, cs * 0.045, 0, 7); c.fill(); }
@@ -581,18 +633,6 @@
     c.restore();
     if (deep) guideBubbles(c, cx, cy, cs, now, 3);
   }
-  // A radar blip: bright when the sweep passes over it, fading after.
-  function g3Blip(c, cx, cy, cs, now, kind, rx, ry, sweep) {
-    var a = Math.atan2(cy - ry, cx - rx), since = ((sweep - a) % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2), glow = Math.max(0.35, 1 - since / (Math.PI * 2));
-    var s = cs / 24, col = kind === 'treasure' ? '255,214,90' : '255,96,96';
-    c.save(); c.translate(cx, cy);
-    var g = c.createRadialGradient(0, 0, 0, 0, 0, 12 * s); g.addColorStop(0, 'rgba(' + col + ',' + (0.55 * glow) + ')'); g.addColorStop(1, 'rgba(' + col + ',0)');
-    c.fillStyle = g; c.beginPath(); c.arc(0, 0, 12 * s, 0, 7); c.fill();
-    c.globalAlpha = glow; c.fillStyle = 'rgb(' + col + ')'; c.strokeStyle = 'rgb(' + col + ')'; c.lineWidth = Math.max(1.8, 2.2 * s); c.lineCap = 'round';
-    if (kind === 'treasure') { c.beginPath(); c.moveTo(0, -6 * s); c.lineTo(6 * s, 0); c.lineTo(0, 6 * s); c.lineTo(-6 * s, 0); c.closePath(); c.fill(); }
-    else { c.beginPath(); c.moveTo(-8 * s, 3 * s); c.quadraticCurveTo(-4 * s, -5 * s, 0, 2 * s); c.quadraticCurveTo(4 * s, 8 * s, 8 * s, -2 * s); c.stroke(); c.beginPath(); c.arc(8 * s, -3 * s, 2.4 * s, 0, 7); c.fill(); }
-    c.restore();
-  }
 
   /* ---------- The keeper's picker: tap a square, then what is there ---------- */
   var G3_PICKS = [['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap'], ['erase', 'Erase'], ['ping', 'Ping']];
@@ -610,8 +650,9 @@
         else if (icon === 'ping') { c.beginPath(); c.arc(14, 14, 3, 0, 7); c.fill(); c.lineWidth = 2; c.beginPath(); c.arc(14, 14, 8, 0, 7); c.stroke(); }
         else { c.beginPath(); c.moveTo(17, 7); c.lineTo(10, 14); c.lineTo(17, 21); c.stroke(); }
       } else {
-        c.fillStyle = G3_PAPER.wash; c.beginPath(); c.arc(14, 14, 13, 0, 7); c.fill();
-        if (icon === 'trap') g3Trap(c, 14, 14, 28, 0); else g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 0, 0, 0, 0, 28, 0);
+        var paint = function () { c.clearRect(0, 0, 28, 28); c.fillStyle = '#e2bf82'; c.beginPath(); c.arc(14, 14, 13.5, 0, 7); c.fill(); g3Sprite(c, icon === 'wind' ? 'wind-e' : icon, 14, 14, 25); };
+        paint();
+        var im = g3Pic('chart', icon.indexOf('wind') === 0 ? 'wind' : icon); if (!im.complete) im.addEventListener('load', paint, { once: true });
       }
       if (icon === 'trap' && g3TrapHere()) b.querySelector('span').textContent = 'Take back';
       else if (icon === 'trap' && g3.G.trapTurn === g3.G.turn) { b.disabled = true; b.querySelector('span').textContent = 'Trap used'; }

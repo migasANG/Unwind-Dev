@@ -24,7 +24,7 @@
   var WIND = { chance: [0.4, 0.55], max: [2, 3], turns: 3 };
   var TRAP = { turns: 3, stun: 3 };
   var DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
-  var RADAR = 3;            // the captain's radar picks up treasure and serpents this many tiles away
+  var RADAR = 3.5;          // the captain's radar: a circle this many squares wide around the boat; a square counts if its middle is inside
   var BEAM_HALF = 20 * Math.PI / 180;
 
   function rngFor(seed, salt) {
@@ -324,11 +324,13 @@
       if (path) log.serpents.push({ id: s.id, path: path });
     });
   }
-  // What the captain's radar shows: blips within range (treasure not yet found, serpents).
+  // Is this square inside the radar's circle around the boat? (37 squares: the 7 x 7 block without its corners.)
+  function inRadar(G, x, y) { var dx = x - G.boat.x, dy = y - G.boat.y; return dx * dx + dy * dy <= RADAR * RADAR; }
+  // What the captain's radar shows: blips inside its circle (treasure not yet found, serpents).
   function radar(G) {
     var out = [];
-    G.treasure.forEach(function (t) { if (!t.got && t.deep && cheb(t.x, t.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
-    G.serpents.forEach(function (s) { if (cheb(s.x, s.y, G.boat.x, G.boat.y) <= RADAR) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id, stun: s.stun || 0 }); });
+    G.treasure.forEach(function (t) { if (!t.got && t.deep && inRadar(G, t.x, t.y)) out.push({ kind: 'treasure', x: t.x, y: t.y }); });
+    G.serpents.forEach(function (s) { if (inRadar(G, s.x, s.y)) out.push({ kind: 'serpent', x: s.x, y: s.y, id: s.id, stun: s.stun || 0 }); });
     return out;
   }
   function replay(seed, opts, actions) {
@@ -343,6 +345,6 @@
     return out;
   }
 
-  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, planPath: planPath, windAt: windAt, trapNear: trapNear, coord: coord, cell: cell, inside: inside, cheb: cheb,
+  return { create: create, apply: apply, replay: replay, litCells: litCells, radar: radar, inRadar: inRadar, planPath: planPath, windAt: windAt, trapNear: trapNear, coord: coord, cell: cell, inside: inside, cheb: cheb,
     WATER: WATER, ROCK: ROCK, TALL: TALL, WHIRL: WHIRL, LIGHT: LIGHT, SIZES: SIZES, SIZE_NAMES: SIZE_NAMES, PHASE_MS: PHASE_MS, ICONS: ICONS, RADAR: RADAR, DIRS: DIRS, TRAP: TRAP };
 });
