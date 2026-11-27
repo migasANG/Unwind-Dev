@@ -2,8 +2,8 @@
      The rules live in guide3.js. Each phone shows only its own role's view:
      - the keeper sees the real sea only in the 7.5 s beam (and the boat, if the beam finds it), and otherwise an old
        paper chart that only holds what they drew;
-     - the captain only ever sees a green radar screen: the squares, the boat, the lighthouse, traps, and the deep
-       treasure and serpents inside the radar's circle. The keeper's drawings stay on the keeper's chart, so they talk.
+     - the captain only ever sees a green radar screen: the keeper's chart, the boat, the lighthouse, traps, and the
+       deep treasure and serpents inside the radar's circle.
      The screen uses the game's usual header and footer, and the chart can be zoomed. */
   var G3 = window.UnwindGuide3, g3 = null, g3ctx = null, g3w = 0, g3h = 0, g3dpr = 1;
   var G3_PHASE = { start: 'Get ready', light: 'Light', write: 'Chart', boat: 'Sailing', next: 'Turn over', over: 'Game over' };
@@ -26,7 +26,7 @@
     if (!im) { var src = group ? G3ART[group][key] : G3ART[key]; im = g3Pics[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src); }
     return im;
   }
-  function g3PicsLoad() { ['chart', 'radar', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
+  function g3PicsLoad() { ['chart', 'radar', 'radarMarks', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
   // Draws a square picture centred on cx, cy, size wide, turned by rot.
   function g3Put(c, im, cx, cy, size, rot, alpha) {
     if (!im.complete || !im.naturalWidth) return;
@@ -40,7 +40,7 @@
     var o = load('unwind.guide3Opts', { size: 0, hard: false });
     var seg = function (key, opts) { return '<div class="sizes lseg ' + (opts.length === 3 ? 'o3' : '') + '" role="group">' + opts.map(function (v) { return '<button data-g3="' + key + '" data-v="' + v[0] + '" aria-pressed="' + (String(o[key]) === String(v[0])) + '">' + v[1] + '</button>'; }).join('') + '</div>'; };
     var html = '<div class="row" id="g3MenuCard"><h2>Guiding Light 3.0</h2><button class="close" id="x" aria-label="Close">×</button></div>' +
-      '<p class="note">A game of memory and talk for two, online. The keeper sees the real sea only in short flashes of the lighthouse beam and draws the chart from memory. The captain never sees the sea, nor the chart: only a radar with the coordinates, the lighthouse, traps, deep treasure and serpents. Talk to each other!</p>' +
+      '<p class="note">A game of memory and talk for two, online. The keeper sees the real sea only in short flashes of the lighthouse beam and draws the chart from memory. The captain never sees the sea: only that chart on a radar screen, with the coordinates, deep treasure and serpents. Talk to each other!</p>' +
       '<div class="setting"><span>Map size<small>A new map is made every game</small></span></div>' + seg('size', [[0, 'Small'], [1, 'Medium'], [2, 'Large']]) +
       '<div class="setting"><span>Difficulty<small>' + (o.hard ? 'Two moves a turn, more tall rocks, gusts and serpents, 2 sailors' : 'Three moves a turn, 3 sailors') + '</small></span></div>' + seg('hard', [[false, 'Normal'], [true, 'Hard']]) +
       '<button class="obig" id="g3Host"><b>Host a room</b><span>Send your partner the room code. Seat 1 keeps the lighthouse, seat 2 sails.</span></button>' +
@@ -58,11 +58,11 @@
      The first time, both roles are explained. In a game, the guide only explains your own role. The pages change in
      place, so the card does not close and open again between them. */
   var G3_PAGES = {
-    roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all, nor the keeper\'s chart: only a radar screen. You win together, so talk!'],
+    roles: ['Two roles', 'The keeper has the lighthouse and an empty paper chart. The captain sails a boat that cannot see the sea at all: only a radar screen with the chart the keeper draws. You win together, so talk!'],
     light: ['The keeper: the light', 'Each turn starts with the light. Drag to aim the beam: for 7.5 seconds you see the real sea. Rocks, tall rocks (they hide what is behind them), whirlpools, gusts of wind, floating treasure, serpents, and the boat if the beam finds it. Remember all you can! Done ends it early.'],
-    chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. Your chart is only for you: tell the captain what is out there. Done ends it early.'],
+    chart: ['The keeper: the chart', 'Then the light goes out and you have 30 seconds to draw on your chart from memory. Tap a square and pick what is there. The captain sees your drawings on the radar as you make them. Done ends it early.'],
     trap: ['The keeper: traps', 'While drawing, you can also throw one trap a turn: tap a square and pick Trap. Changed your mind? Pick it again on the same turn to take it back. It lasts 3 turns. A serpent that swims onto it or next to it, diagonals too, is stunned for 3 turns: it sinks and cannot bite.'],
-    radar: ['The captain: the radar', 'You only see the radar: your boat\'s square (like E7), the lighthouse, traps, and what the radar picks up inside its circle, about 3 squares around you: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
+    radar: ['The captain: the radar', 'You only see the radar: the keeper\'s chart, your boat\'s square (like E7), and what the radar picks up inside its circle, about 3 squares around you: deep treasure and serpents. Tell the keeper where you are, and what you see.'],
     sail: ['The captain: sailing', 'You have 30 seconds to plan up to 3 moves (2 on Hard). Tap a square next to the boat, then the next one. Tap a planned square again to take it back. Pinch, scroll or use + and − to zoom. Sail ends it early. Then press Next turn when you are both ready.'],
     danger: ['Dangers', 'Rocks are there even if nobody drew them: a crash costs a sailor. So does a serpent\'s bite, unless the serpent is stunned. Whirlpools fling the boat away, and a gust of wind blows it one square further. Lose every sailor and the boat is lost.'],
     win: ['Winning', 'Sail into the lighthouse itself to win: passing next to it is not enough. Half the treasure lies deep, where only the radar sees it; half floats, where only the light shows it. Sailing over any treasure finds it. Find every one for a perfect game. Tap any square to ping it on your partner\'s screen.']
@@ -421,7 +421,9 @@
     var L = ox / base, T = oy / base, R = g3w / base - L - n, B = g3h / base - T - n, key = [n, L.toFixed(2), T.toFixed(2), R.toFixed(2), B.toFixed(2)].join();
     if (g3.sheet && g3.sheet.key === key) return g3.sheet;
     // The sheet reaches the screen's edges, and always past the squares, their letters and the border (it may run off screen there).
-    var x0 = Math.min(-L + 0.14, -0.8), y0 = Math.min(-T + 0.14, -0.8), x1 = Math.max(n + R - 0.14, n + 0.36), y1 = Math.max(n + B - 0.14, n + 0.36), rnd = guideRand((g3.seed % 99991) + 7), pts = [];
+    // On a wide screen the paper keeps narrow margins beside the squares (the table shows beyond), so the squares get the room.
+    var wide = L + R > 6, Lm = wide ? Math.min(L - 0.14, 4.4) : L - 0.14, Rm = wide ? Math.min(R - 0.14, 4.4) : R - 0.14;
+    var x0 = Math.min(-Lm, -0.8), y0 = Math.min(-T + 0.14, -0.8), x1 = Math.max(n + Rm, n + 0.36), y1 = Math.max(n + B - 0.14, n + 0.36), rnd = guideRand((g3.seed % 99991) + 7), pts = [];
     var ph = [rnd() * 6, rnd() * 6, rnd() * 6];
     var side = function (ax, ay, bx, by, nx, ny) {
       var len = Math.hypot(bx - ax, by - ay), k = Math.max(10, Math.round(len * 7)), tear = 0, depth = 0;
@@ -435,18 +437,18 @@
     };
     side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0);
     // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
-    var wide = L + R > 6, d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
+    var d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
     if (wide) {
-      var lw = Math.min(L - 0.6, 6.5), lx = -L / 2 - 0.15, rw = Math.min(R - 0.7, 6.4), rx = n + R / 2 - 0.1;
-      d.ribbon = { x: lx, y: 0.6, w: lw };
-      d.small = { x: -L + 1.05, y: 1.9, r: 0.75 };
-      d.ship = { x: lx + 0.3, y: n * 0.42, w: Math.min(lw, 4.2) };
-      d.anchor = { x: lx - lw * 0.28, y: n * 0.68, w: Math.min(1.5, lw * 0.3) };
-      d.mare = { x: lx + 0.4, y: n * 0.7 };
-      d.serpent = { x: lx, y: n - 1.05, w: Math.min(lw, 4) };
-      d.key = { x: rx - rw / 2, y: 0.1, w: rw, cols: 1, h: Math.min(n * 0.62, 8 * 0.66 + 1) };
-      d.rose = { x: rx, y: n - Math.min(1.7, rw * 0.32), r: Math.min(1.5, rw * 0.3) };
-      d.waves = [[lx - lw * 0.35, n * 0.25], [lx + lw * 0.3, n * 0.84], [rx - rw * 0.35, n * 0.72], [rx + rw * 0.4, n * 0.66]];
+      var lw = Lm - 0.95, lx = -Lm / 2 - 0.3, rw = Rm - 0.5, rx = n + Rm / 2 + 0.05;
+      d.ribbon = { x: lx, y: 0.55, w: lw + 0.3, tall: true };
+      d.small = { x: lx, y: 1.75, r: Math.min(0.62, lw * 0.16) };
+      d.ship = { x: lx + 0.2, y: n * 0.45, w: Math.min(lw, 3.5) };
+      d.anchor = { x: lx - lw * 0.33, y: n * 0.72, w: Math.min(1.05, lw * 0.26) };
+      d.mare = { x: lx + lw * 0.14, y: n * 0.72, s: Math.min(0.42, lw * 0.105) };
+      d.serpent = { x: lx, y: n - 0.95, w: Math.min(lw, 3.3) };
+      d.key = { x: rx, y: 0.15, cols: 1, compact: true };
+      d.rose = { x: rx, y: n - Math.min(1.35, rw * 0.33), r: Math.min(1.15, rw * 0.28) };
+      d.waves = [[lx + lw * 0.3, n * 0.26], [lx - lw * 0.3, n * 0.86], [rx - rw * 0.3, n * 0.6], [rx + rw * 0.32, n * 0.52]];
     } else {
       if (T >= 1.9) {
         var ry = -(T + 0.9) / 2;
@@ -486,7 +488,7 @@
     if (d.ship) put('ship', d.ship.x, d.ship.y, d.ship.w, 280 / 320);
     if (d.serpent) put('serpent', d.serpent.x, d.serpent.y, d.serpent.w, 120 / 288);
     if (d.anchor) put('anchor', d.anchor.x, d.anchor.y, d.anchor.w, 124 / 120);
-    if (d.mare) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * 0.5) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
+    if (d.mare) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * (d.mare.s || 0.5)) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
     // The squares sit on slightly lighter paper.
     c.fillStyle = 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
     // Holes, a darker worn rim and age at the edges.
@@ -502,17 +504,28 @@
     if (d.small) g3Put(c, g3Pic('map', 'roseSmall'), X(d.small.x), Y(d.small.y), cs * d.small.r * 2.25);
     // The title ribbon.
     if (d.ribbon) {
-      var rb = g3Pic('map', 'ribbon'), rw = d.ribbon.w * cs, rh = rw * 96 / 780;
+      var rb = g3Pic('map', d.ribbon.tall ? 'ribbonTall' : 'ribbon'), rw = d.ribbon.w * cs, rh = rw * (d.ribbon.tall ? 132 : 96) / 780;
       if (rb.complete && rb.naturalWidth) c.drawImage(rb, X(d.ribbon.x) - rw / 2, Y(d.ribbon.y) - rh / 2, rw, rh);
-      var title = tr('The keeper\'s chart'), fs = Math.min(rh * 0.56, rw * 0.8 / Math.max(8, title.length) * 1.9);
+      var title = tr('The keeper\'s chart'), fs = Math.min(rh * (d.ribbon.tall ? 0.48 : 0.56), rw * 0.72 / Math.max(8, title.length) * 1.9);
       c.fillStyle = P.ink; c.font = '600 ' + Math.round(fs) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(title, X(d.ribbon.x), Y(d.ribbon.y) + rh * 0.04);
     }
     // The key to the symbols.
     if (d.key) {
-      var k = d.key, kx = X(k.x), ky = Y(k.y), kw = k.w * cs, kh = k.h * cs;
+      var k = d.key, rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap']];
+      if (k.compact) {
+        // Snug: one column, as wide as its longest word.
+        var fsz = Math.round(cs * 0.36), hsz = Math.round(cs * 0.4), ic = cs * 0.56, pad = cs * 0.24, rh = cs * 0.58, longest = 0;
+        c.font = 'italic ' + fsz + 'px Georgia, \'Times New Roman\', serif'; rows.forEach(function (r) { longest = Math.max(longest, c.measureText(tr(r[1])).width); });
+        c.font = '600 ' + hsz + 'px Georgia, \'Times New Roman\', serif'; var hw = c.measureText(tr('Key to the chart')).width;
+        var kw2 = Math.max(hw + pad * 2, pad * 2 + ic * 1.3 + longest), kh2 = pad * 1.2 + hsz * 1.5 + rows.length * rh, kx2 = X(k.x) - kw2 / 2, ky2 = Y(k.y);
+        c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx2, ky2, kw2, kh2); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx2, ky2, kw2, kh2); c.lineWidth = 0.8; c.strokeRect(kx2 + 4, ky2 + 4, kw2 - 8, kh2 - 8);
+        c.fillStyle = P.ink; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(tr('Key to the chart'), kx2 + kw2 / 2, ky2 + pad * 0.6 + hsz * 0.75);
+        c.font = 'italic ' + fsz + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'left';
+        rows.forEach(function (r, i) { var cy = ky2 + pad * 0.6 + hsz * 1.5 + (i + 0.5) * rh; g3Put(c, g3Pic('chart', r[0]), kx2 + pad + ic / 2, cy, ic * 1.05); c.fillStyle = P.ink; c.fillText(tr(r[1]), kx2 + pad + ic * 1.3, cy + 1); });
+      } else {
+      var kx = X(k.x), ky = Y(k.y), kw = k.w * cs, kh = k.h * cs;
       c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx, ky, kw, kh); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx, ky, kw, kh); c.lineWidth = 0.8; c.strokeRect(kx + 4, ky + 4, kw - 8, kh - 8);
-      var rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap']];
       var head = Math.min(0.62 * cs, kh * 0.26), per = Math.ceil(rows.length / k.cols), rowH = (kh - head - 8) / per, colW = (kw - 8) / k.cols;
       c.fillStyle = P.ink; c.font = '600 ' + Math.round(head * 0.62) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(tr('Key to the chart'), kx + kw / 2, ky + 4 + head * 0.55);
@@ -522,6 +535,7 @@
         c.fillStyle = P.ink; c.textAlign = 'left'; c.font = 'italic ' + Math.round(Math.min(rowH * 0.46, cs * 0.4)) + 'px Georgia, \'Times New Roman\', serif';
         c.fillText(tr(rw2[1]), cx + isz * 1.25, cy + 1, colW - isz * 1.35);
       });
+      }
     }
     c.strokeStyle = P.line; c.lineWidth = 1;
     for (var gl = 1; gl < n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(n), Y(gl)); c.stroke(); }
@@ -539,8 +553,8 @@
     g3Put(c, g3Pic('chart', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 44);
     g3Labels(c, cam, P.ink, '#d9ab68', true);
   }
-  // The captain's radar screen: crisp squares, the lighthouse, traps, and a round reach around the boat with a sweep.
-  // The keeper's drawings are not on it.
+  // The captain's radar screen: crisp squares, the keeper's drawings in green, the lighthouse, traps, and a round reach
+  // around the boat with a sweep.
   function g3DrawRadar(c, cam, now) {
     var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n;
     c.fillStyle = G3_RADAR.bg; c.fillRect(0, 0, g3w, g3h);
@@ -549,6 +563,7 @@
     for (var gl = 1; gl < n; gl++) { var gx = Math.round(X(gl)) + 0.5, gy = Math.round(Y(gl)) + 0.5; c.beginPath(); c.moveTo(gx, Y(0)); c.lineTo(gx, Y(n)); c.moveTo(X(0), gy); c.lineTo(X(n), gy); c.stroke(); }
     c.strokeStyle = G3_RADAR.glow + '.55)'; c.lineWidth = 1.5; c.strokeRect(X(0), Y(0), n * cs, n * cs);
     var bp = g3BoatPos(now), bx = X(bp.x) + cs / 2, by = Y(bp.y) + cs / 2;
+    g3Marks(c, cam, now, 'radarMarks');
     g3Traps(c, cam, now, 'radar');
     g3Crashes(c, cam);
     g3Put(c, g3Pic('radar', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 40);
@@ -604,17 +619,17 @@
     c.fillStyle = vg; c.fillRect(0, 0, g3w, g3h);
   }
   // The keeper's drawings, in brown ink. Gusts point the way they blow.
-  function g3Sprite(c, icon, cx, cy, cs) {
+  function g3Sprite(c, icon, cx, cy, cs, group) {
     var wind = icon.indexOf('wind-') === 0, key = wind ? 'wind' : icon;
     if (!G3ART.chart[key]) return;
-    g3Put(c, g3Pic('chart', key), cx, cy, cs * 48 / 44, wind ? G3_ROT[icon.charAt(5)] : 0);
+    g3Put(c, g3Pic(group || 'chart', key), cx, cy, cs * 48 / 44, wind ? G3_ROT[icon.charAt(5)] : 0);
   }
-  function g3Marks(c, cam, now) {
+  function g3Marks(c, cam, now, group) {
     var G = g3.G, cs = cam.cs;
     Object.keys(G.marks).forEach(function (kk) {
       var mx = +kk % G.n, my = Math.floor(+kk / G.n), px = cam.ox + mx * cs, py = cam.oy + my * cs;
       if (px > g3w || py > g3h || px + cs < 0 || py + cs < 0) return;
-      g3Sprite(c, G.marks[kk], px + cs / 2, py + cs / 2, cs);
+      g3Sprite(c, G.marks[kk], px + cs / 2, py + cs / 2, cs, group);
     });
   }
   // Where the boat crashed last turn, for both players: a red burst (a red X is treasure on the chart).
