@@ -208,6 +208,7 @@ window.UnwindI18n = (function () {
     'Lighthouse': 'Farol',
     'The keeper\'s chart': 'A carta do faroleiro',
     'Key to the chart': 'Legenda da carta',
+    'Crash': 'Choque',
     'Which way the gust blows': 'Para onde sopra a rajada',
     'Show the whole chart': 'Mostrar a carta inteira',
     'Perfect voyage!': 'Viagem perfeita!',

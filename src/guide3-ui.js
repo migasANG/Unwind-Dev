@@ -425,17 +425,31 @@
     var wide = L + R > 6, Lm = wide ? Math.min(L - 0.14, 4.4) : L - 0.14, Rm = wide ? Math.min(R - 0.14, 4.4) : R - 0.14;
     var x0 = Math.min(-Lm, -0.8), y0 = Math.min(-T + 0.14, -0.8), x1 = Math.max(n + Rm, n + 0.36), y1 = Math.max(n + B - 0.14, n + 0.36), rnd = guideRand((g3.seed % 99991) + 7), pts = [];
     var ph = [rnd() * 6, rnd() * 6, rnd() * 6];
-    var side = function (ax, ay, bx, by, nx, ny) {
+    // Folded-out side pages, where a wide screen has room for them: the chart's sides become straight folds.
+    var fL = wide ? Math.min(L - Lm - 0.35, Lm * 0.95) : 0, fR = wide ? Math.min(R - Rm - 0.35, Rm * 0.95) : 0;
+    if (fL < 1.2) fL = 0; if (fR < 1.2) fR = 0;
+    var side = function (ax, ay, bx, by, nx, ny, flat) {
       var len = Math.hypot(bx - ax, by - ay), k = Math.max(10, Math.round(len * 7)), tear = 0, depth = 0;
       for (var i = 0; i < k; i++) {
         var t = i / k, x = ax + (bx - ax) * t, y = ay + (by - ay) * t, u = (x + y) * 7;
+        if (flat) { pts.push([x, y]); continue; }
         var d = 0.07 + 0.045 * Math.sin(u / 5.3 + ph[0]) + 0.03 * Math.sin(u / 1.9 + ph[1]) + rnd() * 0.035;
         if (tear > 0) { d += depth * (tear % 2 ? 1 : 0.65); tear--; } else if (rnd() < 0.035) { tear = 3; depth = 0.12 + rnd() * 0.18; }
         [[x1, y1, 0.9], [x0, y0, 0.55]].forEach(function (cn) { var dd = Math.hypot(x - cn[0], y - cn[1]); if (dd < cn[2]) d += (cn[2] - dd) * 0.85; });
         pts.push([x + nx * d, y + ny * d]);
       }
     };
-    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0);
+    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0, fR > 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0, fL > 0);
+    var flap = function (xa, dir, w) {
+      // A page folded back: its outer edge torn and a little shorter, as if it tilts away.
+      if (!w) return null;
+      var out = [], xo = xa + dir * w, k = Math.round((y1 - y0) * 6);
+      out.push([xa, y0 + 0.08]);
+      for (var i = 0; i <= k; i++) { var t = i / k, y = (y0 + 0.4) + (y1 - y0 - 0.8) * t; out.push([xo - dir * (0.06 + rnd() * 0.12 + (rnd() < 0.05 ? 0.25 : 0)), y]); }
+      out.push([xa, y1 - 0.08]);
+      return out;
+    };
+    var flaps = [flap(x0, -1, fL), flap(x1, 1, fR)];
     // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
     var d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
     if (wide) {
@@ -460,7 +474,7 @@
       if (B >= 4.2) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
     }
     var hl = [[x1 - 0.7, y0 + 0.5, 0.12], [x0 + 0.6, y1 - 0.45, 0.09]];
-    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl };
+    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl, flaps: flaps };
     return g3.sheet;
   }
   function g3DrawPaper(c, cam, now) {
@@ -468,6 +482,20 @@
     var sh = g3Sheet(), d = sh.deco, tr = window.UnwindI18n ? window.UnwindI18n.t : function (t) { return t; };
     c.fillStyle = P.table; c.fillRect(0, 0, g3w, g3h);
     var sheet = function () { c.beginPath(); sh.pts.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
+    // The folded side pages first, under the chart: darker toward the fold, with faint rhumb lines and a worn rim.
+    sh.flaps.forEach(function (f, fi) {
+      if (!f) return;
+      var path = function () { c.beginPath(); f.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
+      c.save(); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.1; path(); c.fillStyle = '#c99a58'; c.fill(); c.restore();
+      var xa = X(f[0][0]), xo = X(f[3][0]), g = c.createLinearGradient(xa, 0, xo, 0);
+      g.addColorStop(0, '#b7884a'); g.addColorStop(0.25, '#cfa060'); g.addColorStop(1, '#dcb070');
+      c.save(); path(); c.clip(); c.fillStyle = g; c.fillRect(Math.min(xa, xo) - 4, 0, Math.abs(xo - xa) + 8, g3h);
+      c.strokeStyle = 'rgba(61,35,20,.13)'; c.lineWidth = 0.8; c.beginPath();
+      for (var rl = -6; rl <= 6; rl++) { c.moveTo(xa, Y(sh.y0) + rl * cs * 1.6); c.lineTo(xo, Y(sh.y0) + rl * cs * 1.6 + (fi ? 1 : -1) * cs * 2.2 + cs * 3); }
+      c.stroke();
+      c.strokeStyle = 'rgba(74,40,8,.26)'; c.lineWidth = cs * 0.5; path(); c.stroke(); c.restore();
+      c.strokeStyle = '#1d0f06'; c.lineWidth = 2; path(); c.stroke();
+    });
     c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.12; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
     var W = (sh.x1 - sh.x0) * cs, H = (sh.y1 - sh.y0) * cs, SX = X(sh.x0), SY = Y(sh.y0);
     c.save(); sheet(); c.clip();
@@ -493,6 +521,7 @@
     c.fillStyle = 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
     // Holes, a darker worn rim and age at the edges.
     sh.holes.forEach(function (h) { c.fillStyle = 'rgba(90,52,16,.45)'; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs * 1.7, 0, 7); c.fill(); c.fillStyle = P.table; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs, 0, 7); c.fill(); });
+    sh.flaps.forEach(function (f, fi) { if (!f) return; var xe = X(fi ? sh.x1 : sh.x0), fg = c.createLinearGradient(xe, 0, xe + (fi ? -1 : 1) * cs * 0.6, 0); fg.addColorStop(0, 'rgba(74,44,12,.32)'); fg.addColorStop(1, 'rgba(74,44,12,0)'); c.fillStyle = fg; c.fillRect(Math.min(xe, xe + (fi ? -1 : 1) * cs * 0.6), 0, cs * 0.6, g3h); });
     c.strokeStyle = 'rgba(74,40,8,.28)'; c.lineWidth = cs * 0.7; sheet(); c.stroke();
     c.strokeStyle = 'rgba(58,30,6,.35)'; c.lineWidth = cs * 0.22; sheet(); c.stroke();
     c.restore();
@@ -512,7 +541,7 @@
     }
     // The key to the symbols.
     if (d.key) {
-      var k = d.key, rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap']];
+      var k = d.key, rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap'], ['crash', 'Crash']];
       if (k.compact) {
         // Snug: one column, as wide as its longest word.
         var fsz = Math.round(cs * 0.36), hsz = Math.round(cs * 0.4), ic = cs * 0.56, pad = cs * 0.24, rh = cs * 0.58, longest = 0;
@@ -567,7 +596,7 @@
     g3Traps(c, cam, now, 'radar');
     g3Crashes(c, cam);
     g3Put(c, g3Pic('radar', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 40);
-    if (!G.ended) {
+    if (!G.ended && G.phase !== 'start') {
       var R = G3.RADAR, rr = R * 1.05 * cs, sweep = (now / 2400) % 1 * Math.PI * 2;
       c.save(); c.beginPath(); c.rect(X(0), Y(0), n * cs, n * cs); c.clip();
       c.save(); c.beginPath(); c.arc(bx, by, rr, 0, 7); c.clip();
