@@ -26,7 +26,7 @@
     if (!im) { var src = group ? G3ART[group][key] : G3ART[key]; im = g3Pics[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src); }
     return im;
   }
-  function g3PicsLoad() { ['chart', 'radar', 'sea'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
+  function g3PicsLoad() { ['chart', 'radar', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
   // Draws a square picture centred on cx, cy, size wide, turned by rot.
   function g3Put(c, im, cx, cy, size, rot, alpha) {
     if (!im.complete || !im.naturalWidth) return;
@@ -113,7 +113,7 @@
     el.querySelector('.g3-opts').innerHTML = $('mute').innerHTML;
     document.body.classList.add('guideon');
     guideMusic(true);
-    g3PicsLoad(); g3Edge(); g3Paint(); g3Layout(); g3Hud();
+    g3PicsLoad(); g3Paint(); g3Layout(); g3Hud();
     track('guide3_start', { size: opts.size, hard: !!opts.hard, role: role, local: !!local });
     if (!(progress.tutorials && progress.tutorials.guide3)) { progress.tutorials = progress.tutorials || {}; progress.tutorials.guide3 = 1; save('unwind.progress2', progress); g3Help('all'); }
     if (!g3.loop) g3Loop();
@@ -412,45 +412,117 @@
     var w = cs * 1.3, h = w * 84 / 128, bob = reducedMotion() ? 0 : Math.sin(now / 650) * cs * 0.025;
     c.drawImage(im, cx - w / 2, cy + cs * 0.3 - h * 76 / 84 + bob, w, h);
   }
-  // The keeper's chart: torn, worn paper, a checkered border round the squares, rhumb lines from a compass rose,
-  // and the keeper's drawings in brown ink.
-  function g3Edge() {
-    // The sheet's ragged outline, in squares around the chart: made once per game.
-    var n = g3.G.n, r = guideRand((g3.seed % 99991) + 7), pts = [], x0 = -1.05, y0 = -1.05, x1 = n + 0.4, y1 = n + 0.4;
+  // The keeper's chart, like the old map: torn, worn parchment filling the screen, the squares in a checkered border,
+  // rhumb lines from the compass roses, a title ribbon, a key to the symbols, and ships and monsters in the margins.
+  // The margin art is laid out in squares around the chart, from the room there is when the chart is not zoomed,
+  // so it zooms and pans with the squares.
+  function g3Sheet() {
+    var n = g3.G.n, base = Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), ox = (g3w - n * base) / 2 + base * 0.3, oy = (g3h - n * base) / 2 + base * 0.3;
+    var L = ox / base, T = oy / base, R = g3w / base - L - n, B = g3h / base - T - n, key = [n, L.toFixed(2), T.toFixed(2), R.toFixed(2), B.toFixed(2)].join();
+    if (g3.sheet && g3.sheet.key === key) return g3.sheet;
+    // The sheet reaches the screen's edges, and always past the squares, their letters and the border (it may run off screen there).
+    var x0 = Math.min(-L + 0.14, -0.8), y0 = Math.min(-T + 0.14, -0.8), x1 = Math.max(n + R - 0.14, n + 0.36), y1 = Math.max(n + B - 0.14, n + 0.36), rnd = guideRand((g3.seed % 99991) + 7), pts = [];
+    var ph = [rnd() * 6, rnd() * 6, rnd() * 6];
     var side = function (ax, ay, bx, by, nx, ny) {
-      var len = Math.hypot(bx - ax, by - ay), k = Math.max(8, Math.round(len * 5)), tear = 0;
+      var len = Math.hypot(bx - ax, by - ay), k = Math.max(10, Math.round(len * 7)), tear = 0, depth = 0;
       for (var i = 0; i < k; i++) {
-        var t = i / k, d = 0.05 + r() * 0.07;
-        if (tear > 0) { d += tear * 0.09; tear--; } else if (r() < 0.04) tear = 2 + Math.floor(r() * 2);
-        pts.push([ax + (bx - ax) * t + nx * d, ay + (by - ay) * t + ny * d]);
+        var t = i / k, x = ax + (bx - ax) * t, y = ay + (by - ay) * t, u = (x + y) * 7;
+        var d = 0.07 + 0.045 * Math.sin(u / 5.3 + ph[0]) + 0.03 * Math.sin(u / 1.9 + ph[1]) + rnd() * 0.035;
+        if (tear > 0) { d += depth * (tear % 2 ? 1 : 0.65); tear--; } else if (rnd() < 0.035) { tear = 3; depth = 0.12 + rnd() * 0.18; }
+        [[x1, y1, 0.9], [x0, y0, 0.55]].forEach(function (cn) { var dd = Math.hypot(x - cn[0], y - cn[1]); if (dd < cn[2]) d += (cn[2] - dd) * 0.85; });
+        pts.push([x + nx * d, y + ny * d]);
       }
     };
     side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0);
-    g3.edge = pts;
+    // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
+    var wide = L + R > 6, d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
+    if (wide) {
+      var lw = Math.min(L - 0.6, 6.5), lx = -L / 2 - 0.15, rw = Math.min(R - 0.7, 6.4), rx = n + R / 2 - 0.1;
+      d.ribbon = { x: lx, y: 0.6, w: lw };
+      d.small = { x: -L + 1.05, y: 1.9, r: 0.75 };
+      d.ship = { x: lx + 0.3, y: n * 0.42, w: Math.min(lw, 4.2) };
+      d.anchor = { x: lx - lw * 0.28, y: n * 0.68, w: Math.min(1.5, lw * 0.3) };
+      d.mare = { x: lx + 0.4, y: n * 0.7 };
+      d.serpent = { x: lx, y: n - 1.05, w: Math.min(lw, 4) };
+      d.key = { x: rx - rw / 2, y: 0.1, w: rw, cols: 1, h: Math.min(n * 0.62, 8 * 0.66 + 1) };
+      d.rose = { x: rx, y: n - Math.min(1.7, rw * 0.32), r: Math.min(1.5, rw * 0.3) };
+      d.waves = [[lx - lw * 0.35, n * 0.25], [lx + lw * 0.3, n * 0.84], [rx - rw * 0.35, n * 0.72], [rx + rw * 0.4, n * 0.66]];
+    } else {
+      if (T >= 1.9) {
+        var ry = -(T + 0.9) / 2;
+        d.ribbon = { x: n / 2, y: ry, w: Math.min(n * 0.56, 8) };
+        d.small = { x: Math.max(0.2, (n / 2 - d.ribbon.w / 2) / 2 - 0.1), y: ry, r: Math.min(0.75, (T - 1) * 0.5) };
+        d.rose = { x: n - Math.max(0.6, (n / 2 - d.ribbon.w / 2) / 2), y: ry, r: Math.min(0.8, (T - 1) * 0.52), noFleur: true };
+      }
+      if (B >= 1.8) d.key = { x: 0, y: n + 0.42, w: n, cols: 4, h: Math.min(B - 0.6, 1.95) };
+      if (B >= 4.2) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
+    }
+    var hl = [[x1 - 0.7, y0 + 0.5, 0.12], [x0 + 0.6, y1 - 0.45, 0.09]];
+    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl };
+    return g3.sheet;
   }
   function g3DrawPaper(c, cam, now) {
     var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n, P = G3_PAPER;
+    var sh = g3Sheet(), d = sh.deco, tr = window.UnwindI18n ? window.UnwindI18n.t : function (t) { return t; };
     c.fillStyle = P.table; c.fillRect(0, 0, g3w, g3h);
-    var sheet = function () { c.beginPath(); g3.edge.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
-    c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.3; c.shadowOffsetY = cs * 0.1; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
+    var sheet = function () { c.beginPath(); sh.pts.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
+    c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.12; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
+    var W = (sh.x1 - sh.x0) * cs, H = (sh.y1 - sh.y0) * cs, SX = X(sh.x0), SY = Y(sh.y0);
     c.save(); sheet(); c.clip();
-    var pg = c.createLinearGradient(X(-1), Y(-1), X(n + 0.4), Y(n + 0.4)); pg.addColorStop(0, '#e2b877'); pg.addColorStop(0.5, '#d9ab68'); pg.addColorStop(1, '#cc9a58');
-    c.fillStyle = pg; c.fillRect(X(-1.2), Y(-1.2), (n + 1.8) * cs, (n + 1.8) * cs);
+    var pg = c.createLinearGradient(SX, SY, SX + W, SY + H); pg.addColorStop(0, '#e2b877'); pg.addColorStop(0.5, '#d9ab68'); pg.addColorStop(1, '#cc9a58');
+    c.fillStyle = pg; c.fillRect(SX - cs, SY - cs, W + cs * 2, H + cs * 2);
     var rs = guideRand(g3.seed % 100000);
-    for (var st = 0; st < 7; st++) { var sx = X(-1) + rs() * (n + 1.4) * cs, sy = Y(-1) + rs() * (n + 1.4) * cs, sr = cs * (1.2 + rs() * 2.4), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.85, 'rgba(138,90,34,.08)'); sg.addColorStop(1, 'rgba(138,90,34,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
-    // Rhumb lines fanning out from the rose.
-    var rx = X(0) + cs * 1.25, ry = Y(n) - cs * 1.25;   // bottom left, clear of the zoom buttons
-    c.strokeStyle = 'rgba(61,35,20,.16)'; c.lineWidth = 1; c.beginPath();
-    for (var rl = 0; rl < 32; rl++) { var ra = rl * Math.PI / 16; c.moveTo(rx, ry); c.lineTo(rx + Math.cos(ra) * cs * 40, ry + Math.sin(ra) * cs * 40); }
-    c.stroke();
+    for (var st = 0; st < 6; st++) { var sx = SX + rs() * W, sy = SY + rs() * H, sr = cs * (1 + rs() * 2.2), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.82, 'rgba(138,90,34,.09)'); sg.addColorStop(0.94, 'rgba(107,67,22,.2)'); sg.addColorStop(1, 'rgba(107,67,22,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+    // Fold creases.
+    var fold = function (x, y, w, h, vert) { var g = vert ? c.createLinearGradient(x, 0, x + w, 0) : c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(74,44,12,0)'); g.addColorStop(0.47, 'rgba(74,44,12,.15)'); g.addColorStop(0.53, 'rgba(255,242,204,.17)'); g.addColorStop(1, 'rgba(255,242,204,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
+    fold(SX + W / 2 - cs * 0.4, SY, cs * 0.8, H, true); fold(SX, SY + H / 2 - cs * 0.35, W, cs * 0.7, false);
+    // Rhumb lines fanning out from the roses.
+    var rose = d.rose || { x: 1.25, y: n - 1.25, r: 1.15, faint: true };
+    var fan = function (x, y, k, a) { c.strokeStyle = 'rgba(61,35,20,' + a + ')'; c.lineWidth = 0.8; c.beginPath(); for (var rl = 0; rl < k; rl++) { var ra = rl * Math.PI * 2 / k; c.moveTo(X(x), Y(y)); c.lineTo(X(x) + Math.cos(ra) * cs * 60, Y(y) + Math.sin(ra) * cs * 60); } c.stroke(); };
+    fan(rose.x, rose.y, 32, 0.24); if (d.small) fan(d.small.x, d.small.y, 16, 0.17);
+    // Wave strokes, the ships and monsters.
+    var put = function (key, x, y, w, ratio) { var im = g3Pic('map', key); if (im.complete && im.naturalWidth) c.drawImage(im, X(x) - w * cs / 2, Y(y) - w * cs * ratio / 2, w * cs, w * cs * ratio); };
+    d.waves.forEach(function (wv) { put('waves', wv[0], wv[1], 0.75, 66 / 84); });
+    if (d.ship) put('ship', d.ship.x, d.ship.y, d.ship.w, 280 / 320);
+    if (d.serpent) put('serpent', d.serpent.x, d.serpent.y, d.serpent.w, 120 / 288);
+    if (d.anchor) put('anchor', d.anchor.x, d.anchor.y, d.anchor.w, 124 / 120);
+    if (d.mare) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * 0.5) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
     // The squares sit on slightly lighter paper.
-    c.fillStyle = 'rgba(220,176,114,.82)'; c.fillRect(X(0), Y(0), n * cs, n * cs);
-    var eg = c.createRadialGradient(X(n / 2), Y(n / 2), n * cs * 0.42, X(n / 2), Y(n / 2), n * cs * 0.8); eg.addColorStop(0, 'rgba(106,60,18,0)'); eg.addColorStop(1, 'rgba(74,40,10,.42)');
-    c.fillStyle = eg; c.fillRect(X(-1.2), Y(-1.2), (n + 1.8) * cs, (n + 1.8) * cs);
+    c.fillStyle = 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
+    // Holes, a darker worn rim and age at the edges.
+    sh.holes.forEach(function (h) { c.fillStyle = 'rgba(90,52,16,.45)'; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs * 1.7, 0, 7); c.fill(); c.fillStyle = P.table; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs, 0, 7); c.fill(); });
+    c.strokeStyle = 'rgba(74,40,8,.28)'; c.lineWidth = cs * 0.7; sheet(); c.stroke();
+    c.strokeStyle = 'rgba(58,30,6,.35)'; c.lineWidth = cs * 0.22; sheet(); c.stroke();
     c.restore();
-    c.strokeStyle = '#1d0f06'; c.lineWidth = 2; sheet(); c.stroke();
-    // The compass rose, faint, under the drawings.
-    g3Put(c, g3Pic('', 'rose'), rx, ry - cs * 0.06, cs * 2.3, 0, 0.32);
+    c.strokeStyle = '#1d0f06'; c.lineWidth = 2.2; sheet(); c.stroke();
+    c.save(); c.translate(-1, -1); c.strokeStyle = 'rgba(122,74,26,.7)'; c.lineWidth = 1; sheet(); c.stroke(); c.restore();
+    // The compass roses.
+    if (rose.faint) g3Put(c, g3Pic('', 'rose'), X(rose.x), Y(rose.y) - cs * 0.06, cs * rose.r * 2, 0, 0.3);
+    else g3Put(c, g3Pic(rose.noFleur ? 'map' : '', rose.noFleur ? 'roseSmall' : 'rose'), X(rose.x), Y(rose.y) - (rose.noFleur ? 0 : cs * rose.r * 0.06), cs * rose.r * (rose.noFleur ? 2.25 : 2.5));
+    if (d.small) g3Put(c, g3Pic('map', 'roseSmall'), X(d.small.x), Y(d.small.y), cs * d.small.r * 2.25);
+    // The title ribbon.
+    if (d.ribbon) {
+      var rb = g3Pic('map', 'ribbon'), rw = d.ribbon.w * cs, rh = rw * 96 / 780;
+      if (rb.complete && rb.naturalWidth) c.drawImage(rb, X(d.ribbon.x) - rw / 2, Y(d.ribbon.y) - rh / 2, rw, rh);
+      var title = tr('The keeper\'s chart'), fs = Math.min(rh * 0.56, rw * 0.8 / Math.max(8, title.length) * 1.9);
+      c.fillStyle = P.ink; c.font = '600 ' + Math.round(fs) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(title, X(d.ribbon.x), Y(d.ribbon.y) + rh * 0.04);
+    }
+    // The key to the symbols.
+    if (d.key) {
+      var k = d.key, kx = X(k.x), ky = Y(k.y), kw = k.w * cs, kh = k.h * cs;
+      c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx, ky, kw, kh); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx, ky, kw, kh); c.lineWidth = 0.8; c.strokeRect(kx + 4, ky + 4, kw - 8, kh - 8);
+      var rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap']];
+      var head = Math.min(0.62 * cs, kh * 0.26), per = Math.ceil(rows.length / k.cols), rowH = (kh - head - 8) / per, colW = (kw - 8) / k.cols;
+      c.fillStyle = P.ink; c.font = '600 ' + Math.round(head * 0.62) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(tr('Key to the chart'), kx + kw / 2, ky + 4 + head * 0.55);
+      rows.forEach(function (rw2, i) {
+        var col = Math.floor(i / per), row = i % per, cx = kx + 4 + col * colW, cy = ky + 4 + head + row * rowH + rowH / 2, isz = Math.min(rowH * 0.95, cs * 0.95);
+        g3Put(c, g3Pic('chart', rw2[0]), cx + isz * 0.62, cy, isz);
+        c.fillStyle = P.ink; c.textAlign = 'left'; c.font = 'italic ' + Math.round(Math.min(rowH * 0.46, cs * 0.4)) + 'px Georgia, \'Times New Roman\', serif';
+        c.fillText(tr(rw2[1]), cx + isz * 1.25, cy + 1, colW - isz * 1.35);
+      });
+    }
     c.strokeStyle = P.line; c.lineWidth = 1;
     for (var gl = 1; gl < n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(n), Y(gl)); c.stroke(); }
     // A checkered border, like the scale bars round an old chart.
