@@ -6470,7 +6470,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.27-l';
+  var BUILD = '2026.11.27-m';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -12015,7 +12015,7 @@ window.UnwindI18n = (function () {
     if (!im) { var src = group ? G3ART[group][key] : G3ART[key]; im = g3Pics[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src); }
     return im;
   }
-  function g3PicsLoad() { ['chart', 'radar', 'radarMarks', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); }
+  function g3PicsLoad() { ['chart', 'radar', 'radarMarks', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); g3ChartPic(); g3PaperPic(); }
   // Draws a square picture centred on cx, cy, size wide, turned by rot.
   function g3Put(c, im, cx, cy, size, rot, alpha) {
     if (!im.complete || !im.naturalWidth) return;
@@ -12287,9 +12287,21 @@ window.UnwindI18n = (function () {
   if (window.ResizeObserver) new ResizeObserver(function () { if (g3) g3Layout(); }).observe(g3El().querySelector('canvas'));
 
   /* ---------- The camera: fits the chart, or zooms in on part of it ---------- */
+  // The Old Keeper's Chart: a painted parchment (scroll rolls, ship, serpent, roses, title ribbon, key card) for wide
+  // screens, cleaned of its grid so the game draws the squares for any map size. KC is where the squares sit in it.
+  var KC = { w: 1703, h: 924, gx: 460, gy: 84, gw: 793, gh: 774 }, g3ChartIm = null, g3PaperIm = null;
+  function g3ChartPic() { if (!g3ChartIm) { g3ChartIm = new Image(); g3ChartIm.src = 'bg/keeper-chart.webp'; } return g3ChartIm; }
+  function g3PaperPic() { if (!g3PaperIm) { g3PaperIm = new Image(); g3PaperIm.src = 'bg/keeper-paper.webp'; } return g3PaperIm; }
+  // Wide screens show the whole painted chart, for the keeper (and on one device); the camera then fits the picture.
+  function g3PicMode() { return !!g3 && (g3.local || g3.role === 'keeper') && g3h > 0 && g3w / g3h >= 1.62; }
   function g3Cam() {
-    var n = g3.G.n, base = Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), cs = base * g3.zoom, ox, oy;
-    if (g3.zoom <= 1.001) { g3.zoom = 1; cs = base; ox = (g3w - n * cs) / 2 + cs * 0.3; oy = (g3h - n * cs) / 2 + cs * 0.3; g3.vx = (g3w / 2 - ox) / cs; g3.vy = (g3h / 2 - oy) / cs; }
+    var n = g3.G.n, pic = g3PicMode(), base = pic ? Math.min(g3h / (n * KC.h / KC.gh * 0.965), g3w / (n * KC.w / KC.gw)) : Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), cs = base * g3.zoom, ox, oy;
+    if (g3.zoom <= 1.001) {
+      g3.zoom = 1; cs = base;
+      if (pic) { ox = g3w / 2 - n * cs * (KC.w / 2 - KC.gx) / KC.gw; oy = g3h / 2 - n * cs * (KC.h / 2 - KC.gy) / KC.gh; }
+      else { ox = (g3w - n * cs) / 2 + cs * 0.3; oy = (g3h - n * cs) / 2 + cs * 0.3; }
+      g3.vx = (g3w / 2 - ox) / cs; g3.vy = (g3h / 2 - oy) / cs;
+    }
     else {
       ox = g3w / 2 - g3.vx * cs; oy = g3h / 2 - g3.vy * cs;
       var fit = function (o, view) { var size = n * cs; if (size + cs * 1.1 <= view) return (view - size) / 2 + cs * 0.3; return Math.min(cs * 0.8, Math.max(view - size - cs * 0.15, o)); };
@@ -12459,16 +12471,26 @@ window.UnwindI18n = (function () {
   }
   function g3DrawPaper(c, cam, now) {
     var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n, P = G3_PAPER;
-    var sh = g3Sheet(), d = sh.deco, tr = window.UnwindI18n ? window.UnwindI18n.t : function (t) { return t; };
+    var tr = window.UnwindI18n ? window.UnwindI18n.t : function (t) { return t; };
+    if (g3PicMode()) { var cim = g3ChartPic(); if (cim.complete && cim.naturalWidth) { g3DrawChartPic(c, cam, now, cim, tr); return; } }
+    var sh = g3Sheet(), d = sh.deco;
     c.fillStyle = P.table; c.fillRect(0, 0, g3w, g3h);
     var sheet = function () { c.beginPath(); sh.pts.forEach(function (p, i) { c[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1])); }); c.closePath(); };
     c.save(); c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = cs * 0.25; c.shadowOffsetY = cs * 0.12; sheet(); c.fillStyle = P.bg; c.fill(); c.restore();
     var W = (sh.x1 - sh.x0) * cs, H = (sh.y1 - sh.y0) * cs, SX = X(sh.x0), SY = Y(sh.y0);
     c.save(); sheet(); c.clip();
+    // The same worn parchment as the painted chart, when its texture has loaded; else a drawn one.
+    var ppic = g3PaperPic(), tex = ppic.complete && ppic.naturalWidth;
+    if (tex) {
+      if (!g3.paperPat || g3.paperPatCtx !== c) { g3.paperPat = c.createPattern(ppic, 'repeat'); g3.paperPatCtx = c; }
+      var pk = cs * 18 / ppic.naturalWidth; if (g3.paperPat.setTransform) g3.paperPat.setTransform(new DOMMatrix([pk, 0, 0, pk, X(0), Y(0)]));
+      c.fillStyle = g3.paperPat; c.fillRect(SX - cs, SY - cs, W + cs * 2, H + cs * 2);
+    } else {
     var pg = c.createLinearGradient(SX, SY, SX + W, SY + H); pg.addColorStop(0, '#e2b877'); pg.addColorStop(0.5, '#d9ab68'); pg.addColorStop(1, '#cc9a58');
     c.fillStyle = pg; c.fillRect(SX - cs, SY - cs, W + cs * 2, H + cs * 2);
+    }
     var rs = guideRand(g3.seed % 100000);
-    for (var st = 0; st < 6; st++) { var sx = SX + rs() * W, sy = SY + rs() * H, sr = cs * (1 + rs() * 2.2), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.82, 'rgba(138,90,34,.09)'); sg.addColorStop(0.94, 'rgba(107,67,22,.2)'); sg.addColorStop(1, 'rgba(107,67,22,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+    for (var st = 0; st < (tex ? 0 : 6); st++) { var sx = SX + rs() * W, sy = SY + rs() * H, sr = cs * (1 + rs() * 2.2), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.82, 'rgba(138,90,34,.09)'); sg.addColorStop(0.94, 'rgba(107,67,22,.2)'); sg.addColorStop(1, 'rgba(107,67,22,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
     // Fold creases.
     var fold = function (x, y, w, h, vert) { var g = vert ? c.createLinearGradient(x, 0, x + w, 0) : c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(74,44,12,0)'); g.addColorStop(0.47, 'rgba(74,44,12,.15)'); g.addColorStop(0.53, 'rgba(255,242,204,.17)'); g.addColorStop(1, 'rgba(255,242,204,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
     fold(SX + W / 2 - cs * 0.4, SY, cs * 0.8, H, true); fold(SX, SY + H / 2 - cs * 0.35, W, cs * 0.7, false);
@@ -12484,7 +12506,7 @@ window.UnwindI18n = (function () {
     if (d.anchor) put('anchor', d.anchor.x, d.anchor.y, d.anchor.w, 124 / 120);
     if (d.mare) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * (d.mare.s || 0.5)) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
     // The squares sit on slightly lighter paper.
-    c.fillStyle = 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
+    c.fillStyle = tex ? 'rgba(236,204,150,.3)' : 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
     // Holes, a darker worn rim and age at the edges.
     sh.holes.forEach(function (h) { c.fillStyle = 'rgba(90,52,16,.45)'; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs * 1.7, 0, 7); c.fill(); c.fillStyle = P.table; c.beginPath(); c.arc(X(h[0]), Y(h[1]), h[2] * cs, 0, 7); c.fill(); });
     // The paper curls up into each roll: a soft shadow on it, just inside the roll.
@@ -12551,6 +12573,11 @@ window.UnwindI18n = (function () {
       });
       }
     }
+    g3PaperTop(c, cam, now, '#d9ab68');
+  }
+  // On top of either chart: the squares, a checkered border, the drawings, traps, crashes, the lighthouse and the coordinates.
+  function g3PaperTop(c, cam, now, band) {
+    var G = g3.G, cs = cam.cs, X = function (x) { return cam.ox + x * cs; }, Y = function (y) { return cam.oy + y * cs; }, n = G.n, P = G3_PAPER;
     c.strokeStyle = P.line; c.lineWidth = 1;
     for (var gl = 1; gl < n; gl++) { c.beginPath(); c.moveTo(X(gl), Y(0)); c.lineTo(X(gl), Y(n)); c.moveTo(X(0), Y(gl)); c.lineTo(X(n), Y(gl)); c.stroke(); }
     // A checkered border, like the scale bars round an old chart.
@@ -12565,7 +12592,26 @@ window.UnwindI18n = (function () {
     g3Traps(c, cam, now, 'paper');
     g3Crashes(c, cam);
     g3Put(c, g3Pic('chart', 'light'), X(G.c) + cs / 2, Y(G.c) + cs / 2, cs * 48 / 44);
-    g3Labels(c, cam, P.ink, '#d9ab68', true);
+    g3Labels(c, cam, P.ink, band, true);
+  }
+  // The painted Old Keeper's Chart, the squares laid over where its own grid was. The title and the key are written by
+  // the game, so they follow the language.
+  function g3DrawChartPic(c, cam, now, im, tr) {
+    var n = g3.G.n, cs = cam.cs, P = G3_PAPER, sx = n * cs / KC.gw, sy = n * cs / KC.gh, px = cam.ox - KC.gx * sx, py = cam.oy - KC.gy * sy;
+    c.fillStyle = '#160e08'; c.fillRect(0, 0, g3w, g3h);
+    c.drawImage(im, px, py, KC.w * sx, KC.h * sy);
+    var serif = 'px Georgia, \'Times New Roman\', serif';
+    c.fillStyle = P.ink; c.textAlign = 'center'; c.textBaseline = 'middle';
+    // The title ribbon.
+    c.save(); c.translate(px + 266 * sx, py + 121 * sy); c.rotate(-0.025);
+    c.font = 'italic 600 ' + Math.round(27 * sy) + serif; c.fillText(tr('The keeper\'s chart'), 0, 0, 205 * sx); c.restore();
+    // The key card.
+    c.font = 'italic 600 ' + Math.round(29 * sy) + serif; c.fillText(tr('Key to the chart'), px + 1451 * sx, py + 120 * sy, 214 * sx);
+    c.strokeStyle = 'rgba(61,35,20,.55)'; c.lineWidth = Math.max(1, 1.2 * sy); c.beginPath(); c.moveTo(px + 1350 * sx, py + 145 * sy); c.lineTo(px + 1552 * sx, py + 145 * sy); c.stroke();
+    var rows = [['light', 'Lighthouse'], ['rock', 'Rock'], ['tall', 'Tall rock'], ['whirl', 'Whirlpool'], ['wind', 'Gust'], ['treasure', 'Treasure'], ['serpent', 'Serpent'], ['trap', 'Trap'], ['crash', 'Crash']];
+    c.font = 'italic ' + Math.round(26 * sy) + serif; c.textAlign = 'left';
+    rows.forEach(function (r, i) { var cy = py + (176 + i * 45) * sy; g3Put(c, g3Pic('chart', r[0]), px + 1372 * sx, cy, 42 * sy); c.fillStyle = P.ink; c.fillText(tr(r[1]), px + 1414 * sx, cy + 1, 146 * sx); });
+    g3PaperTop(c, cam, now, '#d6aa68');
   }
   // The captain's radar screen: crisp squares, the keeper's drawings in green, the lighthouse, traps, and a round reach
   // around the boat with a sweep.
