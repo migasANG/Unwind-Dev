@@ -8,8 +8,16 @@
     winter: { land: [0.77419, 5, 0], port: [0.94737, 1358], clouds: { big: [2285, 183, 448, 195], small: [1055, 403, 426, 146] }, chimney: [1020, 642], windows: [[460, 1144, 180, 186], [924, 1144, 162, 180], [280, 1152, 64, 108]] },
     spring: { land: [0.77419, 6, 0], port: [0.94737, 1358], clouds: { big: [2269, 184, 437, 194], small: [1028, 403, 436, 146] }, chimney: [1002, 672], windows: [[436, 1144, 184, 186], [910, 1144, 160, 180], [256, 1152, 68, 108]] },
     summer: { land: [0.77253, 2, 0], port: [0.94737, 1354], clouds: { big: [2287, 165, 447, 194], small: [1049, 383, 448, 146] }, chimney: [1022, 654], windows: [[460, 1124, 180, 186], [930, 1124, 160, 186], [280, 1132, 64, 118]] },
-    autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] }
+    autumn: { land: [0.77253, 4, 0], port: [0.94737, 1354], clouds: { big: [2268, 165, 438, 195], small: [1033, 383, 428, 147] }, chimney: [1002, 654], windows: [[436, 1124, 184, 186], [910, 1124, 160, 186], [256, 1132, 68, 118]] },
+    // The alternative scenes. Their master pictures have other sizes (master), and their portraits are cut from a
+    // part of the picture (port's third number is where that cut starts). Positions are in master coordinates.
+    'winter-alt': { master: [6144, 2032], land: [0.70866, 0, 0], port: [0.68571, 1727, 100], clouds: { big: [1091, 154, 488, 210], small: [2700, 150, 553, 235] }, chimney: [1129, 519], windows: [[542, 1129, 203, 226], [1084, 1129, 192, 226], [310, 1140, 85, 124]] },
+    'spring-alt': { master: [6144, 2036], land: [0.70727, 0, 0], port: [0.68571, 1724, 100], clouds: { big: [1090, 132, 487, 208], small: [2700, 130, 551, 235] }, chimney: [1131, 520], windows: [[537, 1103, 198, 209], [1091, 1103, 170, 209], [317, 1114, 68, 113]] },
+    'summer-alt': { master: [2016, 956], land: [1.50628, 238, 0], port: [1.41732, 1765, 1000], clouds: { big: [309, 241, 340, 167], small: [1213, 163, 289, 117] }, windows: [[1587, 149, 48, 42]] },
+    'autumn-alt': { master: [2016, 1044], land: [1.37931, 0, 0], port: [1.41732, 1640, 950], clouds: { big: [1248, 86, 334, 128] } }
   };
+  // An alternative scene has its season's weather, wildlife and music.
+  function photoBase(season) { return String(season).replace(/-alt$/, ''); }
   var photoState = {};   // season + orientation -> 'loading' | 'ok' | 'failed'
   function photoPortrait() { return window.innerWidth / Math.max(1, window.innerHeight) < 0.8; }
   function photoUrl(season, port) { return 'bg/' + season + '-' + (port ? 'portrait' : 'landscape') + '.webp'; }
@@ -25,7 +33,7 @@
     img.onerror = function () { end(false); };
     setTimeout(function () { end(true); }, 6000);
     img.src = photoUrl(season, port);
-    ['big', 'small'].forEach(function (c) { var s = new Image(); s.src = 'bg/' + season + '-cloud-' + c + '.webp'; });
+    Object.keys(PHOTO_GEO[season].clouds).forEach(function (c) { var s = new Image(); s.src = 'bg/' + season + '-cloud-' + c + '.webp'; });
   }
   // Twelve frames of a Fowl Play bird's wingbeat (one beat lasts 250 ms), side by side in one picture.
   var birdStrips = {};
@@ -40,7 +48,9 @@
   function photoScene(season) {
     var G = PHOTO_GEO[season], port = photoPortrait(), W = port ? 1440 : 2560, H = port ? 3120 : 1440;
     var k = port ? G.port[0] : G.land[0];
-    var T = function (x, y) { return port ? [x * k, y * k + G.port[1]] : [x * k - G.land[1], y * k - G.land[2]]; };
+    var T = function (x, y) { return port ? [(x - (G.port[2] || 0)) * k, y * k + G.port[1]] : [x * k - G.land[1], y * k - G.land[2]]; };
+    // The weather and wildlife were placed on the first scenes' masters (3320 x 1860); the same spots, scaled.
+    var Tw = G.master ? function (x, y) { return T(x * G.master[0] / 3320, y * G.master[1] / 1860); } : T;
     var U = port ? 2.6 : 2.2;   // size of one "design pixel" in picture units, so details read at phone size too
     var r = E.rng32(SEASON_ORDER.indexOf(season) * 977 + (port ? 5 : 1));
     var f = function (v) { return Math.round(v * 10) / 10; };
@@ -48,24 +58,29 @@
     out += '<image href="' + photoUrl(season, port) + '" x="0" y="0" width="' + W + '" height="' + H + '" preserveAspectRatio="none"/>';
     // Clouds, drifting slowly (on tall screens a few more spread over the extra sky).
     var clouds = [];
-    ['big', 'small'].forEach(function (c) { var b = G.clouds[c], p = T(b[0], b[1]); clouds.push([c, p[0], p[1], b[2] * k, b[3] * k]); });
-    if (port) { var cb = G.clouds.big; clouds.push(['big', 760, 520, cb[2] * k * 0.9, cb[3] * k * 0.9], ['small', 120, 980, G.clouds.small[2] * k * 0.85, G.clouds.small[3] * k * 0.85], ['big', 980, 1500, cb[2] * k * 0.7, cb[3] * k * 0.7]); }
+    Object.keys(G.clouds).forEach(function (c) { var b = G.clouds[c], p = T(b[0], b[1]); clouds.push([c, p[0], p[1], b[2] * k, b[3] * k]); });
+    if (port) {
+      // On tall screens a few more clouds spread over the extra sky, sized like the first scenes' clouds.
+      var cb = G.clouds.big, cs = G.clouds.small || G.clouds.big, sm = G.clouds.small ? 'small' : 'big', zk = G.master ? 0.94737 * 446 / cb[2] : k;
+      clouds.push(['big', 760, 520, cb[2] * zk * 0.9, cb[3] * zk * 0.9], [sm, 120, 980, cs[2] * zk * 0.85, cs[3] * zk * 0.85], ['big', 980, 1500, cb[2] * zk * 0.7, cb[3] * zk * 0.7]);
+    }
     clouds.forEach(function (c, i) {
       out += '<image class="pdrift" style="--a:' + (-60 - i * 25) + ';--b:' + (90 + i * 20) + ';animation-duration:' + (70 + i * 17) + 's;animation-delay:' + (-i * 23) + 's" href="bg/' + season + '-cloud-' + c[0] + '.webp" x="' + f(c[1]) + '" y="' + f(c[2]) + '" width="' + f(c[3]) + '" height="' + f(c[4]) + '"/>';
     });
     // Warm light in the windows, flickering like a fire inside.
-    G.windows.forEach(function (w, i) {
+    (G.windows || []).forEach(function (w, i) {
       var p = T(w[0], w[1]), ww = w[2] * k, hh = w[3] * k;
       out += '<g class="pglow" style="animation-delay:' + (-i * 1.7) + 's;animation-duration:' + (5 + i) + 's"><ellipse cx="' + f(p[0] + ww / 2) + '" cy="' + f(p[1] + hh / 2) + '" rx="' + f(ww * 0.95) + '" ry="' + f(hh * 0.9) + '" fill="url(#pGlow)"/><rect x="' + f(p[0]) + '" y="' + f(p[1]) + '" width="' + f(ww) + '" height="' + f(hh) + '" rx="' + f(ww * 0.06) + '" fill="#ffcf73" opacity=".35"/></g>';
     });
     // Smoke from the chimney: soft puffs that rise, grow and fade, drifting with the wind.
-    var ch = T(G.chimney[0], G.chimney[1]), puffs = 7, lean = season === 'autumn' ? 150 : season === 'winter' ? 90 : 60;
+    var base = photoBase(season), ch = G.chimney ? T(G.chimney[0], G.chimney[1]) : null, puffs = ch ? 7 : 0, lean = base === 'autumn' ? 150 : base === 'winter' ? 90 : 60;
+    var sk = G.master ? 0.77 : k;   // smoke puffs keep the first scenes' size on screen
     for (var i = 0; i < puffs; i++) {
-      var pr = (34 + r() * 10) * k;
-      out += '<circle class="psmoke" style="--dx:' + Math.round(lean * k * 2.2 + r() * 40) + ';--dy:' + Math.round(-(300 + r() * 80) * k * 1.4) + ';animation-duration:8.4s;animation-delay:' + (-i * 1.2).toFixed(1) + 's" cx="' + f(ch[0] + (r() - 0.5) * 10 * k) + '" cy="' + f(ch[1] - pr * 0.4) + '" r="' + f(pr) + '" fill="url(#pSmoke)"/>';
+      var pr = (34 + r() * 10) * sk;
+      out += '<circle class="psmoke" style="--dx:' + Math.round(lean * sk * 2.2 + r() * 40) + ';--dy:' + Math.round(-(300 + r() * 80) * sk * 1.4) + ';animation-duration:8.4s;animation-delay:' + (-i * 1.2).toFixed(1) + 's" cx="' + f(ch[0] + (r() - 0.5) * 10 * sk) + '" cy="' + f(ch[1] - pr * 0.4) + '" r="' + f(pr) + '" fill="url(#pSmoke)"/>';
     }
     // Each season's own weather and wildlife.
-    out += photoExtras(season, W, H, U, r, f, T, k, port);
+    out += photoExtras(base, W, H, U, r, f, Tw, k, port);
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="' + (port ? 'xMidYMax' : 'xMinYMax') + ' slice" aria-hidden="true"><defs>' +
       '<radialGradient id="pGlow"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset=".55" stop-color="#ffc35c" stop-opacity=".18"/><stop offset="1" stop-color="#ffc35c" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pSmoke"><stop offset="0" stop-color="#f7f7f9" stop-opacity=".95"/><stop offset=".55" stop-color="#e9eaef" stop-opacity=".7"/><stop offset="1" stop-color="#dfe1e8" stop-opacity="0"/></radialGradient>' +
