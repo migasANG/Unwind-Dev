@@ -571,6 +571,8 @@
     if (G.ended) view = 'sea';
     else if (g3.role === 'boat') view = 'radar';
     else view = G.phase === 'light' && !g3.cover ? 'light' : 'paper';
+    var around = view === 'radar' ? G3_RADAR.bg : view === 'paper' ? (g3PicMode() && g3ChartPic().naturalWidth ? '#160e08' : G3_PAPER.table) : '#060a1c';
+    if (el.dataset.bg !== around) { el.dataset.bg = around; el.style.background = around; }
     if (view === 'radar') g3DrawRadar(c, cam, now);
     else if (view === 'paper') g3DrawPaper(c, cam, now);
     else g3DrawSea(c, cam, now, view === 'light');
@@ -702,10 +704,12 @@
     } else {
       var top = y0 + 0.62, room = -0.72 - top, ry = top + room / 2;
       if (T >= 1.9 && room >= 0.75) {
-        // between the top roll and the letters: the title ribbon, and the ship from the old chart beside it
-        var shW = Math.min(room * 1.08 * 510 / 420, n * 0.42), rw2 = Math.min(n * 0.56, 8, room * 0.92 * 620 / 196, n - shW - 0.3);
-        d.topShip = { x: n - shW / 2 + 0.15, y: ry + room * 0.02, w: shW };
-        d.ribbon = { x: (n - shW - 0.15) / 2, y: ry, w: rw2, painted: true };
+        // between the top roll and the letters: a compass rose, the title ribbon, and the ship from the old chart
+        d.ribbon = { x: n / 2, y: ry, w: Math.min(n * 0.58, 8, room * 0.92 * 620 / 196), painted: true };
+        var side2 = (n / 2 - d.ribbon.w / 2) / 2;
+        d.small = { x: Math.max(0.2, side2 - 0.15), y: ry, r: Math.min(0.85, room * 0.5, side2 * 0.9) };
+        var shH = room * 0.95, shW = Math.min(shH * 510 / 420, side2 * 1.9);
+        d.topShip = { x: n - Math.max(0.35, side2 - 0.1), y: ry, w: shW };
       }
       if (B >= 1.5) { var kb = rollB ? y1 - 0.55 : n + B - 0.2; d.key = { x: 0, y: n + 0.36, w: n, cols: 3, h: Math.min(kb - n - 0.42, 150 / base), painted: true }; }
       if (B * base >= 300 && d.key) d.key.h = Math.min(d.key.h, 120 / base);

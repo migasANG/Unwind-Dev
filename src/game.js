@@ -713,10 +713,13 @@
     else { ctx.fillStyle = dark; ctx.save(); ctx.translate(-2, -1); ctx.rotate(-0.3 - rest); ctx.beginPath(); ctx.ellipse(-2, 0, 6.8, 4.4, 0.2, 0, 7); ctx.fill(); ctx.restore(); }
     // A big two-part beak.
     ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(9.5, -4); ctx.quadraticCurveTo(15, -3.6, 19, 0); ctx.lineTo(9.5, 0.6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#e08a1a'; ctx.beginPath(); ctx.moveTo(9.5, 0.6); ctx.lineTo(17, 0.6); ctx.quadraticCurveTo(13, 3.6, 9.5, 3); ctx.closePath(); ctx.fill();
+    // the lower half shuts flush against the upper one
+    ctx.fillStyle = '#e08a1a'; ctx.beginPath(); ctx.moveTo(9.3, 0.6); ctx.lineTo(18.2, 0.08); ctx.quadraticCurveTo(13.4, 3.4, 9.3, 3); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,80,10,.55)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(9.6, 0.58); ctx.lineTo(18.4, 0.05); ctx.stroke();
     // One eye, as a bird seen from the side has: dark, round, with a single small shine.
     ctx.fillStyle = '#1a1a24'; ctx.beginPath(); ctx.ellipse(6.4, -3.8, 2.1, 2.3, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(7.1, -4.6, 0.6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7.1, -4.7, 0.85, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(5.8, -3.1, 0.38, 0, 7); ctx.fill();
     ctx.restore();
   }
   // A twig nest with speckled eggs. A bird sitting in it covers the eggs.
@@ -2069,7 +2072,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.28-p';
+  var BUILD = '2026.11.28-q';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
