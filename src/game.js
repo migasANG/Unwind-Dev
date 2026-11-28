@@ -666,7 +666,7 @@
     ctx.restore(); ctx.globalAlpha = 1;
   }
   // A little round bird drawn like the bees: flat colours, no outlines. A fan of tail feathers, a big beak,
-  // big shiny eyes and orange feet. In flight both wings beat and the feet tuck in.
+  // a dark eye and orange feet. In flight both wings beat and the feet tuck in.
   function drawBird(x, y, s, color, face, flap, now) {
     var k = s / 24;
     // Flapping: a quick downstroke and a slower upstroke, about three beats a second. The body rises a little on
@@ -714,13 +714,9 @@
     // A big two-part beak.
     ctx.fillStyle = '#f5a524'; ctx.beginPath(); ctx.moveTo(9.5, -4); ctx.quadraticCurveTo(15, -3.6, 19, 0); ctx.lineTo(9.5, 0.6); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e08a1a'; ctx.beginPath(); ctx.moveTo(9.5, 0.6); ctx.lineTo(17, 0.6); ctx.quadraticCurveTo(13, 3.6, 9.5, 3); ctx.closePath(); ctx.fill();
-    // Big eyes with two shines each.
-    ctx.fillStyle = '#1a1a24';
-    ctx.beginPath(); ctx.ellipse(3.6, -3.6, 2.9, 3.3, 0, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(8.8, -3.6, 2.5, 3, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(4.5, -4.8, 1.1, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(2.9, -2.3, 0.55, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(9.6, -4.7, 0.95, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(8.2, -2.4, 0.45, 0, 7); ctx.fill();
+    // One eye, as a bird seen from the side has: dark, round, with a single small shine.
+    ctx.fillStyle = '#1a1a24'; ctx.beginPath(); ctx.ellipse(6.4, -3.8, 2.1, 2.3, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(7.1, -4.6, 0.6, 0, 7); ctx.fill();
     ctx.restore();
   }
   // A twig nest with speckled eggs. A bird sitting in it covers the eggs.
@@ -2073,7 +2069,7 @@
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.28-o';
+  var BUILD = '2026.11.28-p';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
