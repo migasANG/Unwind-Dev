@@ -6470,7 +6470,7 @@ window.UnwindI18n = (function () {
   /* ---------- Online: the room server (Cloudflare Worker + Durable Objects) ---------- */
   var NET_DEFAULT = 'https://unwind-rooms.miguelima.workers.dev';
   // Shown in the main menu, to check that a phone has the newest page and not a cached one.
-  var BUILD = '2026.11.28-n';
+  var BUILD = '2026.11.28-o';
   var net = { ws: null, code: '', leaving: false, retries: 0, timer: null, ping: null };
   function netBase() { var b = ''; try { b = localStorage.getItem('unwind.server') || ''; } catch (e) {} return (b || NET_DEFAULT).replace(/\/+$/, ''); }
   function netPid() {
@@ -12310,12 +12310,25 @@ window.UnwindI18n = (function () {
   function g3PaperPic() { if (!g3PaperIm) { g3PaperIm = new Image(); g3PaperIm.src = 'bg/keeper-paper.webp'; } return g3PaperIm; }
   // Wide screens show the whole painted chart, for the keeper (and on one device); the camera then fits the picture.
   function g3PicMode() { return !!g3 && (g3.local || g3.role === 'keeper') && g3h > 0 && g3w / g3h >= 1.62; }
+  // Where the squares sit when not zoomed. On a tall screen the chart leaves room above for the title ribbon and below
+  // for a key big enough to read (the squares get a little smaller for it).
+  function g3Fit(n) {
+    var base = Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), ox = (g3w - n * base) / 2 + base * 0.3, oy = (g3h - n * base) / 2 + base * 0.3;
+    if (g3h > g3w * 1.15) {
+      var bw = g3w / (n + 1.1), topArt = 68, botArt = 104, bh = (g3h - topArt - botArt) / (n + 0.95);
+      if (bh >= bw * 0.78) {
+        base = Math.min(bw, bh); ox = (g3w - n * base) / 2 + base * 0.3;
+        oy = topArt + base * 0.75 + Math.max(0, g3h - (n + 0.95) * base - topArt - botArt) / 2;
+      }
+    }
+    return { base: base, ox: ox, oy: oy };
+  }
   function g3Cam() {
-    var n = g3.G.n, pic = g3PicMode(), base = pic ? Math.min(g3h / (n * KC.h / KC.gh * 0.965), g3w / (n * KC.w / KC.gw)) : Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), cs = base * g3.zoom, ox, oy;
+    var n = g3.G.n, pic = g3PicMode(), base = pic ? Math.min(g3h / (n * KC.h / KC.gh * 0.965), g3w / (n * KC.w / KC.gw)) : g3Fit(n).base, cs = base * g3.zoom, ox, oy;
     if (g3.zoom <= 1.001) {
       g3.zoom = 1; cs = base;
       if (pic) { ox = g3w / 2 - n * cs * (KC.w / 2 - KC.gx) / KC.gw; oy = g3h / 2 - n * cs * (KC.h / 2 - KC.gy) / KC.gh; }
-      else { ox = (g3w - n * cs) / 2 + cs * 0.3; oy = (g3h - n * cs) / 2 + cs * 0.3; }
+      else { var ft = g3Fit(n); ox = ft.ox; oy = ft.oy; }
       g3.vx = (g3w / 2 - ox) / cs; g3.vy = (g3h / 2 - oy) / cs;
     }
     else {
@@ -12439,7 +12452,7 @@ window.UnwindI18n = (function () {
   // The margin art is laid out in squares around the chart, from the room there is when the chart is not zoomed,
   // so it zooms and pans with the squares.
   function g3Sheet() {
-    var n = g3.G.n, base = Math.min(g3w / (n + 1.1), g3h / (n + 1.1)), ox = (g3w - n * base) / 2 + base * 0.3, oy = (g3h - n * base) / 2 + base * 0.3;
+    var n = g3.G.n, ft = g3Fit(n), base = ft.base, ox = ft.ox, oy = ft.oy;
     var L = ox / base, T = oy / base, R = g3w / base - L - n, B = g3h / base - T - n, key = [n, L.toFixed(2), T.toFixed(2), R.toFixed(2), B.toFixed(2)].join();
     if (g3.sheet && g3.sheet.key === key) return g3.sheet;
     // The sheet reaches the screen's edges, and always past the squares, their letters and the border (it may run off screen there).
@@ -12461,7 +12474,7 @@ window.UnwindI18n = (function () {
       }
     };
     // On a tall screen the scroll is rolled up at the top and the bottom instead (when there is room for it).
-    var rollT = !wide && T >= 1.9, rollB = !wide && B >= 2.7;
+    var rollT = !wide && T >= 1.9, rollB = !wide && B * base >= 150 + base * 0.9;
     side(x0, y0, x1, y0, 0, 1, rollT); side(x1, y0, x1, y1, -1, 0, rollR); side(x1, y1, x0, y1, 0, -1, rollB); side(x0, y1, x0, y0, 1, 0, rollL);
     var rolls = [rollL ? { x: x0, w: RW } : null, rollR ? { x: x1, w: RW } : null], hrolls = [rollT ? { y: y0 + 0.1, h: 0.95 } : null, rollB ? { y: y1 - 0.1, h: 0.95 } : null];
     // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
@@ -12485,11 +12498,12 @@ window.UnwindI18n = (function () {
         d.ribbon = { x: n / 2, y: ry, w: Math.min(n * 0.58, 8, room * 0.92 * 620 / 196), painted: true };
         var side2 = (n / 2 - d.ribbon.w / 2) / 2;
         d.small = { x: Math.max(0.2, side2 - 0.15), y: ry, r: Math.min(0.85, room * 0.5, side2 * 0.9) };
-        d.rose = { x: n - Math.max(0.35, side2 - 0.15), y: ry, r: Math.min(0.85, room * 0.5, side2 * 0.9), noFleur: true };
+        var shH = room * 0.95, shW = Math.min(shH * 510 / 420, side2 * 1.9);
+        d.topShip = { x: n - Math.max(0.35, side2 - 0.1), y: ry, w: shW };
       }
-      if (B >= 1.5) { var kb = rollB ? y1 - 0.55 : n + B - 0.2; d.key = { x: 0, y: n + 0.36, w: n, cols: 3, h: Math.min(kb - n - 0.42, 2.2), painted: true }; }
-      if (B >= 4.2 && d.key) d.key.h = Math.min(d.key.h, 1.9);
-      if (B >= 4.2) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
+      if (B >= 1.5) { var kb = rollB ? y1 - 0.55 : n + B - 0.2; d.key = { x: 0, y: n + 0.36, w: n, cols: 3, h: Math.min(kb - n - 0.42, 150 / base), painted: true }; }
+      if (B * base >= 300 && d.key) d.key.h = Math.min(d.key.h, 120 / base);
+      if (B * base >= 300) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
     }
     var hl = [[x1 - 0.7, y0 + 0.5, 0.12], [x0 + 0.6, y1 - 0.45, 0.09]];
     g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: rollT || rollB ? [] : hl, rolls: rolls, hrolls: hrolls };
@@ -12521,9 +12535,9 @@ window.UnwindI18n = (function () {
     var fold = function (x, y, w, h, vert) { var g = vert ? c.createLinearGradient(x, 0, x + w, 0) : c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(74,44,12,0)'); g.addColorStop(0.47, 'rgba(74,44,12,.15)'); g.addColorStop(0.53, 'rgba(255,242,204,.17)'); g.addColorStop(1, 'rgba(255,242,204,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
     if (!tex) { fold(SX + W / 2 - cs * 0.4, SY, cs * 0.8, H, true); fold(SX, SY + H / 2 - cs * 0.35, W, cs * 0.7, false); }
     // Rhumb lines fanning out from the roses.
-    var rose = d.rose || { x: 1.25, y: n - 1.25, r: 1.15, faint: true };
+    var rose = d.rose || (d.topShip ? null : { x: 1.25, y: n - 1.25, r: 1.15, faint: true });
     var fan = function (x, y, k, a) { c.strokeStyle = 'rgba(61,35,20,' + a + ')'; c.lineWidth = 0.8; c.beginPath(); for (var rl = 0; rl < k; rl++) { var ra = rl * Math.PI * 2 / k; c.moveTo(X(x), Y(y)); c.lineTo(X(x) + Math.cos(ra) * cs * 60, Y(y) + Math.sin(ra) * cs * 60); } c.stroke(); };
-    fan(rose.x, rose.y, 32, tex ? 0.13 : 0.24); if (d.small) fan(d.small.x, d.small.y, 16, tex ? 0.1 : 0.17);
+    if (rose) fan(rose.x, rose.y, 32, tex ? 0.13 : 0.24); if (d.small) fan(d.small.x, d.small.y, 16, tex ? 0.1 : 0.17);
     // Wave strokes, the ships and monsters.
     var painted = g3PiecesOk();
     var put = function (key, x, y, w, ratio) {
@@ -12571,7 +12585,9 @@ window.UnwindI18n = (function () {
       c.fillStyle = '#3d240c'; c.beginPath(); c.ellipse(xr, top, w * 0.06, ry * 0.12 + 0.6, 0, 0, Math.PI * 2); c.fill();
     });
     // The compass roses.
-    if (rose.faint && painted) { c.save(); c.globalAlpha = 0.45; g3Piece(c, 'rose2', X(rose.x), Y(rose.y), cs * rose.r * 2.1); c.restore(); }
+    if (d.topShip) { if (painted) g3Piece(c, 'ship', X(d.topShip.x), Y(d.topShip.y), d.topShip.w * cs); else put('ship', d.topShip.x, d.topShip.y, d.topShip.w, 280 / 320); }
+    if (!rose) {}
+    else if (rose.faint && painted) { c.save(); c.globalAlpha = 0.45; g3Piece(c, 'rose2', X(rose.x), Y(rose.y), cs * rose.r * 2.1); c.restore(); }
     else if (rose.faint) g3Put(c, g3Pic('', 'rose'), X(rose.x), Y(rose.y) - cs * 0.06, cs * rose.r * 2, 0, 0.3);
     else if (painted) g3Piece(c, 'rose2', X(rose.x), Y(rose.y), cs * rose.r * 2.3);
     else g3Put(c, g3Pic(rose.noFleur ? 'map' : '', rose.noFleur ? 'roseSmall' : 'rose'), X(rose.x), Y(rose.y) - (rose.noFleur ? 0 : cs * rose.r * 0.06), cs * rose.r * (rose.noFleur ? 2.25 : 2.5));
@@ -12610,13 +12626,13 @@ window.UnwindI18n = (function () {
       var kx = X(k.x), ky = Y(k.y), kw = k.w * cs, kh = k.h * cs;
       if (painted) { g3Card(c, kx, ky, kw, kh); kx += cs * 0.12; ky += cs * 0.06; kw -= cs * 0.24; kh -= cs * 0.12; }
       else { c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx, ky, kw, kh); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx, ky, kw, kh); c.lineWidth = 0.8; c.strokeRect(kx + 4, ky + 4, kw - 8, kh - 8); }
-      var head = Math.min(0.62 * cs, kh * 0.26), per = Math.ceil(rows.length / k.cols), rowH = (kh - head - 8) / per, colW = (kw - 8) / k.cols;
-      c.fillStyle = P.ink; c.font = '600 ' + Math.round(head * 0.62) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      var head = Math.min(26, kh * 0.24), per = Math.ceil(rows.length / k.cols), rowH = (kh - head - 8) / per, colW = (kw - 8) / k.cols;
+      c.fillStyle = P.ink; c.font = (painted ? 'italic ' : '') + '600 ' + Math.round(head * 0.66) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(tr('Key to the chart'), kx + kw / 2, ky + 4 + head * 0.55);
       rows.forEach(function (rw2, i) {
-        var col = Math.floor(i / per), row = i % per, cx = kx + 4 + col * colW, cy = ky + 4 + head + row * rowH + rowH / 2, isz = Math.min(rowH * 0.95, cs * 0.95);
+        var col = Math.floor(i / per), row = i % per, cx = kx + 4 + col * colW, cy = ky + 4 + head + row * rowH + rowH / 2, isz = Math.min(rowH * 0.95, 24);
         g3Put(c, g3Pic('chart', rw2[0]), cx + isz * 0.62, cy, isz);
-        c.fillStyle = P.ink; c.textAlign = 'left'; c.font = 'italic ' + Math.round(Math.min(rowH * 0.46, cs * 0.4)) + 'px Georgia, \'Times New Roman\', serif';
+        c.fillStyle = P.ink; c.textAlign = 'left'; c.font = 'italic ' + Math.round(Math.min(rowH * 0.58, 16)) + 'px Georgia, \'Times New Roman\', serif';
         c.fillText(tr(rw2[1]), cx + isz * 1.25, cy + 1, colW - isz * 1.35);
       });
       }
