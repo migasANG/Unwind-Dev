@@ -26,7 +26,7 @@
     if (!im) { var src = group ? G3ART[group][key] : G3ART[key]; im = g3Pics[id] = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src); }
     return im;
   }
-  function g3PicsLoad() { ['chart', 'radar', 'radarMarks', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); g3ChartPic(); g3PaperPic(); }
+  function g3PicsLoad() { ['chart', 'radar', 'radarMarks', 'sea', 'map'].forEach(function (g) { Object.keys(G3ART[g]).forEach(function (k) { g3Pic(g, k); }); }); g3Pic('', 'rose'); g3Pic('', 'boat'); g3ChartPic(); g3PaperPic(); g3PiecesPic(); }
   // Draws a square picture centred on cx, cy, size wide, turned by rot.
   function g3Put(c, im, cx, cy, size, rot, alpha) {
     if (!im.complete || !im.naturalWidth) return;
@@ -302,6 +302,22 @@
   // screens, cleaned of its grid so the game draws the squares for any map size. KC is where the squares sit in it.
   var KC = { w: 1703, h: 924, gx: 460, gy: 84, gw: 793, gh: 774 }, g3ChartIm = null, g3PaperIm = null;
   function g3ChartPic() { if (!g3ChartIm) { g3ChartIm = new Image(); g3ChartIm.src = 'bg/keeper-chart.webp'; } return g3ChartIm; }
+  // Painted pieces cut from the chart (scroll rolls, ribbon, roses, ship, serpent, anchor, key card) for the other layouts.
+  var KP = {"rollL":[0,0,250,1848],"rollR":[254,0,262,1848],"card":[520,0,534,996],"rose2":[1058,0,488,464],"ship":[1550,0,510,420],"rose":[0,1852,388,376],"serpent":[392,1852,520,276],"rollB":[0,2232,1848,262],"rollT":[0,2498,1848,250],"ribbon":[0,2752,620,196],"anchor":[624,2752,508,180],"waves":[1136,2752,156,88]}, g3PiecesIm = null;
+  function g3PiecesPic() { if (!g3PiecesIm) { g3PiecesIm = new Image(); g3PiecesIm.src = 'bg/keeper-pieces.webp'; } return g3PiecesIm; }
+  function g3PiecesOk() { var im = g3PiecesPic(); return im.complete && im.naturalWidth > 0; }
+  // Draws a piece into a box (w wide; h from its own shape when left out), centred on cx, cy.
+  function g3Piece(c, name, cx, cy, w, h, rot) {
+    var im = g3PiecesPic(), r = KP[name]; if (!im.complete || !im.naturalWidth || !r) return;
+    if (h === undefined) h = w * r[3] / r[2];
+    c.save(); c.translate(cx, cy); if (rot) c.rotate(rot); c.drawImage(im, r[0], r[1], r[2], r[3], -w / 2, -h / 2, w, h); c.restore();
+  }
+  // The key card, stretched without stretching its torn corners.
+  function g3Card(c, x, y, w, h) {
+    var im = g3PiecesPic(), r = KP.card; if (!im.complete || !im.naturalWidth) return;
+    var k = 60, d = Math.min(k * h / 300, w / 3, h / 3), sx = [0, k, r[2] - k, r[2]], sy = [0, k, r[3] - k, r[3]], dx = [x, x + d, x + w - d, x + w], dy = [y, y + d, y + h - d, y + h];
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) c.drawImage(im, r[0] + sx[i], r[1] + sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i] + 0.5, dy[j + 1] - dy[j] + 0.5);
+  }
   function g3PaperPic() { if (!g3PaperIm) { g3PaperIm = new Image(); g3PaperIm.src = 'bg/keeper-paper.webp'; } return g3PaperIm; }
   // Wide screens show the whole painted chart, for the keeper (and on one device); the camera then fits the picture.
   function g3PicMode() { return !!g3 && (g3.local || g3.role === 'keeper') && g3h > 0 && g3w / g3h >= 1.62; }
@@ -406,11 +422,16 @@
     G.treasure.forEach(function (t) { if (t.got || !lit[t.y * G.n + t.x] || (lighting && t.deep)) return; g3Chest(c, X(t.x) + cs / 2, Y(t.y) + cs / 2, cs, now, t.deep); });
     g3Traps(c, cam, now, 'sea');
     G.serpents.forEach(function (s) {
-      if (!lit[s.y * G.n + s.x]) return; if (s.stun) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); else guideSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id, 1); });
+      if (!lit[s.y * G.n + s.x]) return; if (s.stun) guideBubbles(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); else g3SeaSerpent(c, X(s.x) + cs / 2, Y(s.y) + cs / 2, cs, now, s.id); });
     g3Lighthouse(c, cam, lighting ? 0.9 : 0.45);
     var bp = g3BoatPos(now);
     if (lit[Math.round(bp.y) * G.n + Math.round(bp.x)]) g3Boat(c, X(bp.x) + cs / 2, Y(bp.y) + cs / 2, cs, now);
     g3Labels(c, cam, 'rgba(238,240,255,.7)', '#060a1c');
+  }
+  // A sea serpent, like the one in the chart's margin come to life: humps and a tall neck, bobbing in the waves.
+  function g3SeaSerpent(c, cx, cy, cs, now, id) {
+    var bob = reducedMotion() ? 0 : Math.sin(now / 520 + id * 1.7) * cs * 0.035;
+    g3Put(c, g3Pic('sea', 'serpent'), cx, cy - cs * 0.06 + bob, cs * 1.2);
   }
   // The real sea's rocks: one of several pictures per square, always the same one for the same square.
   var G3_LOW = ['boulders', 'mossy', 'gull', 'barnacle', 'seaweed'], G3_TALL = ['stack', 'arch', 'nest', 'twin'];
@@ -450,8 +471,10 @@
         pts.push([x + nx * d, y + ny * d]);
       }
     };
-    side(x0, y0, x1, y0, 0, 1); side(x1, y0, x1, y1, -1, 0, rollR); side(x1, y1, x0, y1, 0, -1); side(x0, y1, x0, y0, 1, 0, rollL);
-    var rolls = [rollL ? { x: x0, w: RW } : null, rollR ? { x: x1, w: RW } : null];
+    // On a tall screen the scroll is rolled up at the top and the bottom instead (when there is room for it).
+    var rollT = !wide && T >= 1.9, rollB = !wide && B >= 2.7;
+    side(x0, y0, x1, y0, 0, 1, rollT); side(x1, y0, x1, y1, -1, 0, rollR); side(x1, y1, x0, y1, 0, -1, rollB); side(x0, y1, x0, y0, 1, 0, rollL);
+    var rolls = [rollL ? { x: x0, w: RW } : null, rollR ? { x: x1, w: RW } : null], hrolls = [rollT ? { y: y0 + 0.1, h: 0.95 } : null, rollB ? { y: y1 - 0.1, h: 0.95 } : null];
     // Where the margin art goes: beside the chart on a wide screen, above and below it on a tall one.
     var d = { ship: null, serpent: null, anchor: null, ribbon: null, rose: null, small: null, key: null, mare: null, waves: [] };
     if (wide) {
@@ -467,17 +490,20 @@
       d.rose = { x: rx, y: n - Math.min(1.35, rw * 0.33), r: Math.min(1.15, rw * 0.28) };
       d.waves = [[lx + lw * 0.3, n * 0.26], [lx - lw * 0.3, n * 0.86], [rx - rw * 0.3, n * 0.6], [rx + rw * 0.32, n * 0.52]];
     } else {
-      if (T >= 1.9) {
-        var ry = -(T + 0.9) / 2;
-        d.ribbon = { x: n / 2, y: ry, w: Math.min(n * 0.56, 8) };
-        d.small = { x: Math.max(0.2, (n / 2 - d.ribbon.w / 2) / 2 - 0.1), y: ry, r: Math.min(0.75, (T - 1) * 0.5) };
-        d.rose = { x: n - Math.max(0.6, (n / 2 - d.ribbon.w / 2) / 2), y: ry, r: Math.min(0.8, (T - 1) * 0.52), noFleur: true };
+      var top = y0 + 0.62, room = -0.72 - top, ry = top + room / 2;
+      if (T >= 1.9 && room >= 0.75) {
+        // between the top roll and the letters
+        d.ribbon = { x: n / 2, y: ry, w: Math.min(n * 0.58, 8, room * 0.92 * 620 / 196), painted: true };
+        var side2 = (n / 2 - d.ribbon.w / 2) / 2;
+        d.small = { x: Math.max(0.2, side2 - 0.15), y: ry, r: Math.min(0.85, room * 0.5, side2 * 0.9) };
+        d.rose = { x: n - Math.max(0.35, side2 - 0.15), y: ry, r: Math.min(0.85, room * 0.5, side2 * 0.9), noFleur: true };
       }
-      if (B >= 1.8) d.key = { x: 0, y: n + 0.42, w: n, cols: 4, h: Math.min(B - 0.6, 1.95) };
+      if (B >= 1.5) { var kb = rollB ? y1 - 0.55 : n + B - 0.2; d.key = { x: 0, y: n + 0.36, w: n, cols: 3, h: Math.min(kb - n - 0.42, 2.2), painted: true }; }
+      if (B >= 4.2 && d.key) d.key.h = Math.min(d.key.h, 1.9);
       if (B >= 4.2) { d.serpent = { x: n * 0.3, y: n + 3.4, w: Math.min(4, n * 0.36) }; d.anchor = { x: n * 0.78, y: n + 3.3, w: 1.1 }; d.waves = [[n * 0.55, n + 3.3], [n * 0.08, n + 3.5]]; }
     }
     var hl = [[x1 - 0.7, y0 + 0.5, 0.12], [x0 + 0.6, y1 - 0.45, 0.09]];
-    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: hl, rolls: rolls };
+    g3.sheet = { key: key, pts: pts, x0: x0, y0: y0, x1: x1, y1: y1, deco: d, holes: rollT || rollB ? [] : hl, rolls: rolls, hrolls: hrolls };
     return g3.sheet;
   }
   function g3DrawPaper(c, cam, now) {
@@ -504,18 +530,23 @@
     for (var st = 0; st < (tex ? 0 : 6); st++) { var sx = SX + rs() * W, sy = SY + rs() * H, sr = cs * (1 + rs() * 2.2), sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr); sg.addColorStop(0, 'rgba(138,90,34,.16)'); sg.addColorStop(0.82, 'rgba(138,90,34,.09)'); sg.addColorStop(0.94, 'rgba(107,67,22,.2)'); sg.addColorStop(1, 'rgba(107,67,22,0)'); c.fillStyle = sg; c.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
     // Fold creases.
     var fold = function (x, y, w, h, vert) { var g = vert ? c.createLinearGradient(x, 0, x + w, 0) : c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, 'rgba(74,44,12,0)'); g.addColorStop(0.47, 'rgba(74,44,12,.15)'); g.addColorStop(0.53, 'rgba(255,242,204,.17)'); g.addColorStop(1, 'rgba(255,242,204,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
-    fold(SX + W / 2 - cs * 0.4, SY, cs * 0.8, H, true); fold(SX, SY + H / 2 - cs * 0.35, W, cs * 0.7, false);
+    if (!tex) { fold(SX + W / 2 - cs * 0.4, SY, cs * 0.8, H, true); fold(SX, SY + H / 2 - cs * 0.35, W, cs * 0.7, false); }
     // Rhumb lines fanning out from the roses.
     var rose = d.rose || { x: 1.25, y: n - 1.25, r: 1.15, faint: true };
     var fan = function (x, y, k, a) { c.strokeStyle = 'rgba(61,35,20,' + a + ')'; c.lineWidth = 0.8; c.beginPath(); for (var rl = 0; rl < k; rl++) { var ra = rl * Math.PI * 2 / k; c.moveTo(X(x), Y(y)); c.lineTo(X(x) + Math.cos(ra) * cs * 60, Y(y) + Math.sin(ra) * cs * 60); } c.stroke(); };
-    fan(rose.x, rose.y, 32, 0.24); if (d.small) fan(d.small.x, d.small.y, 16, 0.17);
+    fan(rose.x, rose.y, 32, tex ? 0.13 : 0.24); if (d.small) fan(d.small.x, d.small.y, 16, tex ? 0.1 : 0.17);
     // Wave strokes, the ships and monsters.
-    var put = function (key, x, y, w, ratio) { var im = g3Pic('map', key); if (im.complete && im.naturalWidth) c.drawImage(im, X(x) - w * cs / 2, Y(y) - w * cs * ratio / 2, w * cs, w * cs * ratio); };
+    var painted = g3PiecesOk();
+    var put = function (key, x, y, w, ratio) {
+      if (painted && KP[key]) { g3Piece(c, key, X(x), Y(y), w * cs * (key === 'ship' ? 1.08 : key === 'serpent' ? 1.08 : key === 'waves' ? 0.9 : 1)); return; }
+      var im = g3Pic('map', key); if (im.complete && im.naturalWidth) c.drawImage(im, X(x) - w * cs / 2, Y(y) - w * cs * ratio / 2, w * cs, w * cs * ratio);
+    };
     d.waves.forEach(function (wv) { put('waves', wv[0], wv[1], 0.75, 66 / 84); });
     if (d.ship) put('ship', d.ship.x, d.ship.y, d.ship.w, 280 / 320);
     if (d.serpent) put('serpent', d.serpent.x, d.serpent.y, d.serpent.w, 120 / 288);
-    if (d.anchor) put('anchor', d.anchor.x, d.anchor.y, d.anchor.w, 124 / 120);
-    if (d.mare) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * (d.mare.s || 0.5)) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
+    // (the painted anchor carries its own 'Mare Ignotum')
+    if (d.anchor) { if (painted) g3Piece(c, 'anchor', X(d.mare ? (d.anchor.x + d.mare.x) / 2 + 0.25 : d.anchor.x), Y(d.anchor.y), cs * (d.mare ? Math.abs(d.mare.x - d.anchor.x) * 2.6 + 1.2 : 2.6)); else put('anchor', d.anchor.x, d.anchor.y, d.anchor.w, 124 / 120); }
+    if (d.mare && !painted) { c.save(); c.translate(X(d.mare.x), Y(d.mare.y)); c.rotate(-0.1); c.fillStyle = P.ink; c.font = 'italic ' + Math.round(cs * (d.mare.s || 0.5)) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Mare Ignotum', 0, 0); c.restore(); }
     // The squares sit on slightly lighter paper.
     c.fillStyle = tex ? 'rgba(236,204,150,.3)' : 'rgba(220,176,114,.86)'; c.fillRect(X(0) - cs * 0.16, Y(0) - cs * 0.16, n * cs + cs * 0.32, n * cs + cs * 0.32);
     // Holes, a darker worn rim and age at the edges.
@@ -528,8 +559,13 @@
     c.strokeStyle = '#1d0f06'; c.lineWidth = 2.2; sheet(); c.stroke();
     c.save(); c.translate(-1, -1); c.strokeStyle = 'rgba(122,74,26,.7)'; c.lineWidth = 1; sheet(); c.stroke(); c.restore();
     // The rolled-up ends of the scroll, over the paper's side edges, a little taller than the sheet.
+    if (painted) {
+      sh.rolls.forEach(function (r, fi) { if (r) g3Piece(c, fi ? 'rollR' : 'rollL', X(r.x), (Y(sh.y0) + Y(sh.y1)) / 2, r.w * cs * 1.35, (sh.y1 - sh.y0 + 0.6) * cs); });
+      (sh.hrolls || []).forEach(function (r, fi) { if (r) g3Piece(c, fi ? 'rollB' : 'rollT', (X(sh.x0) + X(sh.x1)) / 2, Y(r.y), (sh.x1 - sh.x0 + 0.5) * cs, r.h * cs); });
+    }
+    else (sh.hrolls || []).forEach(function (r) { if (!r) return; var g = c.createLinearGradient(0, Y(r.y) - r.h * cs / 2, 0, Y(r.y) + r.h * cs / 2); g.addColorStop(0, '#4a2c0e'); g.addColorStop(0.4, '#e2b877'); g.addColorStop(1, '#4a2c0e'); c.fillStyle = g; c.fillRect(X(sh.x0) - cs * 0.2, Y(r.y) - r.h * cs / 2, (sh.x1 - sh.x0 + 0.4) * cs, r.h * cs); });
     sh.rolls.forEach(function (r) {
-      if (!r) return;
+      if (!r || painted) return;
       var xr = X(r.x), w = r.w * cs, xl = xr - w / 2, top = Y(sh.y0) - cs * 0.3, bot = Y(sh.y1) + cs * 0.3, ry = w * 0.2;
       var g = c.createLinearGradient(xl, 0, xl + w, 0);
       g.addColorStop(0, '#4a2c0e'); g.addColorStop(0.12, '#8a5a26'); g.addColorStop(0.38, '#e2b877'); g.addColorStop(0.55, '#d2a464'); g.addColorStop(0.82, '#9a6a30'); g.addColorStop(1, '#4a2c0e');
@@ -546,16 +582,27 @@
       c.fillStyle = '#3d240c'; c.beginPath(); c.ellipse(xr, top, w * 0.06, ry * 0.12 + 0.6, 0, 0, Math.PI * 2); c.fill();
     });
     // The compass roses.
-    if (rose.faint) g3Put(c, g3Pic('', 'rose'), X(rose.x), Y(rose.y) - cs * 0.06, cs * rose.r * 2, 0, 0.3);
+    if (rose.faint && painted) { c.save(); c.globalAlpha = 0.45; g3Piece(c, 'rose2', X(rose.x), Y(rose.y), cs * rose.r * 2.1); c.restore(); }
+    else if (rose.faint) g3Put(c, g3Pic('', 'rose'), X(rose.x), Y(rose.y) - cs * 0.06, cs * rose.r * 2, 0, 0.3);
+    else if (painted) g3Piece(c, 'rose2', X(rose.x), Y(rose.y), cs * rose.r * 2.3);
     else g3Put(c, g3Pic(rose.noFleur ? 'map' : '', rose.noFleur ? 'roseSmall' : 'rose'), X(rose.x), Y(rose.y) - (rose.noFleur ? 0 : cs * rose.r * 0.06), cs * rose.r * (rose.noFleur ? 2.25 : 2.5));
-    if (d.small) g3Put(c, g3Pic('map', 'roseSmall'), X(d.small.x), Y(d.small.y), cs * d.small.r * 2.25);
+    if (d.small) { if (painted) g3Piece(c, 'rose', X(d.small.x), Y(d.small.y), cs * d.small.r * 2.3); else g3Put(c, g3Pic('map', 'roseSmall'), X(d.small.x), Y(d.small.y), cs * d.small.r * 2.25); }
     // The title ribbon.
     if (d.ribbon) {
+      var title = tr('The keeper\'s chart');
+      if (painted) {
+        var prw = d.ribbon.w * cs, prh = prw * 196 / 620;
+        g3Piece(c, 'ribbon', X(d.ribbon.x), Y(d.ribbon.y), prw, prh);
+        c.save(); c.translate(X(d.ribbon.x) + prw * 0.017, Y(d.ribbon.y) - prh * 0.15); c.rotate(-0.025);
+        c.fillStyle = P.ink; c.font = 'italic 600 ' + Math.round(prh * 0.27) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(title, 0, 0, prw * 0.64); c.restore();
+      } else {
       var rb = g3Pic('map', d.ribbon.tall ? 'ribbonTall' : 'ribbon'), rw = d.ribbon.w * cs, rh = rw * (d.ribbon.tall ? 132 : 96) / 780;
       if (rb.complete && rb.naturalWidth) c.drawImage(rb, X(d.ribbon.x) - rw / 2, Y(d.ribbon.y) - rh / 2, rw, rh);
-      var title = tr('The keeper\'s chart'), fs = Math.min(rh * (d.ribbon.tall ? 0.48 : 0.56), rw * 0.72 / Math.max(8, title.length) * 1.9);
+      var fs = Math.min(rh * (d.ribbon.tall ? 0.48 : 0.56), rw * 0.72 / Math.max(8, title.length) * 1.9);
       c.fillStyle = P.ink; c.font = '600 ' + Math.round(fs) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(title, X(d.ribbon.x), Y(d.ribbon.y) + rh * 0.04);
+      }
     }
     // The key to the symbols.
     if (d.key) {
@@ -572,7 +619,8 @@
         rows.forEach(function (r, i) { var cy = ky2 + pad * 0.6 + hsz * 1.5 + (i + 0.5) * rh; g3Put(c, g3Pic('chart', r[0]), kx2 + pad + ic / 2, cy, ic * 1.05); c.fillStyle = P.ink; c.fillText(tr(r[1]), kx2 + pad + ic * 1.3, cy + 1); });
       } else {
       var kx = X(k.x), ky = Y(k.y), kw = k.w * cs, kh = k.h * cs;
-      c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx, ky, kw, kh); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx, ky, kw, kh); c.lineWidth = 0.8; c.strokeRect(kx + 4, ky + 4, kw - 8, kh - 8);
+      if (painted) { g3Card(c, kx, ky, kw, kh); kx += cs * 0.12; ky += cs * 0.06; kw -= cs * 0.24; kh -= cs * 0.12; }
+      else { c.fillStyle = 'rgba(230,196,138,.95)'; c.fillRect(kx, ky, kw, kh); c.strokeStyle = P.ink; c.lineWidth = 1.5; c.strokeRect(kx, ky, kw, kh); c.lineWidth = 0.8; c.strokeRect(kx + 4, ky + 4, kw - 8, kh - 8); }
       var head = Math.min(0.62 * cs, kh * 0.26), per = Math.ceil(rows.length / k.cols), rowH = (kh - head - 8) / per, colW = (kw - 8) / k.cols;
       c.fillStyle = P.ink; c.font = '600 ' + Math.round(head * 0.62) + 'px Georgia, \'Times New Roman\', serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(tr('Key to the chart'), kx + kw / 2, ky + 4 + head * 0.55);
